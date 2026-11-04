@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_04_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_04_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -161,6 +161,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_120000) do
     t.string "coupon_code"
     t.string "resend_coupon_code"
     t.string "slug"
+    t.datetime "evolution_started_at"
     t.index ["client_id", "kind"], name: "index_campaigns_on_client_id_and_kind"
     t.index ["client_id"], name: "index_campaigns_on_client_id"
     t.index ["filters"], name: "index_campaigns_on_filters", using: :gin
@@ -552,6 +553,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_120000) do
     t.index ["utm_code"], name: "index_users_on_utm_code", unique: true
   end
 
+  create_table "whatsapp_campaign_connections", force: :cascade do |t|
+    t.bigint "campaign_id", null: false
+    t.bigint "connection_id", null: false
+    t.datetime "last_assigned_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id", "connection_id"], name: "idx_wa_campaign_connection_unique", unique: true
+    t.index ["campaign_id"], name: "index_whatsapp_campaign_connections_on_campaign_id"
+    t.index ["connection_id"], name: "index_whatsapp_campaign_connections_on_connection_id"
+  end
+
   create_table "whatsapp_connections", force: :cascade do |t|
     t.bigint "client_id", null: false
     t.string "name", null: false
@@ -739,6 +751,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_120000) do
   add_foreign_key "shopify_events", "integration_users"
   add_foreign_key "users", "clients"
   add_foreign_key "users", "profiles"
+  add_foreign_key "whatsapp_campaign_connections", "campaigns"
+  add_foreign_key "whatsapp_campaign_connections", "whatsapp_connections", column: "connection_id"
   add_foreign_key "whatsapp_connections", "clients"
   add_foreign_key "whatsapp_contact_aliases", "whatsapp_connections", column: "connection_id"
   add_foreign_key "whatsapp_contact_aliases", "whatsapp_contacts", column: "contact_id"

@@ -4,6 +4,8 @@ class Campaign < ApplicationRecord
 
   belongs_to :client
   has_many :campaign_actions, dependent: :destroy
+  has_many :whatsapp_campaign_connections, class_name: 'Whatsapp::CampaignConnection', dependent: :destroy
+  has_many :whatsapp_connections, through: :whatsapp_campaign_connections, source: :connection
 
   enum kind: {
     cashback: 0,

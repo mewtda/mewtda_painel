@@ -16,12 +16,12 @@ class SendCampaignNotificationJob < ApplicationJob
 
     message = build_message(campaign: campaign, customer: customer, order: order, extra: extra)
 
-    response = Zapi::Client.new(campaign.client).send_text(phone: format_phone(phone), message: message)
+    result = Whatsapp::Outbound.deliver(client: campaign.client, campaign: campaign, phone: phone, body: message)
 
-    if response.is_a?(Hash) && response['zaapId'].present?
+    if result.ok
       action.mark_as_sent!(message)
     else
-      action.mark_as_failed!("Falha ao enviar via Z-API: #{response.inspect}")
+      action.mark_as_failed!(result.error)
     end
   end
 
@@ -45,10 +45,5 @@ class SendCampaignNotificationJob < ApplicationJob
     return '' if value.blank?
 
     "#{value.to_s.sub(/\.0\z/, '')}%"
-  end
-
-  def format_phone(phone)
-    digits = phone.to_s.gsub(/\D/, '')
-    digits.start_with?('55') ? digits : "55#{digits}"
   end
 end

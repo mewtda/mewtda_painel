@@ -16,9 +16,11 @@ class CustomerNotificationJob < ApplicationJob
         expiring_message(customer, coupon_code)
       end
 
-    Zapi::Client.new(order.client).send_text(
-      phone: format_phone(phone),
-      message:
+    Whatsapp::Outbound.deliver(
+      client: order.client,
+      campaign: order.client.campaigns.find_by(kind: :cashback),
+      phone: phone,
+      body: message
     )
   end
 
@@ -50,10 +52,5 @@ class CustomerNotificationJob < ApplicationJob
 
       Não perca 😉
     MSG
-  end
-
-  def format_phone(phone)
-    digits = phone.gsub(/\D/, '')
-    digits.start_with?('55') ? digits : "55#{digits}"
   end
 end

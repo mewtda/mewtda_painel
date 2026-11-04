@@ -62,6 +62,15 @@ automações (por isso o número pertence ao cliente, não à automação).
 - A conexão é escolhida **no cliente** ("Evolution Mewtda"); os números são **importados** na automação.
 - Vários números por automação; **os checkouts são divididos entre eles**.
 - **Permissão por número por usuário**; o usuário entra na tela e conversa com os clientes por ela.
+- **Cada número conectado pertence a um único cliente e só pode ser usado no contexto dele.** Regras que o
+  builder garante no modelo e nos controllers (não só na tela):
+  - `whatsapp_connections.client_id` obrigatório e imutável depois de criado.
+  - Só pode ser importado em automações/campanhas **do mesmo cliente** (validação na tabela de ligação).
+  - Só usuários **daquele cliente** podem receber permissão no número; admin vê os números apenas do
+    cliente em contexto na tela.
+  - Conversas, contatos, mensagens, mídia e webhooks herdam o cliente do número; toda consulta filtra por
+    cliente. Um envio de automação do cliente A nunca pode sair por número do cliente B.
+  - Testes cobrindo tentativa de cruzar clientes (importar, permissionar, abrir conversa, baixar mídia).
 - Referência de comportamento e de código: o atendimento WhatsApp do Honey em `ChaseOrders`.
 - Sem o agente de IA do Honey; mas **deixar pronta a resposta automática**, com **OpenAI**, configurada na
   aba Geral do cliente.

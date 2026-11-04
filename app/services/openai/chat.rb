@@ -27,7 +27,8 @@ module Openai
       raise Error, 'OpenAI sem conteúdo' if content.blank?
 
       content
-    rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, SystemCallError, OpenSSL::SSL::SSLError, JSON::ParserError => e
+    rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, SystemCallError, EOFError, IOError, Net::HTTPBadResponse,
+           Net::ProtocolError, OpenSSL::SSL::SSLError, JSON::ParserError => e
       raise Error, "OpenAI #{e.class.name}"
     end
   end

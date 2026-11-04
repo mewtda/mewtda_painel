@@ -20,15 +20,16 @@ module Whatsapp
       return unless conversation
 
       client = conversation.connection.client
-      return unless client.auto_reply_ready?
-      return if conversation.auto_reply_paused?
-      return if conversation.messages.where(direction: 'incoming', historical: false).where('id > ?', message_id).exists?
+      return if stale?(conversation, message_id)
 
       nonce = "ai-#{message_id}"
       return if conversation.messages.exists?(origin: 'ai', client_nonce: nonce)
 
       text = Openai::Chat.new(api_key: client.openai_api_key, model: client.openai_model)
                          .reply(messages: prompt(client, conversation))
+      # A chamada leva até 30 s: a equipe pode ter respondido ou o cliente escrito de novo.
+      return if stale?(conversation.reload, message_id)
+
       reply = conversation.messages.create!(connection: conversation.connection, direction: 'outgoing',
                                             kind: 'text', origin: 'ai', body: text, state: 'queued',
                                             client_nonce: nonce, sent_at: Time.current)
@@ -40,6 +41,11 @@ module Whatsapp
     end
 
     private
+
+    def stale?(conversation, message_id)
+      !conversation.connection.client.reload.auto_reply_ready? || conversation.auto_reply_paused? ||
+        conversation.messages.where(direction: 'incoming', historical: false).where('id > ?', message_id).exists?
+    end
 
     def prompt(client, conversation)
       [{ role: 'system', content: system_prompt(client, conversation) }] + history(conversation)

@@ -6,14 +6,16 @@ class Whatsapp::AutoReplyJobTest < ActiveJob::TestCase
   class FakeChat
     attr_reader :calls, :last_messages
 
-    def initialize(result = 'Claro!')
+    def initialize(result = 'Claro!', &during)
       @calls = 0
       @result = result
+      @during = during
     end
 
     def reply(messages:)
       @calls += 1
       @last_messages = messages
+      @during&.call
       raise Openai::Chat::Error, 'falhou' if @result == :error
 
       @result
@@ -54,6 +56,21 @@ class Whatsapp::AutoReplyJobTest < ActiveJob::TestCase
     assert_equal 'outgoing', reply.direction
     assert_equal "ai-#{m3.id}", reply.client_nonce
     assert_enqueued_with(job: Whatsapp::SendJob, args: [reply.id])
+  end
+
+  test 'equipe responde durante a chamada: resposta velha não é criada' do
+    chat = FakeChat.new { @conversation.update!(auto_reply_paused: true) }
+    run_job(incoming('oi'), chat)
+    assert_equal 1, chat.calls
+    assert_equal 0, @conversation.messages.where(origin: 'ai').count
+    assert_enqueued_jobs 0, only: Whatsapp::SendJob
+  end
+
+  test 'cliente escreve durante a chamada: resposta velha não é criada' do
+    chat = FakeChat.new { incoming('mais uma') }
+    run_job(incoming('oi'), chat)
+    assert_equal 0, @conversation.messages.where(origin: 'ai').count
+    assert_enqueued_jobs 0, only: Whatsapp::SendJob
   end
 
   test 'conversa pausada não chama a OpenAI' do

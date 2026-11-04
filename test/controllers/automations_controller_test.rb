@@ -301,4 +301,18 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'Salve a automação antes de importar números.'
     assert_not_includes response.body, 'Salvar números'
   end
+
+  test 'numbers partial links to the automation conversations once a number is linked' do
+    client = evolution_client
+    campaign = saved_cart_campaign(client)
+    sign_in build_user(client: client)
+
+    get edit_cart_recovery_automation_path
+    assert_not_includes response.body, 'Conversas desta automação'
+
+    Whatsapp::CampaignConnection.create!(campaign: campaign,
+                                         connection: client.whatsapp_connections.create!(name: 'Meu'))
+    get edit_cart_recovery_automation_path
+    assert_select 'a[href=?]', "/crm/whatsapp/conversations?campaign_id=#{campaign.id}", text: /Conversas desta automação/
+  end
 end

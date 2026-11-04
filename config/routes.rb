@@ -51,6 +51,22 @@ Rails.application.routes.draw do
         end
       end
     end
+    # Atendimento: conversas do cliente selecionado, só nos números liberados ao usuário.
+    namespace :whatsapp do
+      resources :conversations, only: %i[index show create update] do
+        member do
+          post :read
+          patch :auto_reply
+        end
+        resources :messages, only: %i[index create] do
+          member do
+            post :retry_send
+            get :attachment
+          end
+        end
+      end
+    end
+
     resources :campaigns do
       resources :campaign_actions, only: [:index, :show], path: 'actions'
     end

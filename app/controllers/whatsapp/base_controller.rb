@@ -28,5 +28,10 @@ module Whatsapp
     end
 
     def authorized_connections = Connection.visible_to(current_user, client: current_whatsapp_client)
+
+    # Atendimento: sempre o cliente selecionado (ClientScoped#set_client), nunca um client_id da URL.
+    # Sem cliente, visible_to não devolve nada e toda conversa vira 404.
+    def attendance_connections = Connection.visible_to(current_user, client: @client)
+    def attendance_conversations = Conversation.visible_to(current_user, client: @client)
   end
 end

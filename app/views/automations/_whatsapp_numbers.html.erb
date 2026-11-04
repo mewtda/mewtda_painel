@@ -2,7 +2,14 @@
 <% if client.whatsapp_evolution? %>
   <% selected_ids = campaign.persisted? ? campaign.whatsapp_connection_ids : [] %>
   <div class="cpform-section">
-    <div class="cpform-section__header"><h3 class="cpform-section__title">Números responsáveis</h3></div>
+    <div class="cpform-section__header">
+      <h3 class="cpform-section__title">Números responsáveis</h3>
+      <% if selected_ids.any? %>
+        <%= link_to whatsapp_conversations_path(campaign_id: campaign.id), class: 'btn btn-sm btn-outline-secondary' do %>
+          <i class="fa-solid fa-comments"></i> Conversas desta automação
+        <% end %>
+      <% end %>
+    </div>
     <% if campaign.persisted? && selected_ids.empty? %>
       <div class="cpform-alert cpform-alert--warning">
         <div><strong>Importe um número responsável — esta automação não envia sem ele.</strong></div>

@@ -1,0 +1,108 @@
+<% title 'Conversas do WhatsApp' %>
+<% content_for :head do %><%= stylesheet_link_tag 'whatsapp_support', media: 'all' %><% end %>
+
+<section class="wa-app wa-chat-app" id="wa-inbox" data-wa-theme="dark" aria-label="Conversas do WhatsApp"
+         data-api-base="<%= whatsapp_conversations_path.delete_suffix('/conversations') %>"
+         data-campaign-id="<%= @campaign&.id %>">
+  <header class="wa-page-head">
+    <div>
+      <h1><i class="fa-brands fa-whatsapp"></i> Conversas</h1>
+      <p>
+        <% if @campaign %>
+          Números da automação <strong><%= @campaign.name %></strong>.
+          <%= link_to 'Ver todas as conversas', whatsapp_conversations_path %>
+        <% else %>
+          Conversas dos números liberados para você, em um só lugar.
+        <% end %>
+      </p>
+    </div>
+    <% if @client %>
+      <button type="button" class="wa-pill" id="wa-new"><i class="fas fa-comment-medical"></i> Nova conversa</button>
+    <% end %>
+  </header>
+  <div class="wa-notice" id="wa-error" role="status" hidden></div>
+  <% if @empty_state %>
+    <p class="wa-number-none"><%= @empty_message %></p>
+  <% else %>
+  <nav class="wa-number-tabs" id="wa-number-tabs" role="tablist" aria-label="Números conectados">
+    <% @connections.each do |c| %>
+      <button type="button" role="tab" class="wa-number-tab" data-id="<%= c.id %>" aria-selected="false">
+        <span class="wa-number-dot<%= ' is-on' if c.connected? %>" title="<%= c.connected? ? 'Conectado' : 'Desconectado' %>"></span>
+        <span class="wa-number-name"><i class="fab fa-whatsapp"></i><%= c.name %></span>
+        <small><%= c.phone.presence || 'sem telefone' %></small>
+        <span class="wa-number-count" hidden></span>
+      </button>
+    <% end %>
+    <% if @connections.empty? %>
+      <span class="wa-number-none">
+        <%= @campaign ? 'Esta automação ainda não tem números liberados para você.' : 'Nenhum número liberado para você. Peça acesso à administração.' %>
+      </span>
+    <% end %>
+  </nav>
+  <div class="wa-workspace">
+    <aside class="wa-inbox-list" aria-label="Lista de conversas">
+      <header class="wa-side-head">
+        <h2>Conversas</h2>
+        <div class="wa-side-tools">
+          <button type="button" class="wa-icon-btn" id="wa-theme-toggle" title="Usar tema claro" aria-label="Usar tema claro"><i class="fas fa-sun"></i></button>
+          <button type="button" class="wa-icon-btn" id="wa-new-side" title="Nova conversa" aria-label="Nova conversa"><i class="fas fa-comment-medical"></i></button>
+        </div>
+      </header>
+      <div class="wa-side-search">
+        <div class="wa-search-box"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><label class="visually-hidden" for="wa-search">Buscar nome ou telefone</label><input id="wa-search" class="form-control" placeholder="Pesquisar nome ou telefone" type="search"></div>
+        <input type="hidden" id="wa-number" value="">
+        <div class="wa-filters">
+          <select id="wa-state" class="form-select wa-chip-select" aria-label="Situação"><option value="open">Em aberto</option><option value="closed">Finalizadas</option><option value="">Todas</option></select>
+          <label class="wa-chip"><input id="wa-unread" type="checkbox"> Não lidas</label>
+        </div>
+      </div>
+      <div id="wa-threads" class="wa-threads" aria-live="polite"></div>
+      <button id="wa-more-conversations" class="wa-more" type="button" hidden>Mais conversas</button>
+    </aside>
+    <main class="wa-chat" aria-label="Conversa selecionada">
+      <div id="wa-empty" class="wa-empty">
+        <div class="wa-empty-art"><i class="fab fa-whatsapp" aria-hidden="true"></i></div>
+        <h2>WhatsApp da loja</h2>
+        <p>Selecione uma conversa à esquerda para começar o atendimento,<br>ou abra uma nova conversa com um cliente.</p>
+        <small><i class="fas fa-lock" aria-hidden="true"></i> As mensagens ficam registradas no painel para toda a equipe com acesso ao número.</small>
+      </div>
+      <div id="wa-selected" hidden>
+        <header class="wa-chat-header">
+          <button id="wa-back" class="wa-icon-btn wa-mobile" type="button" aria-label="Voltar"><i class="fas fa-arrow-left"></i></button>
+          <span class="wa-avatar" id="wa-contact-avatar" aria-hidden="true"></span>
+          <div class="wa-chat-title"><strong id="wa-contact-name"></strong><small id="wa-company-number"></small><small id="wa-checkout-line"></small></div>
+          <button id="wa-contact-toggle" class="wa-icon-btn" type="button" aria-expanded="false" title="Dados do contato" aria-label="Dados do contato"><i class="fas fa-address-card"></i></button>
+        </header>
+        <div class="wa-actions">
+          <span id="wa-checkout-badge" class="wa-checkout-badge" hidden></span>
+          <% if @client&.auto_reply_ready? %>
+            <button id="wa-auto-reply" class="wa-pill wa-auto-reply" type="button" aria-pressed="false"><i class="fas fa-robot"></i> Pausar resposta automática</button>
+          <% end %>
+          <button id="wa-close" class="wa-pill" type="button">Finalizar</button>
+        </div>
+        <div class="wa-history" id="wa-history" role="log" aria-label="Histórico de mensagens"><button id="wa-older" class="wa-older" type="button" hidden>Carregar anteriores</button><div id="wa-messages"></div></div>
+        <button id="wa-new-indicator" class="wa-new-indicator" type="button" hidden aria-label="Novas mensagens"><i class="fas fa-chevron-down"></i></button>
+        <form id="wa-compose" class="wa-compose">
+          <div class="wa-file-chip" id="wa-file-chip"><i class="fas fa-paperclip" aria-hidden="true"></i><span id="wa-file-name"></span><button id="wa-clear-file" class="wa-icon-btn" type="button" hidden title="Remover arquivo" aria-label="Remover arquivo"><i class="fas fa-xmark"></i></button></div>
+          <div class="wa-compose-row">
+            <label class="wa-icon-btn" title="Anexar (até 16 MB)"><i class="fas fa-paperclip" aria-hidden="true"></i><span class="visually-hidden">Anexar</span><input id="wa-file" type="file" class="visually-hidden" accept="<%= Whatsapp::Media::TYPES.keys.join(',') %>"></label>
+            <label for="wa-text" class="visually-hidden">Mensagem</label><textarea id="wa-text" class="form-control" rows="1" maxlength="10000" placeholder="Digite uma mensagem"></textarea>
+            <button id="wa-record" type="button" class="wa-icon-btn" title="Gravar áudio" aria-label="Gravar áudio"><i class="fas fa-microphone"></i></button>
+            <button type="submit" id="wa-send" class="wa-send" title="Enviar" aria-label="Enviar"><i class="fas fa-paper-plane"></i></button>
+          </div>
+          <small>Arquivos de até 16 MB. Entrega e leitura aparecem somente quando confirmadas pelo WhatsApp.</small>
+        </form>
+      </div>
+    </main>
+    <aside class="wa-contact" id="wa-contact-panel" aria-label="Dados do contato" hidden>
+      <header class="wa-contact-head"><button id="wa-contact-hide" class="wa-icon-btn" type="button" aria-label="Fechar"><i class="fas fa-xmark"></i></button><h2>Dados do contato</h2></header>
+      <div class="wa-contact-card"><span class="wa-avatar wa-avatar-lg" id="wa-contact-avatar-lg" aria-hidden="true"></span><p id="wa-contact-phone"></p></div>
+      <div class="wa-contact-section" id="wa-checkout"></div>
+    </aside>
+  </div>
+  <dialog id="wa-new-dialog"><form id="wa-start"><h2>Nova conversa</h2><label for="wa-start-number">Enviar pelo número</label><select id="wa-start-number" class="form-select" required><option value="">Escolha um número</option></select><label for="wa-start-phone">Telefone do cliente</label><input id="wa-start-phone" class="form-control" type="tel" placeholder="+55 11 99999-9999" required><div class="wa-dialog-actions"><button type="button" id="wa-cancel-new" class="wa-pill">Cancelar</button><button class="wa-send-btn">Abrir conversa</button></div></form></dialog>
+  <% end %>
+</section>
+<% unless @empty_state %>
+  <%= javascript_include_tag 'whatsapp_support', defer: true %>
+<% end %>

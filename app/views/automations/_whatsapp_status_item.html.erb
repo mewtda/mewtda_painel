@@ -1,0 +1,18 @@
+<%# locals: (client:, campaign:) %>
+<div class="cpform-status-item">
+  <% if client.whatsapp_evolution? %>
+    <span class="cpform-status-item__label">WhatsApp (Evolution)</span>
+    <% if client.whatsapp_ready? %>
+      <span class="cpform-status-item__value cpform-status-item__value--success">Conectado</span>
+    <% else %>
+      <span class="cpform-status-item__value cpform-status-item__value--danger">Nenhum número conectado</span>
+    <% end %>
+  <% else %>
+    <span class="cpform-status-item__label">Integração Zapi</span>
+    <% if campaign.zapi_configured? %>
+      <span class="cpform-status-item__value cpform-status-item__value--success">Configurada</span>
+    <% else %>
+      <span class="cpform-status-item__value cpform-status-item__value--danger">Não configurada</span>
+    <% end %>
+  <% end %>
+</div>

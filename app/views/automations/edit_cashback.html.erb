@@ -163,14 +163,7 @@
                   <span class="cpform-status-item__value cpform-status-item__value--inactive">Inativa</span>
                 <% end %>
               </div>
-              <div class="cpform-status-item">
-                <span class="cpform-status-item__label">Integração Zapi</span>
-                <% if @campaign.zapi_configured? %>
-                  <span class="cpform-status-item__value cpform-status-item__value--success">Configurada</span>
-                <% else %>
-                  <span class="cpform-status-item__value cpform-status-item__value--danger">Não configurada</span>
-                <% end %>
-              </div>
+              <%= render 'automations/whatsapp_status_item', client: @client, campaign: @campaign %>
               <div class="cpform-status-item">
                 <span class="cpform-status-item__label">Total de notificações</span>
                 <span class="cpform-status-item__value"><%= @campaign.actions_count %></span>

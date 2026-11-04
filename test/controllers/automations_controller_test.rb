@@ -241,6 +241,7 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
   test 'cart recovery edit page shows metrics and the numbers partial for evolution clients' do
     client = evolution_client
+    saved_cart_campaign(client)
     client.abandoned_checkouts.create!(shopify_checkout_id: 'a', total_price: 150, checkout_created_at: 1.day.ago)
     sign_in build_user(client: client)
 
@@ -275,5 +276,29 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes response.body, 'Integração Zapi não configurada'
     assert_not_includes response.body, 'Importe um número responsável'
+  end
+
+  test 'status row shows Evolution connection instead of Zapi for evolution clients' do
+    client = evolution_client
+    saved_cart_campaign(client)
+    client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
+    sign_in build_user(client: client)
+
+    get edit_cart_recovery_automation_path
+
+    assert_not_includes response.body, 'Integração Zapi'
+    assert_includes response.body, 'WhatsApp (Evolution)'
+    assert_includes response.body, 'Conectado'
+  end
+
+  test 'numbers partial asks to save the automation first when not persisted' do
+    client = evolution_client
+    client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
+    sign_in build_user(client: client)
+
+    get edit_tracking_automation_path
+
+    assert_includes response.body, 'Salve a automação antes de importar números.'
+    assert_not_includes response.body, 'Salvar números'
   end
 end

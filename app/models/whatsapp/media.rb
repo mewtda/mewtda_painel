@@ -22,6 +22,7 @@ module Whatsapp
     FORMATS_MESSAGE = 'Formato não permitido. Use JPG, PNG, WEBP, GIF, PDF, TXT, CSV, DOC, DOCX, XLS, XLSX, ZIP, ' \
                       'áudio ou vídeo (MP4, 3GP, MOV).'.freeze
     class Invalid < StandardError; end
+    class NotConfigured < StandardError; end
 
     def self.inspect_upload(io, filename:)
       raise Invalid, 'O arquivo deve ter até 16 MB.' if io.size > MAX_BYTES || io.size.zero?
@@ -45,7 +46,7 @@ module Whatsapp
       type, kind, safe_name = inspect_upload(io, filename: filename)
       service_name = ENV['WHATSAPP_STORAGE_SERVICE'].presence
       if service_name.nil?
-        raise Invalid, 'WHATSAPP_STORAGE_SERVICE não configurado.' if Rails.env.production?
+        raise NotConfigured, 'WHATSAPP_STORAGE_SERVICE não configurado.' if Rails.env.production?
 
         service_name = Rails.application.config.active_storage.service.to_s
       end

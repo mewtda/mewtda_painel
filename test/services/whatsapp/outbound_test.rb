@@ -110,6 +110,17 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
     assert Whatsapp::Message.exists?(result.message.id)
   end
 
+  test 'dentro de transação externa o job só é enfileirado após o commit' do
+    evolution!
+    result = nil
+    ActiveRecord::Base.transaction do
+      result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
+      assert result.ok
+      assert_no_enqueued_jobs(only: Whatsapp::SendJob)
+    end
+    assert_enqueued_with(job: Whatsapp::SendJob, args: [result.message.id])
+  end
+
   test 'automação de outro cliente não envia por nenhum provedor' do
     evolution!
     other = Client.create!(name: 'Outra', email: "o-#{SecureRandom.hex(4)}@example.com")

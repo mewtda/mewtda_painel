@@ -5,7 +5,7 @@ module Whatsapp
     before_action :private_response
     rescue_from JSON::ParserError, with: -> { render json: { error: 'Parâmetros inválidos.' }, status: :unprocessable_entity }
     rescue_from ActiveRecord::RecordNotFound, with: -> { head :not_found }
-    rescue_from ActiveRecord::RecordInvalid, Media::Invalid, ArgumentError, ActionController::ParameterMissing do |error|
+    rescue_from ActiveRecord::RecordInvalid, Media::Invalid, Media::NotConfigured, ArgumentError, ActionController::ParameterMissing do |error|
       message = error.is_a?(ActiveRecord::RecordInvalid) ? error.record.errors.full_messages.join(', ') : error.message
       render json: { error: message }, status: :unprocessable_entity
     end

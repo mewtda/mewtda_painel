@@ -44,8 +44,12 @@ module Whatsapp
                                   send_after: slot, client_nonce: SecureRandom.hex(16))
         conversation.update!(last_message_at: now, last_message_preview: message.preview.truncate(120))
       end
-      # Fora da transação: o worker só pode enxergar a mensagem depois do commit.
-      SendJob.set(wait_until: slot).perform_later(message.id)
+      # O worker só pode enxergar a mensagem depois do commit, inclusive de uma transação externa do chamador
+      # (ex.: checkout.with_lock). Com load_defaults 7.0 o push ao Sidekiq é imediato, então adiamos até o commit.
+      message_id = message.id
+      ActiveRecord.after_all_transactions_commit do
+        SendJob.set(wait_until: slot).perform_later(message_id)
+      end
       message
     end
 

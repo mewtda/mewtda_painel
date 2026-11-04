@@ -69,7 +69,7 @@ class Whatsapp::MediaTest < ActiveSupport::TestCase
     message = message_with_kind('image')
     original = ENV.delete('WHATSAPP_STORAGE_SERVICE')
     Rails.stub(:env, ActiveSupport::StringInquirer.new('production')) do
-      error = assert_raises(Whatsapp::Media::Invalid) do
+      error = assert_raises(Whatsapp::Media::NotConfigured) do
         Whatsapp::Media.store!(message, StringIO.new(WEBP_HEADER), filename: 'a.webp')
       end
       assert_match(/WHATSAPP_STORAGE_SERVICE/, error.message)

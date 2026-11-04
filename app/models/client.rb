@@ -11,13 +11,14 @@ class Client < ApplicationRecord
   has_many :whatsapp_connections, class_name: 'Whatsapp::Connection', dependent: :restrict_with_exception
 
   encrypts :meta_access_token, :google_ads_refresh_token, :shopify_api_secret, :shopify_storefront_token,
-           :whatsapp_cloud_access_token
+           :whatsapp_cloud_access_token, :openai_api_key
 
   before_validation :generate_slug, if: -> { slug.blank? && name.present? }
 
   validates :name, presence: true
   validates :whatsapp_provider, inclusion: { in: %w[zapi evolution] }
   validates :email, presence: true
+  validates :openai_model, presence: true, if: :auto_reply_enabled?
   validates :site_url, format: { with: %r{\Ahttps?://}, message: 'deve começar com http:// ou https://' },
                        allow_blank: true
   validates :email_sending_domain,
@@ -35,8 +36,11 @@ class Client < ApplicationRecord
     whatsapp_evolution? ? whatsapp_connections.any?(&:connected?) : zapi_configured?
   end
 
-  # Resposta automática por IA no WhatsApp; a Task 9 implementa a configuração real.
-  def auto_reply_ready? = false
+  # Resposta automática (OpenAI) só no Evolution, com chave, modelo e instruções preenchidos.
+  def auto_reply_ready?
+    whatsapp_evolution? && auto_reply_enabled? && openai_api_key.present? && openai_model.present? &&
+      auto_reply_instructions.present?
+  end
 
   def site_url_configured?
     site_url.present?

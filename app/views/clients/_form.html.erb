@@ -117,6 +117,48 @@
             </div>
           <% end %>
         </div>
+
+        <div class="cform-section">
+          <div class="cform-section__header">
+            <i class="fa-brands fa-whatsapp"></i>
+            Resposta automática (OpenAI)
+          </div>
+
+          <% unless client.whatsapp_evolution? %>
+            <div class="cform-field">
+              <span class="cform-field__hint">A resposta automática só funciona quando o cliente usa o WhatsApp Evolution Mewtda.</span>
+            </div>
+          <% end %>
+
+          <div class="cform-field">
+            <div class="cform-toggle">
+              <%= form.check_box :auto_reply_enabled, class: 'cform-toggle__input', disabled: read_only %>
+              <span class="cform-toggle__label">Responder automaticamente no WhatsApp</span>
+            </div>
+          </div>
+
+          <div class="cform-row">
+            <div class="cform-field">
+              <%= form.label :openai_api_key, 'Chave da API OpenAI', class: 'crm-label' %>
+              <div class="cform-field__input-wrapper">
+                <%= form.password_field :openai_api_key, class: 'crm-input cform-field__input--password', placeholder: 'deixe em branco para manter', autocomplete: 'off', disabled: read_only, value: '' %>
+                <% if client.openai_api_key.present? %>
+                  <span class="crm-tag crm-tag--success">Configurado</span>
+                <% end %>
+              </div>
+            </div>
+            <div class="cform-field">
+              <%= form.label :openai_model, 'Modelo', class: 'crm-label' %>
+              <%= form.text_field :openai_model, class: 'crm-input', placeholder: 'Nome do modelo da OpenAI', disabled: read_only %>
+              <span class="cform-field__hint">Obrigatório quando a resposta automática está ligada.</span>
+            </div>
+          </div>
+
+          <div class="cform-field">
+            <%= form.label :auto_reply_instructions, 'Instruções para a IA', class: 'crm-label' %>
+            <%= form.text_area :auto_reply_instructions, class: 'crm-input', rows: 6, placeholder: 'Como a IA deve atender os clientes da loja', disabled: read_only %>
+          </div>
+        </div>
       </div>
 
       <div class="cform-panel" role="tabpanel" data-panel="shopify" hidden>

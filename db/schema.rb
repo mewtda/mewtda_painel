@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_04_140000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_04_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -206,6 +206,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_140000) do
     t.string "whatsapp_cloud_business_account_id"
     t.text "whatsapp_cloud_access_token"
     t.string "whatsapp_provider", default: "zapi", null: false
+    t.boolean "auto_reply_enabled", default: false, null: false
+    t.text "openai_api_key"
+    t.string "openai_model"
+    t.text "auto_reply_instructions"
     t.index ["shopify_shop_url"], name: "index_clients_on_shopify_shop_url", unique: true
     t.index ["slug"], name: "index_clients_on_slug", unique: true
   end

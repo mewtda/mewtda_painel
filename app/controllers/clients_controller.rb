@@ -37,7 +37,7 @@ class ClientsController < ApplicationController
   def update
     # Os campos de senha vêm sempre vazios no form: em branco = manter o valor atual.
     %i[meta_access_token shopify_access_token shopify_api_secret shopify_storefront_token zapi_instance_token
-       zapi_client_token whatsapp_cloud_access_token].each do |secret|
+       zapi_client_token whatsapp_cloud_access_token openai_api_key].each do |secret|
       params[:client].delete(secret) if params[:client][secret].blank?
     end
 
@@ -82,7 +82,7 @@ class ClientsController < ApplicationController
       :zapi_instance_id, :zapi_instance_token, :zapi_client_token, :whatsapp_provider,
       :whatsapp_cloud_phone_number_id, :whatsapp_cloud_business_account_id, :whatsapp_cloud_access_token,
       :meta_access_token, :meta_ad_account_id,
-      :google_ads_customer_id
+      :google_ads_customer_id, :auto_reply_enabled, :openai_api_key, :openai_model, :auto_reply_instructions
     )
   end
 end

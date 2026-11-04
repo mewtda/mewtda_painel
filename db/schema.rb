@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_08_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_04_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -195,8 +195,37 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_120000) do
     t.datetime "ses_verified_at"
     t.string "slug"
     t.string "shopify_storefront_token"
+    t.string "whatsapp_cloud_phone_number_id"
+    t.string "whatsapp_cloud_business_account_id"
+    t.text "whatsapp_cloud_access_token"
+    t.string "whatsapp_provider", default: "zapi", null: false
     t.index ["shopify_shop_url"], name: "index_clients_on_shopify_shop_url", unique: true
     t.index ["slug"], name: "index_clients_on_slug", unique: true
+  end
+
+  create_table "custom_automation_runs", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.string "status", default: "pending", null: false
+    t.date "period_start", null: false
+    t.date "period_end", null: false
+    t.string "order_filter", null: false
+    t.decimal "price_percentage", precision: 5, scale: 2, null: false
+    t.integer "orders_count", default: 0, null: false
+    t.decimal "total_value", precision: 14, scale: 2, default: "0.0", null: false
+    t.jsonb "items", default: [], null: false
+    t.jsonb "warnings", default: [], null: false
+    t.string "tiny_note_id"
+    t.string "tiny_note_number"
+    t.text "tiny_response"
+    t.text "error_message"
+    t.datetime "emitted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id", "kind", "created_at"], name: "idx_on_client_id_kind_created_at_22125b7406"
+    t.index ["client_id"], name: "index_custom_automation_runs_on_client_id"
+    t.index ["user_id"], name: "index_custom_automation_runs_on_user_id"
   end
 
   create_table "customers", force: :cascade do |t|
@@ -475,6 +504,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_120000) do
     t.jsonb "data"
     t.jsonb "context"
     t.jsonb "raw_payload"
+    t.index ["client_id", "created_at"], name: "index_shopify_events_on_client_id_and_created_at"
     t.index ["client_id", "kind"], name: "index_shopify_events_on_client_id_and_kind"
     t.index ["client_id"], name: "index_shopify_events_on_client_id"
     t.index ["event_name"], name: "index_shopify_events_on_event_name"
@@ -522,6 +552,160 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_120000) do
     t.index ["utm_code"], name: "index_users_on_utm_code", unique: true
   end
 
+  create_table "whatsapp_connections", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.string "name", null: false
+    t.string "provider", default: "evolution", null: false
+    t.string "instance_key", null: false
+    t.text "webhook_token", null: false
+    t.string "phone"
+    t.string "state", default: "disconnected", null: false
+    t.boolean "enabled", default: true, null: false
+    t.text "qr_data"
+    t.datetime "qr_expires_at"
+    t.datetime "provider_updated_at"
+    t.datetime "last_event_at"
+    t.datetime "last_synced_at"
+    t.datetime "sync_requested_at"
+    t.string "control_action"
+    t.integer "control_version", default: 0, null: false
+    t.string "error_code"
+    t.datetime "next_send_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id"], name: "index_whatsapp_connections_on_client_id"
+    t.index ["instance_key"], name: "index_whatsapp_connections_on_instance_key", unique: true
+  end
+
+  create_table "whatsapp_contact_aliases", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "contact_id", null: false
+    t.string "jid", limit: 191, null: false
+    t.index ["connection_id", "jid"], name: "idx_wa_alias_unique", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_contact_aliases_on_connection_id"
+    t.index ["contact_id"], name: "index_whatsapp_contact_aliases_on_contact_id"
+  end
+
+  create_table "whatsapp_contacts", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "customer_id"
+    t.string "provider_jid", limit: 191, null: false
+    t.string "phone"
+    t.string "name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "provider_jid"], name: "idx_wa_contact_unique", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_contacts_on_connection_id"
+    t.index ["customer_id"], name: "index_whatsapp_contacts_on_customer_id"
+    t.index ["phone"], name: "index_whatsapp_contacts_on_phone"
+  end
+
+  create_table "whatsapp_conversations", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "contact_id", null: false
+    t.string "state", default: "open", null: false
+    t.datetime "last_message_at"
+    t.string "last_message_preview"
+    t.boolean "auto_reply_paused", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "contact_id"], name: "idx_wa_conversation_unique", unique: true
+    t.index ["connection_id", "last_message_at"], name: "idx_wa_inbox"
+    t.index ["connection_id"], name: "index_whatsapp_conversations_on_connection_id"
+    t.index ["contact_id"], name: "index_whatsapp_conversations_on_contact_id"
+  end
+
+  create_table "whatsapp_events", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.string "digest", limit: 64, null: false
+    t.string "kind", null: false
+    t.text "payload", null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "processed_at"
+    t.integer "attempts", default: 0, null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "digest"], name: "idx_wa_event_unique", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_events_on_connection_id"
+    t.index ["processed_at", "attempts"], name: "idx_wa_pending_events"
+  end
+
+  create_table "whatsapp_media", force: :cascade do |t|
+    t.bigint "message_id", null: false
+    t.string "storage_key", null: false
+    t.string "service_name", null: false
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.bigint "byte_size", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_whatsapp_media_on_message_id", unique: true
+    t.index ["storage_key"], name: "index_whatsapp_media_on_storage_key", unique: true
+  end
+
+  create_table "whatsapp_memberships", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "user_id"], name: "idx_wa_membership_unique", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_memberships_on_connection_id"
+    t.index ["user_id"], name: "index_whatsapp_memberships_on_user_id"
+  end
+
+  create_table "whatsapp_messages", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "user_id"
+    t.string "provider_id", limit: 191
+    t.string "client_nonce", limit: 64
+    t.string "direction", null: false
+    t.string "kind", default: "text", null: false
+    t.text "body"
+    t.string "state", null: false
+    t.integer "receipt_rank", default: 0, null: false
+    t.boolean "historical", default: false, null: false
+    t.datetime "sent_at", null: false
+    t.datetime "attempted_at"
+    t.string "error_code"
+    t.string "media_state"
+    t.integer "media_attempts", default: 0, null: false
+    t.datetime "media_retry_at"
+    t.jsonb "provider_key"
+    t.string "origin", default: "team", null: false
+    t.datetime "send_after"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "client_nonce"], name: "idx_wa_client_message", unique: true
+    t.index ["connection_id", "provider_id"], name: "idx_wa_provider_message", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_messages_on_connection_id"
+    t.index ["conversation_id", "sent_at", "id"], name: "idx_wa_history"
+    t.index ["conversation_id"], name: "index_whatsapp_messages_on_conversation_id"
+    t.index ["media_state", "media_retry_at"], name: "idx_wa_pending_media"
+    t.index ["state", "attempted_at"], name: "idx_wa_pending_sends"
+    t.index ["user_id"], name: "index_whatsapp_messages_on_user_id"
+  end
+
+  create_table "whatsapp_reads", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "last_message_id", default: 0, null: false
+    t.index ["conversation_id", "user_id"], name: "idx_wa_read_unique", unique: true
+    t.index ["conversation_id"], name: "index_whatsapp_reads_on_conversation_id"
+    t.index ["user_id"], name: "index_whatsapp_reads_on_user_id"
+  end
+
+  create_table "whatsapp_receipts", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.string "provider_id", limit: 191, null: false
+    t.integer "rank", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "provider_id"], name: "idx_wa_receipt_unique", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_receipts_on_connection_id"
+  end
+
   add_foreign_key "abandoned_checkouts", "clients"
   add_foreign_key "abandoned_checkouts", "customers"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -532,6 +716,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_120000) do
   add_foreign_key "campaign_actions", "customers"
   add_foreign_key "campaign_actions", "orders"
   add_foreign_key "campaigns", "clients"
+  add_foreign_key "custom_automation_runs", "clients"
+  add_foreign_key "custom_automation_runs", "users"
   add_foreign_key "email_templates", "clients"
   add_foreign_key "goals", "clients"
   add_foreign_key "integration_users", "clients"
@@ -553,4 +739,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_120000) do
   add_foreign_key "shopify_events", "integration_users"
   add_foreign_key "users", "clients"
   add_foreign_key "users", "profiles"
+  add_foreign_key "whatsapp_connections", "clients"
+  add_foreign_key "whatsapp_contact_aliases", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_contact_aliases", "whatsapp_contacts", column: "contact_id"
+  add_foreign_key "whatsapp_contacts", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_conversations", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_conversations", "whatsapp_contacts", column: "contact_id"
+  add_foreign_key "whatsapp_events", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_media", "whatsapp_messages", column: "message_id"
+  add_foreign_key "whatsapp_memberships", "users"
+  add_foreign_key "whatsapp_memberships", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_messages", "users"
+  add_foreign_key "whatsapp_messages", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_messages", "whatsapp_conversations", column: "conversation_id"
+  add_foreign_key "whatsapp_reads", "users"
+  add_foreign_key "whatsapp_reads", "whatsapp_conversations", column: "conversation_id"
+  add_foreign_key "whatsapp_receipts", "whatsapp_connections", column: "connection_id"
 end

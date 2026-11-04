@@ -8,6 +8,7 @@ class Client < ApplicationRecord
   has_one :popup, dependent: :destroy
   has_many :email_templates, dependent: :destroy
   has_many :landing_pages, dependent: :destroy
+  has_many :whatsapp_connections, class_name: 'Whatsapp::Connection', dependent: :restrict_with_exception
 
   encrypts :meta_access_token, :google_ads_refresh_token, :shopify_api_secret, :shopify_storefront_token,
            :whatsapp_cloud_access_token
@@ -15,6 +16,7 @@ class Client < ApplicationRecord
   before_validation :generate_slug, if: -> { slug.blank? && name.present? }
 
   validates :name, presence: true
+  validates :whatsapp_provider, inclusion: { in: %w[zapi evolution] }
   validates :email, presence: true
   validates :site_url, format: { with: %r{\Ahttps?://}, message: 'deve começar com http:// ou https://' },
                        allow_blank: true
@@ -25,6 +27,8 @@ class Client < ApplicationRecord
   validates :slug, presence: true, uniqueness: true,
                    format: { with: LandingPage::SLUG_FORMAT, message: 'use só letras minúsculas, números e hífens' },
                    exclusion: { in: LandingPage::RESERVED_PREFIXES, message: 'é reservado pelo sistema' }
+
+  def whatsapp_evolution? = whatsapp_provider == 'evolution'
 
   def site_url_configured?
     site_url.present?

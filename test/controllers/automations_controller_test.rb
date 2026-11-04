@@ -172,7 +172,7 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     user = build_user(client: client)
     sign_in user
 
-    assert_enqueued_with(job: SendCartRecoveryNotificationJob, args: [checkout.id, 'Oi {nome}', nil, 'first']) do
+    assert_enqueued_with(job: SendCartRecoveryNotificationJob, args: [checkout.id, 'Oi {nome}', nil, 'first', true]) do
       post resend_cart_recovery_automation_path(checkout, slot: 'first')
     end
 
@@ -314,5 +314,22 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
                                          connection: client.whatsapp_connections.create!(name: 'Meu'))
     get edit_cart_recovery_automation_path
     assert_select 'a[href=?]', "/crm/whatsapp/conversations?campaign_id=#{campaign.id}", text: /Conversas desta automação/
+  end
+
+  test 'resend_cart_recovery avisa quando o canal da 1ª mensagem não está disponível' do
+    client = evolution_client
+    saved_cart_campaign(client)
+    checkout = client.abandoned_checkouts.create!(
+      shopify_checkout_id: SecureRandom.hex(6), phone: '+5511999999999',
+      checkout_created_at: Time.current, first_notified_at: Time.current, whatsapp_provider: 'zapi'
+    )
+    sign_in build_user(client: client)
+
+    assert_no_enqueued_jobs only: SendCartRecoveryNotificationJob do
+      post resend_cart_recovery_automation_path(checkout, slot: 'first')
+    end
+    assert_redirected_to cart_recovery_data_automation_path
+    assert_equal 'Canal da 1ª mensagem indisponível.', flash[:alert]
+    assert_nil flash[:notice]
   end
 end

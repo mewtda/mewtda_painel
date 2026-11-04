@@ -64,4 +64,17 @@ class Whatsapp::MediaTest < ActiveSupport::TestCase
     _type, kind, = Whatsapp::Media.inspect_upload(StringIO.new("a,b\n1,2\n"), filename: 'dados.csv')
     assert_equal 'document', kind
   end
+
+  test 'store! em produção exige WHATSAPP_STORAGE_SERVICE' do
+    message = message_with_kind('image')
+    original = ENV.delete('WHATSAPP_STORAGE_SERVICE')
+    Rails.stub(:env, ActiveSupport::StringInquirer.new('production')) do
+      error = assert_raises(Whatsapp::Media::Invalid) do
+        Whatsapp::Media.store!(message, StringIO.new(WEBP_HEADER), filename: 'a.webp')
+      end
+      assert_match(/WHATSAPP_STORAGE_SERVICE/, error.message)
+    end
+  ensure
+    ENV['WHATSAPP_STORAGE_SERVICE'] = original if original
+  end
 end

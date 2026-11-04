@@ -10,10 +10,16 @@ module Whatsapp
       end
       return deliver_zapi(client, phone, body) unless client.whatsapp_evolution?
 
+      return Result.new(ok: false, provider: 'evolution', error: 'telefone inválido') if Phone.normalize(phone).nil?
+
       connection = Router.pick(campaign: campaign, phone: phone, prefer: prefer_connection, strict: strict)
       return Result.new(ok: false, provider: 'evolution', error: 'sem número responsável conectado') unless connection
 
-      message = enqueue(connection, phone, body)
+      message = begin
+        enqueue(connection, phone, body)
+      rescue ArgumentError
+        return Result.new(ok: false, provider: 'evolution', error: 'telefone inválido')
+      end
       Result.new(ok: true, provider: 'evolution', connection: connection, message: message)
     end
 

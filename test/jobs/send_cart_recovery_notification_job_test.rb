@@ -150,4 +150,34 @@ class SendCartRecoveryNotificationJobTest < ActiveJob::TestCase
     assert_nil @checkout.first_notified_at
     assert_equal :pending, @checkout.status
   end
+
+  test 'two automatic first jobs for the same checkout send exactly once' do
+    with_zapi_stub({ 'zaapId' => 'z' }) do |calls|
+      2.times { SendCartRecoveryNotificationJob.perform_now(@checkout.id, 'Oi', nil, 'first') }
+      assert_equal 1, calls.size
+    end
+  end
+
+  test 'two automatic second jobs for the same checkout send exactly once' do
+    @checkout.update!(first_notified_at: 1.day.ago, whatsapp_provider: 'zapi')
+    with_zapi_stub({ 'zaapId' => 'z' }) do |calls|
+      2.times { SendCartRecoveryNotificationJob.perform_now(@checkout.id, 'Volta', nil, 'second') }
+      assert_equal 1, calls.size
+    end
+  end
+
+  test 'manual resend after the first was sent sends again through the same channel' do
+    with_zapi_stub({ 'zaapId' => 'z' }) do |calls|
+      SendCartRecoveryNotificationJob.perform_now(@checkout.id, 'Oi', nil, 'first')
+      SendCartRecoveryNotificationJob.perform_now(@checkout.id, 'Oi', nil, 'first', true)
+      assert_equal 2, calls.size
+    end
+  end
+
+  test 'channel_available? is false when the first message channel is gone' do
+    @client.update!(whatsapp_provider: 'evolution')
+    link('A')
+    @checkout.update!(first_notified_at: 1.day.ago, whatsapp_provider: 'zapi')
+    assert_not SendCartRecoveryNotificationJob.channel_available?(@checkout, @client, @campaign)
+  end
 end

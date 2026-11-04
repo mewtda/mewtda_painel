@@ -93,8 +93,13 @@ class AutomationsController < ApplicationController
       return redirect_to cart_recovery_data_automation_path, alert: 'Configure a mensagem antes de reenviar.'
     end
 
+    if SendCartRecoveryNotificationJob.channel_locked?(checkout, slot) &&
+       !SendCartRecoveryNotificationJob.channel_available?(checkout, @client, campaign)
+      return redirect_to cart_recovery_data_automation_path, alert: 'Canal da 1ª mensagem indisponível.'
+    end
+
     coupon = slot == 'second' ? checkout.second_coupon_code : checkout.first_coupon_code
-    SendCartRecoveryNotificationJob.perform_later(checkout.id, template, coupon, slot)
+    SendCartRecoveryNotificationJob.perform_later(checkout.id, template, coupon, slot, true)
 
     redirect_to cart_recovery_data_automation_path, notice: 'Reenvio agendado com sucesso.'
   rescue ActiveRecord::RecordNotFound

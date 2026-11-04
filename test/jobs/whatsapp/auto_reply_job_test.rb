@@ -137,4 +137,12 @@ class Whatsapp::AutoReplyJobTest < ActiveJob::TestCase
     assert_enqueued_with(job: Whatsapp::AutoReplyJob, args: [@conversation.id, message.id])
     assert_in_delta 20, enqueued_jobs.first[:at] - Time.now.to_f, 3
   end
+
+  test 'erro inesperado não propaga nem reenfileira' do
+    m = incoming('oi')
+    boom = Object.new
+    boom.define_singleton_method(:reply) { |**| raise 'inesperado' }
+    assert_nothing_raised { run_job(m, boom) }
+    assert_equal 0, @conversation.messages.where(origin: 'ai').count
+  end
 end

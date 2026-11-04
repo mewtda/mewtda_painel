@@ -154,7 +154,11 @@
   }
 
   const nameInput = document.getElementById("wan-name");
-  nameInput.onkeydown = (e) => { if (e.key === "Enter") e.preventDefault(); };
+  nameInput.onkeydown = (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    document.getElementById("wan-add").click();
+  };
   document.getElementById("wan-add").onclick = guard(async () => {
     const created = await api("", "POST", {
       name: nameInput.value,

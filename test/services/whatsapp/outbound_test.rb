@@ -122,4 +122,11 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
       assert_empty calls
     end
   end
+
+  test 'telefone inválido retorna falha em vez de levantar' do
+    evolution!
+    result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: 'abc', body: 'oi')
+    assert_not result.ok
+    assert_equal 'telefone inválido', result.error
+  end
 end

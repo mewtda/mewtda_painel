@@ -294,7 +294,7 @@
       el("strong", money(c.checkout.total_price)),
       el("p", checkoutLabels[c.checkout.status] || c.checkout.status),
     );
-    if (c.checkout.recovery_url) {
+    if (/^https?:\/\//i.test(String(c.checkout.recovery_url || ""))) {
       const a = el("a", "Abrir link do carrinho");
       a.href = c.checkout.recovery_url;
       a.target = "_blank";

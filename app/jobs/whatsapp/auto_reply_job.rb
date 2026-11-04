@@ -3,6 +3,11 @@ module Whatsapp
   class AutoReplyJob < ApplicationJob
     queue_as :whatsapp
 
+    # Nunca reenvia em loop: um erro inesperado descarta o job (sem corpo nem chave nos logs).
+    discard_on(StandardError) do |job, error|
+      Rails.logger.warn("whatsapp auto reply #{job.arguments.first}: #{error.class}")
+    end
+
     RULES = 'Responda em português, de forma curta, como atendente da loja. ' \
             'Nunca invente preços, prazos ou cupons que não estejam no contexto.'.freeze
     HISTORY = 20

@@ -224,4 +224,13 @@ class Whatsapp::ConversationsControllerTest < ActionDispatch::IntegrationTest
     get "/crm/whatsapp/conversations/#{@conv_a1.id}.json"
     assert_response :not_found
   end
+
+  test 'PATCH auto_reply com paused nulo responde 422' do
+    @a1.memberships.create!(user: @user_a)
+    sign_in @user_a
+
+    patch "/crm/whatsapp/conversations/#{@conv_a1.id}/auto_reply", params: { paused: nil }, as: :json
+    assert_response :unprocessable_entity
+    assert_equal 'Valor inválido.', response.parsed_body['error']
+  end
 end

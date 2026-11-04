@@ -53,7 +53,10 @@ module Whatsapp
     # Pausar/retomar a resposta automática nesta conversa.
     def auto_reply
       conversation = attendance_conversations.find(params[:id])
-      conversation.update!(auto_reply_paused: ActiveModel::Type::Boolean.new.cast(params.fetch(:paused)))
+      paused = params.fetch(:paused)
+      raise ArgumentError, 'Valor inválido.' if paused.nil? || paused.to_s.strip.empty?
+
+      conversation.update!(auto_reply_paused: ActiveModel::Type::Boolean.new.cast(paused))
       render json: details(conversation)
     end
 

@@ -43,7 +43,12 @@ module Whatsapp
 
     def self.store!(message, io, filename:)
       type, kind, safe_name = inspect_upload(io, filename: filename)
-      service_name = ENV['WHATSAPP_STORAGE_SERVICE'].presence || Rails.application.config.active_storage.service.to_s
+      service_name = ENV['WHATSAPP_STORAGE_SERVICE'].presence
+      if service_name.nil?
+        raise Invalid, 'WHATSAPP_STORAGE_SERVICE não configurado.' if Rails.env.production?
+
+        service_name = Rails.application.config.active_storage.service.to_s
+      end
       service = ActiveStorage::Blob.services.fetch(service_name)
       key = "whatsapp/#{SecureRandom.hex(32)}"
       record = new(message: message, storage_key: key, service_name: service_name, filename: safe_name,

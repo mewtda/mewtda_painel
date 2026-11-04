@@ -200,6 +200,15 @@
 
       <div class="cform-panel" role="tabpanel" data-panel="whatsapp" hidden>
         <div class="cform-provider">
+          <div class="cform-field">
+            <%= form.label :whatsapp_provider, 'Conexão WhatsApp', class: 'crm-label' %>
+            <%= form.select :whatsapp_provider, [['Z-API', 'zapi'], ['Evolution Mewtda', 'evolution']], {}, class: 'crm-input', id: 'client_whatsapp_provider', disabled: read_only %>
+            <small>Define por onde saem as mensagens automáticas deste cliente. Os campos da Z-API abaixo continuam editáveis.</small>
+          </div>
+        </div>
+        <%= render 'clients/whatsapp_numbers', client: client %>
+
+        <div class="cform-provider">
           <div class="cform-provider__header">
             <span class="cform-logo cform-logo--zapi">Z</span>
             <span class="cform-provider__title">Z-API</span>

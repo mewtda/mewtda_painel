@@ -30,6 +30,11 @@ class Client < ApplicationRecord
 
   def whatsapp_evolution? = whatsapp_provider == 'evolution'
 
+  # Evolution: algum número conectado; Z-API: credenciais preenchidas.
+  def whatsapp_ready?
+    whatsapp_evolution? ? whatsapp_connections.any?(&:connected?) : zapi_configured?
+  end
+
   # Resposta automática por IA no WhatsApp; a Task 9 implementa a configuração real.
   def auto_reply_ready? = false
 

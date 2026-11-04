@@ -1,0 +1,25 @@
+<%# Números do WhatsApp (Evolution Mewtda). Sem <form> próprio: fica dentro do form do cliente; o JS fala com a API. %>
+<% base = client_whatsapp_connections_path(client) %>
+<div class="cform-provider wan" id="wan-section" data-base="<%= base %>" <%= 'hidden' unless client.whatsapp_evolution? %>>
+  <div class="cform-provider__header">
+    <span class="cform-logo cform-logo--whatsapp"><i class="fa-brands fa-whatsapp"></i></span>
+    <span class="cform-provider__title">Números conectados</span>
+    <span class="wan__status" id="wan-status"></span>
+  </div>
+  <% if client.new_record? %>
+    <p class="wan__hint">Salve o cliente para adicionar números.</p>
+  <% else %>
+    <p class="wan__hint">Cada número pertence só a este cliente. Para conectar, abra o WhatsApp Business no celular, vá em Aparelhos conectados e leia o QR.</p>
+    <div id="wan-notice" class="wan__notice" role="status" hidden></div>
+    <div id="wan-cards" class="wan__cards" aria-live="polite"></div>
+    <div class="wan__add">
+      <label class="crm-label" for="wan-name">Adicionar número</label>
+      <input id="wan-name" type="text" class="crm-input" maxlength="80" placeholder="Nome para a equipe (Vendas, Atacado...)" autocomplete="off">
+      <fieldset class="wan__users"><legend class="crm-label">Quem pode atender neste número?</legend><div id="wan-new-users"></div></fieldset>
+      <button type="button" id="wan-add" class="crm-btn crm-btn--primary">Adicionar número</button>
+    </div>
+  <% end %>
+</div>
+<% unless client.new_record? %>
+  <%= javascript_include_tag 'whatsapp_numbers', defer: true %>
+<% end %>

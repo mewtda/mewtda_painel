@@ -40,7 +40,17 @@ Rails.application.routes.draw do
       end
     end
 
-    resources :clients
+    resources :clients do
+      namespace :whatsapp, module: 'whatsapp' do
+        resources :connections, only: %i[index create update destroy] do
+          member do
+            post :connect
+            post :disconnect
+            post :sync
+          end
+        end
+      end
+    end
     resources :campaigns do
       resources :campaign_actions, only: [:index, :show], path: 'actions'
     end

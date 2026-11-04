@@ -79,7 +79,7 @@ class ClientsController < ApplicationController
     params.require(:client).permit(
       :name, :email, :active, :shopify_shop_url, :shopify_access_token,
       :shopify_api_key, :shopify_api_secret, :shopify_storefront_token, :slug,
-      :zapi_instance_id, :zapi_instance_token, :zapi_client_token,
+      :zapi_instance_id, :zapi_instance_token, :zapi_client_token, :whatsapp_provider,
       :whatsapp_cloud_phone_number_id, :whatsapp_cloud_business_account_id, :whatsapp_cloud_access_token,
       :meta_access_token, :meta_ad_account_id,
       :google_ads_customer_id

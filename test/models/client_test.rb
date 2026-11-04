@@ -47,4 +47,21 @@ class ClientTest < ActiveSupport::TestCase
     client = build_client(ses_verification_status: 'verified')
     assert client.ses_domain_verified?
   end
+
+  test 'whatsapp_ready? com Evolution depende de número conectado' do
+    client = Client.create!(name: 'Loja', email: "l-#{SecureRandom.hex(4)}@example.com", whatsapp_provider: 'evolution')
+    connection = client.whatsapp_connections.create!(name: 'A1')
+    assert_not client.whatsapp_ready?
+
+    connection.update!(state: 'connected', enabled: true)
+    assert client.whatsapp_ready?
+
+    connection.update!(enabled: false)
+    assert_not client.reload.whatsapp_ready?
+  end
+
+  test 'whatsapp_ready? com Z-API depende das credenciais' do
+    assert_not build_client.whatsapp_ready?
+    assert build_client(zapi_instance_id: 'i', zapi_instance_token: 't', zapi_client_token: 'c').whatsapp_ready?
+  end
 end

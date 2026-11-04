@@ -73,4 +73,13 @@ class Whatsapp::RouterTest < ActiveSupport::TestCase
     link(@a)
     assert_not_nil @campaign.reload.evolution_started_at
   end
+
+  test 'strict devolve só o preferido conectado, sem cair em outro número' do
+    link(@a)
+    link(@b)
+    assert_equal @b, Whatsapp::Router.pick(campaign: @campaign, phone: '11999990000', prefer: @b, strict: true)
+    @b.update!(state: 'disconnected')
+    assert_nil Whatsapp::Router.pick(campaign: @campaign, phone: '11999990000', prefer: @b, strict: true)
+    assert_nil Whatsapp::Router.pick(campaign: @campaign, phone: '11999990000', strict: true)
+  end
 end

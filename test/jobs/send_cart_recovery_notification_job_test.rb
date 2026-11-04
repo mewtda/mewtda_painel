@@ -94,6 +94,26 @@ class SendCartRecoveryNotificationJobTest < ActiveJob::TestCase
     assert_equal :skipped, @checkout.status
   end
 
+  test 'second message waits while the first connection is disconnected and goes out once it is back' do
+    @client.update!(whatsapp_provider: 'evolution')
+    a = link('A')
+    link('B')
+    @checkout.update!(first_notified_at: 1.day.ago, whatsapp_provider: 'evolution', whatsapp_connection_id: a.id)
+    a.update!(state: 'disconnected')
+
+    assert_no_difference 'Whatsapp::Message.count' do
+      SendCartRecoveryNotificationJob.perform_now(@checkout.id, 'Volta', nil, 'second')
+    end
+    @checkout.reload
+    assert_nil @checkout.second_notified_at
+    assert_nil @checkout.skip_reason
+
+    a.update!(state: 'connected')
+    SendCartRecoveryNotificationJob.perform_now(@checkout.id, 'Volta', nil, 'second')
+    assert_equal a.id, Whatsapp::Message.last.connection_id
+    assert_equal 'Volta', @checkout.reload.second_message_sent
+  end
+
   test 'second message is skipped when the first connection left the campaign' do
     @client.update!(whatsapp_provider: 'evolution')
     link('A')

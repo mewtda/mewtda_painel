@@ -16,7 +16,8 @@ class SendCartRecoveryNotificationJob < ApplicationJob
 
     message = build_message(template, checkout, coupon_code)
     result = Whatsapp::Outbound.deliver(client: client, campaign: campaign, phone: checkout.phone, body: message,
-                                        prefer_connection: channel_locked ? checkout.whatsapp_connection : nil)
+                                        prefer_connection: channel_locked ? checkout.whatsapp_connection : nil,
+                                        strict: channel_locked)
     # Evolution sem número disponível: mantém o checkout pendente para tentar de novo.
     return if !result.ok && result.provider == 'evolution'
 

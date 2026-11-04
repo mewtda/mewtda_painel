@@ -3,14 +3,14 @@ module Whatsapp
   module Outbound
     Result = Struct.new(:ok, :provider, :connection, :message, :error, keyword_init: true)
 
-    def self.deliver(client:, campaign:, phone:, body:, prefer_connection: nil)
+    def self.deliver(client:, campaign:, phone:, body:, prefer_connection: nil, strict: false)
       if campaign && campaign.client_id != client.id
         return Result.new(ok: false, provider: client.whatsapp_evolution? ? 'evolution' : 'zapi',
                           error: 'automação de outro cliente')
       end
       return deliver_zapi(client, phone, body) unless client.whatsapp_evolution?
 
-      connection = Router.pick(campaign: campaign, phone: phone, prefer: prefer_connection)
+      connection = Router.pick(campaign: campaign, phone: phone, prefer: prefer_connection, strict: strict)
       return Result.new(ok: false, provider: 'evolution', error: 'sem número responsável conectado') unless connection
 
       message = enqueue(connection, phone, body)

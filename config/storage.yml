@@ -9,10 +9,11 @@ local:
 # Midia do WhatsApp (ativada em producao via ENV["WHATSAPP_STORAGE_SERVICE"]=amazon)
 amazon:
   service: S3
-  access_key_id: <%= ENV.fetch("WHATSAPP_S3_ACCESS_KEY_ID", "") %>
-  secret_access_key: <%= ENV.fetch("WHATSAPP_S3_SECRET_ACCESS_KEY", "") %>
-  region: <%= ENV.fetch("WHATSAPP_S3_REGION", "us-east-1") %>
-  bucket: <%= ENV.fetch("WHATSAPP_S3_BUCKET", "whatsapp-media-#{Rails.env}") %>
+  # Bucket do add-on Bucketeer do Heroku; WHATSAPP_S3_* sobrescreve se preciso.
+  access_key_id: <%= ENV["WHATSAPP_S3_ACCESS_KEY_ID"].presence || ENV.fetch("BUCKETEER_AWS_ACCESS_KEY_ID", "") %>
+  secret_access_key: <%= ENV["WHATSAPP_S3_SECRET_ACCESS_KEY"].presence || ENV.fetch("BUCKETEER_AWS_SECRET_ACCESS_KEY", "") %>
+  region: <%= ENV["WHATSAPP_S3_REGION"].presence || ENV.fetch("BUCKETEER_AWS_REGION", "us-east-1") %>
+  bucket: <%= ENV["WHATSAPP_S3_BUCKET"].presence || ENV.fetch("BUCKETEER_BUCKET_NAME", "whatsapp-media-#{Rails.env}") %>
 
 # Remember not to checkin your GCS keyfile to a repository
 # google:

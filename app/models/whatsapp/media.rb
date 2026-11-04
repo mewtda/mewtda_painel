@@ -6,6 +6,7 @@ module Whatsapp
     self.table_name = 'whatsapp_media'
     belongs_to :message
     MAX_BYTES = 16.megabytes
+    MEDIA_KINDS = %w[image video audio document sticker].freeze
     DOCUMENT_TYPES = %w[
       application/pdf text/plain text/csv application/msword application/vnd.ms-excel application/zip
       application/vnd.openxmlformats-officedocument.wordprocessingml.document
@@ -50,7 +51,8 @@ module Whatsapp
       begin
         service.upload(key, io, content_type: type)
         record.save!
-        message.update!(kind: kind, media_state: 'ready')
+        # Ingest já define o tipo pela mensagem do WhatsApp (figurinha, vídeo webm); só uploads novos o deduzem.
+        message.update!(kind: MEDIA_KINDS.include?(message.kind) ? message.kind : kind, media_state: 'ready')
       rescue StandardError
         service.delete(key)
         raise

@@ -52,13 +52,20 @@ class Whatsapp::RouterTest < ActiveSupport::TestCase
     assert_equal @b, Whatsapp::Router.pick(campaign: @campaign, phone: '5511999990000')
   end
 
-  test 'número de outro cliente não pode ser ligado nem escolhido' do
+  test 'número de outro cliente não pode ser ligado' do
     other = Client.create!(name: 'Outra', email: "o-#{SecureRandom.hex(4)}@example.com")
-    foreign = connect('X', client: other)
-    link = Whatsapp::CampaignConnection.new(campaign: @campaign, connection: foreign)
+    link = Whatsapp::CampaignConnection.new(campaign: @campaign, connection: connect('X', client: other))
     assert_not link.valid?
     assert_includes link.errors[:connection], 'número de outro cliente'
+  end
+
+  test 'número de outro cliente ligado por fora da validação nunca é escolhido' do
+    other = Client.create!(name: 'Outra', email: "o-#{SecureRandom.hex(4)}@example.com")
+    foreign = connect('X', client: other)
+    Whatsapp::CampaignConnection.new(campaign: @campaign, connection: foreign).save!(validate: false)
     assert_nil Whatsapp::Router.pick(campaign: @campaign, phone: '11999990000')
+    link(@a)
+    3.times { assert_equal @a, Whatsapp::Router.pick(campaign: @campaign, phone: '11999990000', prefer: foreign) }
   end
 
   test 'primeira ligação marca evolution_started_at' do

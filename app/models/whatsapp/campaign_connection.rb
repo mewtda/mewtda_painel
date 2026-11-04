@@ -11,7 +11,7 @@ module Whatsapp
     end
 
     after_create do
-      campaign.update!(evolution_started_at: Time.current) if campaign.evolution_started_at.nil?
+      campaign.update_column(:evolution_started_at, Time.current) if campaign.evolution_started_at.nil?
     end
   end
 end

@@ -5,7 +5,8 @@ module Whatsapp
       return unless campaign
 
       campaign.with_lock do
-        links = campaign.whatsapp_campaign_connections.includes(:connection).to_a.select { |l| l.connection.connected? }
+        links = campaign.whatsapp_campaign_connections.includes(:connection).to_a
+                     .select { |l| l.connection.client_id == campaign.client_id && l.connection.connected? }
         next if links.empty?
 
         chosen = links.find { |l| prefer && l.connection_id == prefer.id } || sticky(links, phone) || oldest(links)

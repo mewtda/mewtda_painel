@@ -90,4 +90,36 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
       assert_empty calls
     end
   end
+
+  test 'o job é enfileirado fora da transação, com a mensagem já persistida' do
+    evolution!
+    baseline = Whatsapp::Message.connection.open_transactions
+    seen = nil
+    original = Whatsapp::SendJob.method(:set)
+    Whatsapp::SendJob.define_singleton_method(:set) do |*args, **kw|
+      seen = Whatsapp::Message.connection.open_transactions
+      original.call(*args, **kw)
+    end
+    begin
+      result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
+    ensure
+      Whatsapp::SendJob.define_singleton_method(:set, original)
+    end
+    assert_equal baseline, seen
+    assert_enqueued_with(job: Whatsapp::SendJob, args: [result.message.id])
+    assert Whatsapp::Message.exists?(result.message.id)
+  end
+
+  test 'automação de outro cliente não envia por nenhum provedor' do
+    evolution!
+    other = Client.create!(name: 'Outra', email: "o-#{SecureRandom.hex(4)}@example.com")
+    with_zapi_stub({ 'zaapId' => 'x' }) do |calls|
+      assert_no_difference 'Whatsapp::Message.count' do
+        result = Whatsapp::Outbound.deliver(client: other, campaign: @campaign, phone: '11999990000', body: 'oi')
+        assert_not result.ok
+        assert_equal 'automação de outro cliente', result.error
+      end
+      assert_empty calls
+    end
+  end
 end

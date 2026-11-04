@@ -4,6 +4,10 @@ module Whatsapp
     Result = Struct.new(:ok, :provider, :connection, :message, :error, keyword_init: true)
 
     def self.deliver(client:, campaign:, phone:, body:, prefer_connection: nil)
+      if campaign && campaign.client_id != client.id
+        return Result.new(ok: false, provider: client.whatsapp_evolution? ? 'evolution' : 'zapi',
+                          error: 'automação de outro cliente')
+      end
       return deliver_zapi(client, phone, body) unless client.whatsapp_evolution?
 
       connection = Router.pick(campaign: campaign, phone: phone, prefer: prefer_connection)
@@ -21,6 +25,7 @@ module Whatsapp
 
     def self.enqueue(connection, phone, body)
       message = nil
+      slot = nil
       connection.with_lock do
         now = Time.current
         jid = "#{format_phone(phone)}@s.whatsapp.net"
@@ -32,8 +37,9 @@ module Whatsapp
                                   direction: 'outgoing', state: 'queued', kind: 'text', body: body, sent_at: now,
                                   send_after: slot, client_nonce: SecureRandom.hex(16))
         conversation.update!(last_message_at: now, last_message_preview: message.preview.truncate(120))
-        SendJob.set(wait_until: slot).perform_later(message.id)
       end
+      # Fora da transação: o worker só pode enxergar a mensagem depois do commit.
+      SendJob.set(wait_until: slot).perform_later(message.id)
       message
     end
 

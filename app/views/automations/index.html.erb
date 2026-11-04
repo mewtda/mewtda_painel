@@ -10,7 +10,7 @@
     </p>
   </div>
 
-  <% unless @client.zapi_configured? %>
+  <% unless @client.whatsapp_ready? %>
     <div class="campaigns-alert campaigns-alert--danger">
       <div class="campaigns-alert__icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -18,9 +18,16 @@
         </svg>
       </div>
       <div class="campaigns-alert__content">
-        <strong>Integração Zapi não configurada!</strong>
-        <p>As automações não serão executadas enquanto a integração Zapi não estiver configurada.</p>
-        <%= link_to 'Configurar Zapi', edit_settings_path, class: 'campaigns-alert__link' %>
+        <% if @client.whatsapp_evolution? %>
+          <strong>Nenhum número Evolution conectado!</strong>
+          <p>As automações não serão executadas enquanto não houver um número Evolution conectado.</p>
+        <% else %>
+          <strong>Integração Zapi não configurada!</strong>
+          <p>As automações não serão executadas enquanto a integração Zapi não estiver configurada.</p>
+        <% end %>
+        <% unless @client.whatsapp_evolution? %>
+          <%= link_to 'Configurar Zapi', edit_settings_path, class: 'campaigns-alert__link' %>
+        <% end %>
       </div>
     </div>
   <% end %>

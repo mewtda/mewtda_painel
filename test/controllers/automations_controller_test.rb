@@ -178,4 +178,102 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to cart_recovery_data_automation_path
   end
+
+  def evolution_client
+    Client.create!(name: 'Loja Evo', email: "evo-#{SecureRandom.hex(4)}@example.com", whatsapp_provider: 'evolution')
+  end
+
+  def saved_cart_campaign(client)
+    client.campaigns.create!(
+      name: 'Recuperação', kind: 'cart_recovery', message: 'Oi',
+      start_date: Date.current - 1.day, end_date: Date.current + 1.year, send_delay_minutes: 60
+    )
+  end
+
+  test 'update_numbers links only numbers of the same client' do
+    client = evolution_client
+    campaign = saved_cart_campaign(client)
+    mine = client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
+    other_client = evolution_client
+    foreign = other_client.whatsapp_connections.create!(name: 'Alheio', state: 'connected')
+    sign_in build_user(client: client)
+
+    patch automation_numbers_path(kind: 'cart-recovery'), params: { connection_ids: [mine.id, foreign.id] }
+
+    assert_redirected_to edit_cart_recovery_automation_path
+    assert_equal [mine.id], campaign.reload.whatsapp_connections.pluck(:id)
+  end
+
+  test 'update_numbers removes numbers that were unchecked' do
+    client = evolution_client
+    campaign = saved_cart_campaign(client)
+    mine = client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
+    Whatsapp::CampaignConnection.create!(campaign: campaign, connection: mine)
+    sign_in build_user(client: client)
+
+    patch automation_numbers_path(kind: 'cart-recovery')
+
+    assert_empty campaign.reload.whatsapp_connections
+  end
+
+  test 'update_numbers asks to save the automation first when it is not persisted' do
+    client = evolution_client
+    client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
+    sign_in build_user(client: client)
+
+    patch automation_numbers_path(kind: 'tracking'), params: { connection_ids: [client.whatsapp_connections.first.id] }
+
+    assert_redirected_to edit_tracking_automation_path
+    assert_equal 'Salve a automação antes de importar números.', flash[:alert]
+    assert_equal 0, Whatsapp::CampaignConnection.count
+  end
+
+  test 'update_numbers is a no-op for a Z-API client' do
+    client = Client.create!(name: 'Loja', email: "z-#{SecureRandom.hex(4)}@example.com")
+    saved_cart_campaign(client)
+    sign_in build_user(client: client)
+
+    patch automation_numbers_path(kind: 'cart-recovery'), params: { connection_ids: [1] }
+
+    assert_redirected_to edit_cart_recovery_automation_path
+    assert_equal 0, Whatsapp::CampaignConnection.count
+  end
+
+  test 'cart recovery edit page shows metrics and the numbers partial for evolution clients' do
+    client = evolution_client
+    client.abandoned_checkouts.create!(shopify_checkout_id: 'a', total_price: 150, checkout_created_at: 1.day.ago)
+    sign_in build_user(client: client)
+
+    get edit_cart_recovery_automation_path
+
+    assert_response :success
+    assert_includes response.body, 'Ticket médio'
+    assert_includes response.body, 'R$ 150,00'
+    assert_includes response.body, 'Importe um número responsável'
+    assert_includes response.body, 'Nenhum número Evolution conectado'
+  end
+
+  test 'cart recovery data page shows metrics and honors period' do
+    client = Client.create!(name: 'Loja', email: "m-#{SecureRandom.hex(4)}@example.com")
+    client.abandoned_checkouts.create!(shopify_checkout_id: 'a', total_price: 100, checkout_created_at: 2.days.ago)
+    client.abandoned_checkouts.create!(shopify_checkout_id: 'b', total_price: 300, checkout_created_at: 20.days.ago)
+    sign_in build_user(client: client)
+
+    get cart_recovery_data_automation_path(period: 7)
+    assert_includes response.body, 'Ticket médio'
+    assert_includes response.body, 'R$ 100,00'
+
+    get cart_recovery_data_automation_path(period: 'bogus')
+    assert_includes response.body, 'R$ 200,00'
+  end
+
+  test 'zapi client without configuration sees the Zapi warning, not the numbers partial' do
+    client = Client.create!(name: 'Loja', email: "w-#{SecureRandom.hex(4)}@example.com")
+    sign_in build_user(client: client)
+
+    get edit_cashback_automation_path
+
+    assert_includes response.body, 'Integração Zapi não configurada'
+    assert_not_includes response.body, 'Importe um número responsável'
+  end
 end

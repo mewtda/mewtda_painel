@@ -1,0 +1,16 @@
+<%# locals: (metrics:, period:, path:) %>
+<% brl = ->(value) { number_to_currency(value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') } %>
+<div class="cart-metrics" style="margin-bottom: 1.5rem;">
+  <div style="display: flex; gap: .5rem; margin-bottom: .75rem; flex-wrap: wrap;">
+    <% [7, 30, 90].each do |days| %>
+      <%= link_to "#{days} dias", url_for(path.merge(period: days, only_path: true)),
+                  class: "btn #{'btn-primary' if days == period}", style: 'padding: .25rem .75rem;' %>
+    <% end %>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .75rem;">
+    <div class="automations-card"><strong>Ticket médio</strong><p><%= brl.call(metrics[:average_ticket]) %></p></div>
+    <div class="automations-card"><strong>Checkouts abandonados</strong><p><%= metrics[:count] %></p></div>
+    <div class="automations-card"><strong>Valor abandonado</strong><p><%= brl.call(metrics[:total]) %></p></div>
+    <div class="automations-card"><strong>Valor recuperado</strong><p><%= brl.call(metrics[:recovered_total]) %> (<%= metrics[:recovered_count] %>)</p></div>
+  </div>
+</div>

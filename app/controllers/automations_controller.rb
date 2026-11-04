@@ -38,6 +38,29 @@ class AutomationsController < ApplicationController
 
   def edit_cart_recovery
     @campaign = cart_recovery_campaign
+    load_cart_recovery_metrics
+  end
+
+  # Define os números responsáveis da automação; só aceita números do próprio cliente.
+  def update_numbers
+    kind = params[:kind]
+    campaign = case kind
+               when 'tracking' then tracking_campaign
+               when 'cashback' then cashback_campaign
+               else cart_recovery_campaign
+               end
+    back = { 'tracking' => edit_tracking_automation_path, 'cashback' => edit_cashback_automation_path }
+           .fetch(kind, edit_cart_recovery_automation_path)
+
+    return redirect_to back, alert: 'Salve a automação antes de importar números.' unless campaign.persisted?
+    return redirect_to back, alert: 'Este cliente não usa números Evolution.' unless @client.whatsapp_evolution?
+
+    ids = @client.whatsapp_connections.where(id: Array(params[:connection_ids])).pluck(:id)
+    Whatsapp::CampaignConnection.transaction do
+      campaign.whatsapp_campaign_connections.where.not(connection_id: ids).destroy_all
+      ids.each { |id| campaign.whatsapp_campaign_connections.find_or_create_by!(connection_id: id) }
+    end
+    redirect_to back, notice: 'Números responsáveis atualizados.'
   end
 
   def update_cart_recovery
@@ -45,6 +68,7 @@ class AutomationsController < ApplicationController
     if @campaign.update(cart_recovery_params)
       redirect_to automations_path, notice: 'Automação de recuperação de carrinho salva com sucesso.'
     else
+      load_cart_recovery_metrics
       render :edit_cart_recovery, status: :unprocessable_entity
     end
   end
@@ -52,6 +76,7 @@ class AutomationsController < ApplicationController
   # Fila de checkouts abandonados com telefone — não usa CampaignAction (não
   # há Order nem sempre Customer pra vincular), então tem sua própria tela.
   def cart_recovery_data
+    load_cart_recovery_metrics
     @checkouts = @client.abandoned_checkouts
                         .with_phone
                         .recent
@@ -77,6 +102,12 @@ class AutomationsController < ApplicationController
   end
 
   private
+
+  # Período dos cards de ticket médio: 7, 30 (padrão) ou 90 dias.
+  def load_cart_recovery_metrics
+    @period = %w[7 30 90].include?(params[:period].to_s) ? params[:period].to_i : 30
+    @metrics = Sales::AbandonedCheckoutMetrics.new(@client, from: @period.days.ago, to: Time.current).call
+  end
 
   def require_client!
     redirect_to crm_path, alert: 'Nenhum cliente selecionado.' unless @client

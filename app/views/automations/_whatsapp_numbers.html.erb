@@ -1,0 +1,25 @@
+<%# locals: (campaign:, client:, kind:) %>
+<% if client.whatsapp_evolution? %>
+  <% selected_ids = campaign.persisted? ? campaign.whatsapp_connection_ids : [] %>
+  <div class="cpform-section">
+    <div class="cpform-section__header"><h3 class="cpform-section__title">Números responsáveis</h3></div>
+    <% if selected_ids.empty? %>
+      <div class="cpform-alert cpform-alert--warning">
+        <div><strong>Importe um número responsável — esta automação não envia sem ele.</strong></div>
+      </div>
+    <% end %>
+    <%= form_with url: automation_numbers_path(kind: kind), method: :patch, html: { autocomplete: 'off' } do %>
+      <% if client.whatsapp_connections.empty? %>
+        <p>Este cliente ainda não tem números WhatsApp cadastrados.</p>
+      <% end %>
+      <% client.whatsapp_connections.order(:name).each do |connection| %>
+        <label style="display: block; margin-bottom: .5rem;">
+          <%= check_box_tag 'connection_ids[]', connection.id, selected_ids.include?(connection.id), id: "connection_#{connection.id}" %>
+          <%= connection.name %><%= " — #{connection.phone}" if connection.phone.present? %>
+          <em>(<%= connection.connected? ? 'Conectado' : 'Desconectado' %>)</em>
+        </label>
+      <% end %>
+      <%= submit_tag 'Salvar números', class: 'btn btn-primary' %>
+    <% end %>
+  </div>
+<% end %>

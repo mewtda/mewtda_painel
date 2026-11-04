@@ -18,6 +18,8 @@
     </div>
   </div>
 
+  <%= render 'automations/cart_recovery_metrics', metrics: @metrics, period: @period, path: { action: :cart_recovery_data } %>
+
   <div class="campaign-show-table-wrap">
     <div class="campaign-show-table-header">
       <span class="campaign-show-table-header__title">

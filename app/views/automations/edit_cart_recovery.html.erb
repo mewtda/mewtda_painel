@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <% unless @client.zapi_configured? %>
+    <% unless @client.whatsapp_ready? %>
       <div class="cpform-alert cpform-alert--danger">
         <div class="cpform-alert__icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -37,8 +37,13 @@
           </svg>
         </div>
         <div>
-          <strong>Atenção: Integração Zapi não configurada!</strong>
-          <p>Esta automação não será executada até que a integração Zapi seja configurada.</p>
+          <% if @client.whatsapp_evolution? %>
+            <strong>Atenção: Nenhum número Evolution conectado!</strong>
+            <p>Esta automação não será executada até que um número Evolution esteja conectado.</p>
+          <% else %>
+            <strong>Atenção: Integração Zapi não configurada!</strong>
+            <p>Esta automação não será executada até que a integração Zapi seja configurada.</p>
+          <% end %>
         </div>
       </div>
     <% end %>
@@ -60,6 +65,10 @@
         </div>
       </div>
     <% end %>
+
+    <%= render 'automations/cart_recovery_metrics', metrics: @metrics, period: @period, path: { action: :edit_cart_recovery } %>
+
+    <%= render 'automations/whatsapp_numbers', campaign: @campaign, client: @client, kind: 'cart-recovery' %>
 
     <%= form_with model: @campaign, url: cart_recovery_automation_path, method: :patch, html: { autocomplete: 'off' } do |form| %>
       <div class="cpform-card__body">

@@ -65,6 +65,8 @@ Rails.application.routes.draw do
     patch 'automations/cart-recovery',      to: 'automations#update_cart_recovery', as: :cart_recovery_automation
     get   'automations/cart-recovery/data', to: 'automations#cart_recovery_data',
                                             as: :cart_recovery_data_automation
+    patch 'automations/:kind/numbers',      to: 'automations#update_numbers', as: :automation_numbers,
+                                            constraints: { kind: /tracking|cashback|cart-recovery/ }
     post  'automations/cart-recovery/data/:id/resend', to: 'automations#resend_cart_recovery',
                                                        as: :resend_cart_recovery_automation
 

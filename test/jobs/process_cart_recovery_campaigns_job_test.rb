@@ -61,3 +61,57 @@ class ProcessCartRecoveryCampaignsJobTest < ActiveJob::TestCase
     end
   end
 end
+
+class ProcessCartRecoveryEvolutionTest < ActiveJob::TestCase
+  def setup
+    @client = Client.create!(name: 'Loja Evo', email: "evo-#{SecureRandom.hex(4)}@example.com",
+                             whatsapp_provider: 'evolution')
+    @campaign = @client.campaigns.create!(
+      name: 'Recuperação', kind: 'cart_recovery', message: 'Oi {nome}',
+      start_date: Date.current - 1.day, end_date: Date.current + 1.year, send_delay_minutes: 60
+    )
+  end
+
+  def checkout(created_at)
+    @client.abandoned_checkouts.create!(shopify_checkout_id: SecureRandom.hex(6), phone: '+5511999999999',
+                                        checkout_created_at: created_at)
+  end
+
+  def connect!
+    conn = @client.whatsapp_connections.create!(name: 'A', state: 'connected')
+    Whatsapp::CampaignConnection.create!(campaign: @campaign, connection: conn)
+    conn
+  end
+
+  test 'evolution only sends checkouts created after the first number was linked' do
+    old = checkout(3.hours.ago)
+    connect!
+    @campaign.reload.update_column(:evolution_started_at, 2.hours.ago)
+    fresh = checkout(90.minutes.ago)
+
+    assert_enqueued_jobs 1, only: SendCartRecoveryNotificationJob do
+      ProcessCartRecoveryCampaignsJob.perform_now(@client.id)
+    end
+    assert_enqueued_with(job: SendCartRecoveryNotificationJob, args: [fresh.id, 'Oi {nome}', nil, 'first'])
+    assert_equal :pending, old.reload.status
+  end
+
+  test 'evolution without evolution_started_at sends nothing' do
+    connect!
+    @campaign.update_column(:evolution_started_at, nil)
+    checkout(3.hours.ago)
+
+    assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob) do
+      ProcessCartRecoveryCampaignsJob.perform_now(@client.id)
+    end
+  end
+
+  test 'evolution client without connected number sends nothing' do
+    @client.whatsapp_connections.create!(name: 'A', state: 'disconnected')
+    checkout(3.hours.ago)
+
+    assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob) do
+      ProcessCartRecoveryCampaignsJob.perform_now(@client.id)
+    end
+  end
+end

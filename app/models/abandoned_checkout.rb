@@ -4,6 +4,8 @@ class AbandonedCheckout < ApplicationRecord
 
   belongs_to :client
   belongs_to :customer, optional: true
+  belongs_to :whatsapp_connection, class_name: 'Whatsapp::Connection', optional: true
+  belongs_to :whatsapp_conversation, class_name: 'Whatsapp::Conversation', optional: true
 
   scope :recent, -> { order(checkout_created_at: :desc) }
   scope :with_phone, -> { where.not(phone: [nil, '']) }
@@ -19,6 +21,7 @@ class AbandonedCheckout < ApplicationRecord
 
   def status
     return :recovered if recovered?
+    return :skipped if skip_reason.present?
     return :second_sent if second_notified_at.present?
     return :first_sent if first_notified_at.present?
 

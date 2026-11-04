@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_04_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_04_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -37,10 +37,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_130000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "slug"
+    t.string "whatsapp_provider"
+    t.string "skip_reason"
+    t.bigint "whatsapp_connection_id"
+    t.bigint "whatsapp_conversation_id"
     t.index ["client_id", "shopify_checkout_id"], name: "index_abandoned_checkouts_on_client_and_shopify_id", unique: true
     t.index ["client_id"], name: "index_abandoned_checkouts_on_client_id"
     t.index ["customer_id"], name: "index_abandoned_checkouts_on_customer_id"
     t.index ["slug"], name: "index_abandoned_checkouts_on_slug", unique: true
+    t.index ["whatsapp_connection_id"], name: "index_abandoned_checkouts_on_whatsapp_connection_id"
+    t.index ["whatsapp_conversation_id"], name: "index_abandoned_checkouts_on_whatsapp_conversation_id"
   end
 
   create_table "active_storage_attachments", force: :cascade do |t|
@@ -720,6 +726,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_130000) do
 
   add_foreign_key "abandoned_checkouts", "clients"
   add_foreign_key "abandoned_checkouts", "customers"
+  add_foreign_key "abandoned_checkouts", "whatsapp_connections", on_delete: :nullify
+  add_foreign_key "abandoned_checkouts", "whatsapp_conversations", on_delete: :nullify
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ad_cost_snapshots", "clients"

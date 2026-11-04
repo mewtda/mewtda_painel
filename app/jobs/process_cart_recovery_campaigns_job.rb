@@ -16,15 +16,20 @@ class ProcessCartRecoveryCampaignsJob < ApplicationJob
   def process_client(client)
     campaign = client.campaigns.running.find_by(kind: :cart_recovery)
     return unless campaign
-    return unless client.zapi_configured?
+    return unless client.whatsapp_ready?
 
     process_first_notifications(client, campaign)
     process_resend_notifications(client, campaign) if campaign.resend_enabled?
   end
 
   def process_first_notifications(client, campaign)
+    # Na Evolution só entram checkouts criados depois do primeiro número vinculado à automação.
+    evolution_since = campaign.evolution_started_at
+    return if client.whatsapp_evolution? && evolution_since.nil?
+
     client.abandoned_checkouts.pending_first_notification.find_each do |checkout|
       next if checkout.checkout_created_at.blank?
+      next if client.whatsapp_evolution? && checkout.checkout_created_at < evolution_since
       next if checkout.checkout_created_at + campaign.send_delay_minutes.minutes > Time.current
 
       coupon_code = campaign.include_coupon? ? campaign.coupon_code : nil

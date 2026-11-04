@@ -68,6 +68,8 @@
               <% case checkout.status %>
               <% when :recovered %>
                 <span class="campaign-show-table__status campaign-show-table__status--recovered">Recuperado</span>
+              <% when :skipped %>
+                <span class="campaign-show-table__status campaign-show-table__status--pending" title="<%= checkout.skip_reason %>">Pulada</span>
               <% when :second_sent %>
                 <span class="campaign-show-table__status campaign-show-table__status--info">2ª enviada</span>
               <% when :first_sent %>

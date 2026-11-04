@@ -19,6 +19,9 @@ Rails.application.routes.draw do
     match 'shopify/events', to: 'shopify_events#create', via: [:post, :options]
   end
 
+  # Webhook da Evolution API: autenticado pelo token do número, fora do CRM.
+  post 'whatsapp/webhooks/:instance_key', to: 'whatsapp/webhooks#create'
+
   namespace :widget do
     get  'popup/config',      to: 'popup#show_config'
     post 'popup/submissions', to: 'popup#create_submission'

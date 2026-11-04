@@ -30,6 +30,9 @@ class Client < ApplicationRecord
 
   def whatsapp_evolution? = whatsapp_provider == 'evolution'
 
+  # Resposta automática por IA no WhatsApp; a Task 9 implementa a configuração real.
+  def auto_reply_ready? = false
+
   def site_url_configured?
     site_url.present?
   end

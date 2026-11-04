@@ -7,3 +7,8 @@ landing_pages_products_sync:
   cron: "0 5 * * * America/Sao_Paulo"
   class: "LandingPagesProductsSyncJob"
   queue: default
+
+whatsapp_recovery:
+  cron: "* * * * *"
+  class: "Whatsapp::RecoveryJob"
+  queue: whatsapp

@@ -1,4 +1,5 @@
 <% title 'Automação de Recuperação de Carrinho' %>
+<% content_for :head do %><%= stylesheet_link_tag 'whatsapp_support', media: 'all' %><% end %>
 
 <div class="cpform-wrapper cpform-wrapper--with-preview">
   <div class="cpform-card">
@@ -271,6 +272,15 @@
 
   <%= render 'automations/whatsapp_preview' %>
 </div>
+
+<% if @conversation_connections %>
+  <div class="cpform-conversations" id="conversas">
+    <h3 class="cpform-section__title"><i class="fa-solid fa-comments"></i> Conversas desta automação</h3>
+    <%= render 'whatsapp/conversations/inbox', connections: @conversation_connections, campaign: @campaign,
+                                              client: @client, empty_state: false, empty_message: nil,
+                                              show_header: false %>
+  </div>
+<% end %>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {

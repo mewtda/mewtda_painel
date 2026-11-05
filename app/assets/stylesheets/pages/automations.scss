@@ -175,3 +175,7 @@
 
 .wa-bubble__time { font-size: 10px; color: rgba(0, 0, 0, 0.45); }
 .wa-bubble__check { font-size: 10px; color: #4fc3f7; }
+
+// Caixa de conversas do WhatsApp embutida na página da automação.
+.cpform-conversations { margin-top: 24px; }
+.cpform-conversations .wa-app { min-height: 640px; }

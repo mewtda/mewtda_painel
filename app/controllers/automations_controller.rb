@@ -39,6 +39,7 @@ class AutomationsController < ApplicationController
   def edit_cart_recovery
     @campaign = cart_recovery_campaign
     load_cart_recovery_metrics
+    load_conversation_connections
   end
 
   # Define os números responsáveis da automação; só aceita números do próprio cliente.
@@ -112,6 +113,15 @@ class AutomationsController < ApplicationController
   def load_cart_recovery_metrics
     @period = %w[7 30 90].include?(params[:period].to_s) ? params[:period].to_i : 30
     @metrics = Sales::AbandonedCheckoutMetrics.new(@client, from: @period.days.ago, to: Time.current).call
+  end
+
+  # Números da automação que o usuário pode ver, para a caixa de conversas na própria página.
+  def load_conversation_connections
+    return unless @campaign.persisted? && @campaign.whatsapp_connections.exists?
+
+    @conversation_connections = Whatsapp::Connection.visible_to(current_user, client: @client)
+                                                    .where(id: @campaign.whatsapp_connections.select(:id))
+                                                    .order(:name).to_a
   end
 
   def require_client!

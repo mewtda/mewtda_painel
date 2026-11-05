@@ -313,7 +313,8 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     Whatsapp::CampaignConnection.create!(campaign: campaign,
                                          connection: client.whatsapp_connections.create!(name: 'Meu'))
     get edit_cart_recovery_automation_path
-    assert_select 'a[href=?]', "/crm/whatsapp/conversations?campaign_id=#{campaign.id}", text: /Conversas desta automação/
+    assert_select 'a[href=?]', '#conversas', text: /Conversas desta automação/
+    assert_select '#conversas #wa-inbox[data-campaign-id=?]', campaign.id.to_s
   end
 
   test 'resend_cart_recovery avisa quando o canal da 1ª mensagem não está disponível' do

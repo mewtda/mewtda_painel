@@ -261,4 +261,59 @@ class Sales::MonthlyMetricsTest < ActiveSupport::TestCase
       assert_equal :approximate, result[:tagged_revenue_source]
     end
   end
+
+  class FakeReport
+    attr_reader :queries
+
+    def initialize(sales:, sessions:)
+      @sales = sales
+      @sessions = sessions
+      @queries = []
+    end
+
+    def rows(query)
+      @queries << query
+      query.start_with?('FROM sessions') ? @sessions : @sales
+    end
+  end
+
+  test 'metas usam os números do relatório da Shopify quando disponível' do
+    fake = FakeReport.new(
+      sales: [{ 'total_sales' => '373854.23', 'gross_sales' => '490593.9', 'discounts' => '-61126.01',
+                'returns' => '-66092.24', 'shipping_charges' => '10478.58', 'taxes' => '0', 'orders' => '805',
+                'average_order_value' => '531.596', 'new_customers' => '589' }],
+      sessions: [{ 'sessions' => '107367', 'conversion_rate' => '0.007115780453956989' }]
+    )
+    Sales::ShopifyReport.stub(:new, fake) do
+      m = Sales::MonthlyMetrics.new(client: @client, year: 2026, month: 10).call
+      assert_equal :shopify, m[:metrics_source]
+      assert_equal BigDecimal('373854.23'), m[:revenue]
+      assert_equal BigDecimal('490593.9'), m[:gross_sales]
+      assert_equal BigDecimal('61126.01'), m[:discounts]
+      assert_equal BigDecimal('66092.24'), m[:returns]
+      assert_equal BigDecimal('10478.58'), m[:shipping]
+      assert_equal 805, m[:orders_count]
+      assert_equal BigDecimal('531.60'), m[:avg_ticket]
+      assert_equal 589, m[:new_customers_count]
+      assert_equal 0.71, m[:conversion_rate]
+    end
+    assert(fake.queries.any? { |q| q.include?("TIMEZONE 'America/Sao_Paulo', CURRENCY 'BRL' SINCE 2026-10-01 UNTIL 2026-10-31") })
+  end
+
+  test 'filtro de tag entra na consulta de vendas da Shopify' do
+    fake = FakeReport.new(sales: [{ 'total_sales' => '10', 'orders' => '1' }], sessions: nil)
+    Sales::ShopifyReport.stub(:new, fake) do
+      Sales::MonthlyMetrics.new(client: @client, year: 2026, month: 10, tag: 'Eloina').call
+    end
+    assert(fake.queries.any? { |q| q.include?("WHERE order_tags CONTAINS 'VendedoraElo' OR order_tags CONTAINS 'Eloina'") })
+  end
+
+  test 'sem relatório da Shopify as metas usam os pedidos sincronizados' do
+    fake = FakeReport.new(sales: nil, sessions: nil)
+    Sales::ShopifyReport.stub(:new, fake) do
+      m = Sales::MonthlyMetrics.new(client: @client, year: 2026, month: 10).call
+      assert_equal :approximate, m[:metrics_source]
+      assert_nil m[:returns]
+    end
+  end
 end

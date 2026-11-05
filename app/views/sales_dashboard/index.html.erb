@@ -66,6 +66,9 @@
       <div class="crm-kpi-card sd-kpi-card--wide">
         <div class="crm-kpi-card__label">Faturamento</div>
         <div class="crm-kpi-card__value"><%= currency(@metrics[:revenue]) %></div>
+        <div class="sd-kpi__hint">
+          <%= @metrics[:metrics_source] == :shopify ? 'Números do relatório da Shopify' : 'Aproximado: soma dos pedidos sincronizados (relatório da Shopify indisponível)' %>
+        </div>
         <div class="sd-breakdown">
           <div class="sd-breakdown__row">
             <span class="sd-breakdown__label">Bruto</span>
@@ -79,10 +82,22 @@
             <span class="sd-breakdown__label">= Faturamento (líquido)</span>
             <span class="sd-breakdown__value"><%= currency(@metrics[:net_of_discounts]) %></span>
           </div>
+          <% if @metrics[:returns] %>
+            <div class="sd-breakdown__row sd-breakdown__row--neg">
+              <span class="sd-breakdown__label">− Devoluções</span>
+              <span class="sd-breakdown__value"><%= currency(@metrics[:returns]) %></span>
+            </div>
+          <% end %>
           <div class="sd-breakdown__row sd-breakdown__row--pos">
             <span class="sd-breakdown__label">+ Frete</span>
             <span class="sd-breakdown__value"><%= currency(@metrics[:shipping]) %></span>
           </div>
+          <% if @metrics[:taxes].to_f.positive? %>
+            <div class="sd-breakdown__row sd-breakdown__row--pos">
+              <span class="sd-breakdown__label">+ Impostos</span>
+              <span class="sd-breakdown__value"><%= currency(@metrics[:taxes]) %></span>
+            </div>
+          <% end %>
           <div class="sd-breakdown__row sd-breakdown__row--total">
             <span class="sd-breakdown__label">= Faturamento</span>
             <span class="sd-breakdown__value"><%= currency(@metrics[:revenue]) %></span>

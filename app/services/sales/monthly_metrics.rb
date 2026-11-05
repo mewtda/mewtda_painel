@@ -9,8 +9,12 @@ module Sales
 
     def call
       {
+        # :shopify = números do relatório da Shopify; :approximate = pedidos sincronizados.
+        metrics_source: report_sales ? :shopify : :approximate,
         revenue: revenue,
         gross_sales: gross_sales,
+        returns: returns,
+        taxes: taxes,
         discounts: discounts,
         net_of_discounts: net_of_discounts,
         shipping: shipping,
@@ -67,36 +71,60 @@ module Sales
       scope
     end
 
+    # Com o relatório da Shopify: vendas totais (bruto − descontos − devoluções
+    # + frete + impostos), igual ao admin da loja. Sem ele: Bruto − Descontos + Frete
+    # dos pedidos sincronizados.
     def revenue
+      return money(report_sales['total_sales']) if report_sales
+
       net_of_discounts + shipping
+    end
+
+    def returns
+      money(report_sales['returns']).abs if report_sales
+    end
+
+    def taxes
+      money(report_sales['taxes']) if report_sales
     end
 
     # subtotal_price do Shopify já vem líquido de descontos (não é o "bruto" de fato).
     # Reconstituímos o valor bruto somando o desconto de volta, pra a UI mostrar
     # o caminho completo: Bruto - Descontos = Faturamento.
     def gross_sales
+      return money(report_sales['gross_sales']) if report_sales
+
       net_of_discounts + discounts
     end
 
     def net_of_discounts
+      return gross_sales - discounts if report_sales
+
       orders_scope.sum(:subtotal_price)
     end
 
     def discounts
+      return money(report_sales['discounts']).abs if report_sales
+
       orders_scope.sum(:total_discounts)
     end
 
     def shipping
+      return money(report_sales['shipping_charges']) if report_sales
+
       orders_scope.sum(:total_shipping_price)
     end
 
     def orders_count
+      return report_sales['orders'].to_i if report_sales
+
       orders_scope.count
     end
 
     # Baseado no valor original de cada pedido (não no Faturamento ajustado por
     # reembolsos de outros períodos), pra representar o ticket de fato daquele pedido.
     def avg_ticket
+      return money(report_sales['average_order_value']).round(2) if report_sales && orders_count.positive?
       return nil if orders_count.zero?
 
       orders_scope.sum(:total_price) / orders_count
@@ -130,6 +158,8 @@ module Sales
     end
 
     def new_customers_count
+      return report_sales['new_customers'].to_i if report_sales
+
       Customer
         .joins(:orders)
         .where(orders: { client_id: client.id, cancelled_at: nil })
@@ -162,6 +192,7 @@ module Sales
     end
 
     def conversion_rate
+      return (report_sessions['conversion_rate'].to_f * 100).round(2) if report_sessions
       return nil if unique_sessions.zero?
 
       (period_orders_count.to_f / unique_sessions * 100).round(2)
@@ -186,6 +217,40 @@ module Sales
     def tagged_revenue_source
       tagged_revenue
       @tagged_revenue_source
+    end
+
+    def shopify_report
+      @shopify_report ||= Sales::ShopifyReport.new(client: client)
+    end
+
+    # Resumo do mês no relatório de vendas da Shopify (respeita o filtro de tag).
+    def report_sales
+      return @report_sales if defined?(@report_sales)
+
+      where = ''
+      if tag.present?
+        tags = Sales::ShopifyReport.tags(tag)
+        return @report_sales = nil if tags.empty?
+
+        where = "WHERE #{Sales::ShopifyReport.tag_condition(tags)} "
+      end
+      query = 'FROM sales SHOW total_sales, gross_sales, discounts, returns, net_sales, shipping_charges, taxes, ' \
+              "orders, average_order_value, new_customers #{where}WITH #{Sales::ShopifyReport::WITH_OPTIONS} " \
+              "#{Sales::ShopifyReport.range(period.first, period.last)}"
+      @report_sales = shopify_report.rows(query)&.first
+    end
+
+    # Sessões e conversão da loja inteira no mês (relatório de sessões da Shopify).
+    def report_sessions
+      return @report_sessions if defined?(@report_sessions)
+
+      query = "FROM sessions SHOW sessions, conversion_rate WITH #{Sales::ShopifyReport::WITH_OPTIONS} " \
+              "#{Sales::ShopifyReport.range(period.first, period.last)}"
+      @report_sessions = shopify_report.rows(query)&.first
+    end
+
+    def money(value)
+      BigDecimal(value.to_s.presence || '0')
     end
 
     def goal

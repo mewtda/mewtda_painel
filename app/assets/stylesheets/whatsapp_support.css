@@ -1,7 +1,7 @@
 /* Conversas do WhatsApp: portado do Honey, sem os blocos do agente de IA. */
 .wa-app {
-  max-width: 1600px;
-  margin: auto;
+  width: 100%;
+  margin: 0;
   padding: 20px;
   color: #22332e;
 }

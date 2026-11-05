@@ -1,6 +1,6 @@
 .automations-wrapper { padding: 1.5rem 2rem; }
 
-.automations-intro { margin-bottom: 1.5rem; max-width: 720px; }
+.automations-intro { margin-bottom: 1.5rem; }
 .automations-intro__title { font-size: 1.2rem; font-weight: 700; color: var(--fg); margin: 0 0 0.35rem; }
 .automations-intro__text { color: var(--fg-alt); font-size: 0.9rem; line-height: 1.6; margin: 0; }
 
@@ -45,12 +45,11 @@
 .cpform-wrapper--with-preview {
   display: flex;
   align-items: flex-start;
-  justify-content: center;
   gap: 24px;
   flex-wrap: wrap;
 }
 
-.cpform-wrapper--with-preview .cpform-card { flex: 1 1 480px; max-width: 720px; }
+.cpform-wrapper--with-preview .cpform-card { flex: 1 1 480px; min-width: 0; }
 
 .cpform-header-description {
   color: var(--fg-alt);

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_04_150000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -168,6 +168,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_150000) do
     t.string "resend_coupon_code"
     t.string "slug"
     t.datetime "evolution_started_at"
+    t.string "test_phone"
     t.index ["client_id", "kind"], name: "index_campaigns_on_client_id_and_kind"
     t.index ["client_id"], name: "index_campaigns_on_client_id"
     t.index ["filters"], name: "index_campaigns_on_filters", using: :gin

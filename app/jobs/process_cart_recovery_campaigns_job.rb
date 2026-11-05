@@ -32,6 +32,7 @@ class ProcessCartRecoveryCampaignsJob < ApplicationJob
     return if client.whatsapp_evolution? && evolution_since.nil?
 
     client.abandoned_checkouts.pending_first_notification.find_each do |checkout|
+      next unless allowed_by_test_mode?(campaign, checkout)
       next if checkout.checkout_created_at.blank?
       next if checkout.checkout_created_at < FIRST_MESSAGE_MAX_AGE.ago
       next if client.whatsapp_evolution? && checkout.checkout_created_at < evolution_since
@@ -44,10 +45,19 @@ class ProcessCartRecoveryCampaignsJob < ApplicationJob
 
   def process_resend_notifications(client, campaign)
     client.abandoned_checkouts.pending_second_notification.find_each do |checkout|
+      next unless allowed_by_test_mode?(campaign, checkout)
       next if checkout.first_notified_at + campaign.resend_delay_hours.hours > Time.current
 
       coupon_code = campaign.resend_include_coupon? ? campaign.resend_coupon_code : nil
       SendCartRecoveryNotificationJob.perform_later(checkout.id, campaign.resend_message, coupon_code, 'second')
     end
+  end
+
+  # Modo teste: com um número de teste preenchido, só esse telefone recebe.
+  def allowed_by_test_mode?(campaign, checkout)
+    return true if campaign.test_phone.blank?
+
+    test = Whatsapp::Phone.normalize(campaign.test_phone)
+    test.present? && Whatsapp::Phone.normalize(checkout.phone) == test
   end
 end

@@ -41,6 +41,17 @@ class ProcessCartRecoveryCampaignsJobTest < ActiveJob::TestCase
     end
   end
 
+  test 'modo teste só envia para o número de teste' do
+    create_campaign(test_phone: '11 98888-7777')
+    create_checkout(checkout_created_at: 2.hours.ago)
+    mine = create_checkout(checkout_created_at: 2.hours.ago, phone: '+55 11 98888-7777')
+
+    assert_enqueued_jobs 1, only: SendCartRecoveryNotificationJob do
+      ProcessCartRecoveryCampaignsJob.perform_now(@client.id)
+    end
+    assert_enqueued_with(job: SendCartRecoveryNotificationJob, args: [mine.id, 'Oi {nome}', nil, 'first'])
+  end
+
   test 'does not send before the configured delay has passed' do
     create_campaign(send_delay_minutes: 120)
     create_checkout(checkout_created_at: 10.minutes.ago)

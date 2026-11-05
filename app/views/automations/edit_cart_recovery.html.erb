@@ -119,6 +119,12 @@
           </p>
 
           <div class="cpform-field">
+            <%= form.label :test_phone, 'Número de teste (modo teste)', class: 'crm-label' %>
+            <%= form.text_field :test_phone, class: 'crm-input cpform-field__input--half', placeholder: 'Ex: 16 99199-7608' %>
+            <span class="cpform-field__hint">Preenchido, a automação só envia para checkouts com este telefone. Deixe vazio para enviar a todos.</span>
+          </div>
+
+          <div class="cpform-field">
             <%= form.label :send_delay_minutes, 'Enviar Após (minutos)', class: 'crm-label' %>
             <%= form.number_field :send_delay_minutes, class: 'crm-input cpform-field__input--half', min: 1, max: 1440,
                 placeholder: 'Ex: 60' %>

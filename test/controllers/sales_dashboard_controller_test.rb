@@ -155,4 +155,31 @@ class SalesDashboardControllerTest < ActionDispatch::IntegrationTest
     assert_select 'button.sd-copy-query[data-query^="FROM sales SHOW total_sales"]'
     assert_match 'Números do relatório da Shopify', response.body
   end
+
+  test 'devoluções do mês vêm do relatório da Shopify' do
+    client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com",
+                            shopify_shop_url: 'loja.myshopify.com', shopify_access_token: 'tok')
+    sign_in build_user(client: client)
+    fake = Struct.new(:call).new({ orders: [{ id: '1', name: 'DN1', returns: BigDecimal('10.5'), url: 'https://x' }],
+                                   total: BigDecimal('10.5'), query: 'FROM sales SHOW returns' })
+
+    Sales::ShopifyReturns.stub(:new, ->(**_) { fake }) do
+      get returns_sales_dashboard_path(year: 2026, month: 10), headers: { 'Accept' => 'application/json' }
+    end
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal 10.5, body['total']
+    assert_equal 'DN1', body['orders'].first['name']
+    assert_equal 'FROM sales SHOW returns', body['query']
+  end
+
+  test 'devoluções sem relatório da Shopify responde erro' do
+    client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
+    sign_in build_user(client: client)
+    Sales::ShopifyReturns.stub(:new, ->(**_) { Struct.new(:call).new(nil) }) do
+      get returns_sales_dashboard_path(year: 2026, month: 10), headers: { 'Accept' => 'application/json' }
+    end
+    assert_response :bad_gateway
+  end
 end

@@ -83,10 +83,11 @@
             <span class="sd-breakdown__value"><%= currency(@metrics[:net_of_discounts]) %></span>
           </div>
           <% if @metrics[:returns] %>
-            <div class="sd-breakdown__row sd-breakdown__row--neg">
-              <span class="sd-breakdown__label">− Devoluções</span>
+            <button type="button" class="sd-breakdown__row sd-breakdown__row--neg sd-breakdown__row--link" id="sd-returns-open"
+                    title="Ver os pedidos com devolução">
+              <span class="sd-breakdown__label">− Devoluções <i class="fa-solid fa-up-right-from-square"></i></span>
               <span class="sd-breakdown__value"><%= currency(@metrics[:returns]) %></span>
-            </div>
+            </button>
           <% end %>
           <div class="sd-breakdown__row sd-breakdown__row--pos">
             <span class="sd-breakdown__label">+ Frete</span>
@@ -270,6 +271,22 @@
         </div>
         <div class="sd-modal__body">
           <div class="sd-modal__grid" id="sd-day-modal-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sd-returns-modal-overlay" class="sd-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="sd-returns-title">
+      <div class="sd-modal">
+        <div class="sd-modal__head">
+          <div>
+            <h2 class="sd-modal__title" id="sd-returns-title">Pedidos com devolução</h2>
+            <p class="sd-modal__subtitle" id="sd-returns-subtitle"></p>
+          </div>
+          <span id="sd-returns-copy"></span>
+          <button type="button" id="sd-returns-close" class="sd-modal__close" aria-label="Fechar">&times;</button>
+        </div>
+        <div class="sd-modal__body">
+          <div class="sd-order-list" id="sd-returns-list"></div>
         </div>
       </div>
     </div>
@@ -582,5 +599,62 @@ document.addEventListener('click', function (event) {
     area.remove();
     done();
   }
+});
+</script>
+
+<script>
+// Modal "− Devoluções": pedidos com devolução no mês, do relatório da Shopify.
+document.addEventListener('DOMContentLoaded', function () {
+  var openBtn = document.getElementById('sd-returns-open');
+  var overlay = document.getElementById('sd-returns-modal-overlay');
+  if (!openBtn || !overlay) return;
+  var list = document.getElementById('sd-returns-list');
+  var subtitle = document.getElementById('sd-returns-subtitle');
+  var copySlot = document.getElementById('sd-returns-copy');
+  var url = '<%= returns_sales_dashboard_path(year: @year, month: @month, tag: @tag) %>';
+  var money = function (v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
+  var el = function (tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  var message = function (text) { list.replaceChildren(el('p', 'sd-chart-empty', text)); };
+  var close = function () { overlay.style.display = 'none'; };
+
+  openBtn.addEventListener('click', function () {
+    subtitle.textContent = '';
+    copySlot.replaceChildren();
+    message('Carregando...');
+    overlay.style.display = 'block';
+    fetch(url, { headers: { 'Accept': 'application/json' } })
+      .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+      .then(function (r) {
+        if (!r.ok) return message(r.data.error || 'Erro ao carregar as devoluções.');
+        var data = r.data;
+        subtitle.textContent = data.orders.length + ' pedido(s) · total devolvido ' + money(data.total);
+        var copy = el('button', 'sd-copy-query');
+        copy.type = 'button';
+        copy.title = 'Copiar consulta da Shopify';
+        copy.dataset.query = data.query;
+        copy.appendChild(el('i', 'fa-regular fa-copy'));
+        copySlot.replaceChildren(copy);
+        if (data.orders.length === 0) return message('Nenhuma devolução neste mês.');
+        var rows = data.orders.map(function (o) {
+          var row = el('div', 'sd-order-row');
+          var name = el(o.url ? 'a' : 'span', 'sd-order-row__number', '#' + o.name);
+          if (o.url) { name.href = o.url; name.target = '_blank'; name.rel = 'noopener'; }
+          row.append(name, el('span', 'sd-order-row__total', money(o.returns)));
+          return row;
+        });
+        var total = el('div', 'sd-order-row sd-order-row--total');
+        total.append(el('span', 'sd-order-row__number', 'Total'), el('span', 'sd-order-row__total', money(data.total)));
+        rows.push(total);
+        list.replaceChildren.apply(list, rows);
+      })
+      .catch(function () { message('Erro ao carregar as devoluções. Tente novamente.'); });
+  });
+  document.getElementById('sd-returns-close').addEventListener('click', close);
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
 });
 </script>

@@ -419,3 +419,12 @@ $sd-header-blue: var(--chrome-bg);
   &:hover { color: var(--primary); border-color: var(--primary); }
   &.is-copied { color: #16a34a; border-color: #16a34a; }
 }
+
+// "− Devoluções" clicável e linha de total no modal de devoluções.
+.sd-breakdown__row--link {
+  width: 100%; border: 0; background: transparent; padding: inherit; font: inherit; color: inherit;
+  text-align: left; cursor: pointer; border-radius: 6px;
+  &:hover { background: var(--outline); }
+  .fa-up-right-from-square { font-size: 10px; margin-left: 4px; opacity: .6; }
+}
+.sd-order-row--total { font-weight: 700; border-top: 2px solid var(--outline); }

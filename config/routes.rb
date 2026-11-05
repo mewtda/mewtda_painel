@@ -126,6 +126,7 @@ Rails.application.routes.draw do
     post 'vendas/sync_ad_costs', to: 'sales_dashboard#sync_ad_costs', as: :sync_ad_costs_sales_dashboard
     post 'vendas/process_now',   to: 'sales_dashboard#process_now',   as: :process_now_sales_dashboard
     get  'vendas/orders_for_day', to: 'sales_dashboard#orders_for_day', as: :orders_for_day_sales_dashboard
+    get  'vendas/devolucoes',     to: 'sales_dashboard#returns',        as: :returns_sales_dashboard
 
     resources :ad_costs, except: [:show]
     resource :goal, only: %i[edit update]

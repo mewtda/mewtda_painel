@@ -137,6 +137,22 @@ class SalesDashboardController < ApplicationController
     render json: { error: 'Dia inválido.' }, status: :unprocessable_entity
   end
 
+  # Pedidos com devolução no mês (relatório da Shopify), para o modal do "− Devoluções".
+  def returns
+    return render json: { error: 'Nenhum cliente selecionado.' }, status: :unprocessable_entity unless @client
+
+    start = Date.new(requested_year, requested_month, 1)
+    result = Sales::ShopifyReturns.new(client: @client, from: start, to: start.end_of_month,
+                                       tag: params[:tag].presence).call
+    return render json: { error: 'Relatório da Shopify indisponível.' }, status: :bad_gateway unless result
+
+    render json: {
+      orders: result[:orders].map { |o| o.merge(returns: o[:returns].to_f) },
+      total: result[:total].to_f,
+      query: result[:query]
+    }
+  end
+
   private
 
   def ensure_dashboard_access!

@@ -7,7 +7,7 @@
      data-format="currency" data-reference="<%= target %>" data-status="<%= gauge_status %>"
      data-label="<%= label %>">
   <div class="sd-goal-chart__header">
-    <span class="sd-goal-chart__label"><%= label %></span>
+    <span class="sd-goal-chart__label"><%= label %><%= shopify_query_button(local_assigns[:query], note: local_assigns[:query_note]) %></span>
     <span class="sd-goal-chart__comparison">
       <strong><%= current.present? ? currency(current.to_f.round(2)) : '—' %></strong> de até <%= currency(target.to_f.round(2)) %>
     </span>

@@ -64,7 +64,7 @@
 
     <div class="sd-kpi-grid">
       <div class="crm-kpi-card sd-kpi-card--wide">
-        <div class="crm-kpi-card__label">Faturamento</div>
+        <div class="crm-kpi-card__label">Faturamento <%= shopify_query_button(@metrics.dig(:shopify_queries, :sales)) %></div>
         <div class="crm-kpi-card__value"><%= currency(@metrics[:revenue]) %></div>
         <div class="sd-kpi__hint">
           <%= @metrics[:metrics_source] == :shopify ? 'Números do relatório da Shopify' : 'Aproximado: soma dos pedidos sincronizados (relatório da Shopify indisponível)' %>
@@ -106,12 +106,12 @@
       </div>
 
       <div class="crm-kpi-card">
-        <div class="crm-kpi-card__label">ROAS Faturado</div>
+        <div class="crm-kpi-card__label">ROAS Faturado <%= shopify_query_button(@metrics.dig(:shopify_queries, :sales), note: 'o custo de anúncio vem do painel') %></div>
         <div class="crm-kpi-card__value"><%= @metrics[:roas] ? "#{@metrics[:roas]}x" : '—' %></div>
       </div>
 
       <div class="crm-kpi-card">
-        <div class="crm-kpi-card__label">CAC</div>
+        <div class="crm-kpi-card__label">CAC <%= shopify_query_button(@metrics.dig(:shopify_queries, :sales), note: 'clientes novos; ' + 'o custo de anúncio vem do painel') %></div>
         <div class="crm-kpi-card__value"><%= @metrics[:cac] ? currency(@metrics[:cac]) : '—' %></div>
         <div class="sd-kpi__hint"><%= @metrics[:new_customers_count] %> clientes novos</div>
       </div>
@@ -138,34 +138,34 @@
 
           <% if @metrics[:revenue_target].present? %>
             <%= render 'sales_dashboard/goal_summary_bar',
-                label: 'Faturamento (Bruto − Descontos + Frete)', format: :currency,
+                label: 'Faturamento', format: :currency, query: @metrics.dig(:shopify_queries, :sales),
                 current: @metrics[:revenue], target: @metrics[:revenue_target],
                 progress_pct: @metrics[:revenue_target_progress_pct], remaining: @metrics[:revenue_target_remaining] %>
           <% end %>
 
           <% if @metrics[:avg_ticket_target].present? %>
             <%= render 'sales_dashboard/goal_summary_bar',
-                label: 'Ticket Médio', format: :currency,
+                label: 'Ticket Médio', format: :currency, query: @metrics.dig(:shopify_queries, :sales),
                 current: @metrics[:avg_ticket] || 0, target: @metrics[:avg_ticket_target],
                 progress_pct: @metrics[:avg_ticket_target_progress_pct], remaining: @metrics[:avg_ticket_target_remaining] %>
           <% end %>
 
           <% if @metrics[:roas_target].present? %>
             <%= render 'sales_dashboard/goal_summary_bar',
-                label: 'ROAS Faturado', format: :multiplier,
+                label: 'ROAS Faturado', format: :multiplier, query: @metrics.dig(:shopify_queries, :sales), query_note: 'o custo de anúncio vem do painel',
                 current: @metrics[:roas] || 0, target: @metrics[:roas_target],
                 progress_pct: @metrics[:roas_target_progress_pct], remaining: @metrics[:roas_target_remaining] %>
           <% end %>
 
           <% if @metrics[:cac_target].present? %>
             <%= render 'sales_dashboard/goal_summary_ceiling_bar',
-                label: 'CAC', current: @metrics[:cac], target: @metrics[:cac_target],
+                label: 'CAC', query: @metrics.dig(:shopify_queries, :sales), query_note: 'clientes novos; ' + 'o custo de anúncio vem do painel', current: @metrics[:cac], target: @metrics[:cac_target],
                 status: @metrics[:cac_target_status], diff: @metrics[:cac_target_diff] %>
           <% end %>
 
           <% if @metrics[:tagged_revenue_target].present? %>
             <%= render 'sales_dashboard/goal_summary_bar',
-                label: "Vendas — tag \"#{@metrics[:tagged_revenue_tag]}\"#{' (aproximado)' if @metrics[:tagged_revenue_source] == :approximate}", format: :currency,
+                label: "Vendas — tag \"#{@metrics[:tagged_revenue_tag]}\"#{' (aproximado)' if @metrics[:tagged_revenue_source] == :approximate}", format: :currency, query: @metrics.dig(:shopify_queries, :tagged),
                 current: @metrics[:tagged_revenue] || 0, target: @metrics[:tagged_revenue_target],
                 progress_pct: @metrics[:tagged_revenue_target_progress_pct], remaining: @metrics[:tagged_revenue_target_remaining] %>
           <% end %>
@@ -176,7 +176,7 @@
       <div class="sd-goals-grid">
       <% if @metrics[:revenue_target].present? %>
         <%= render 'sales_dashboard/goal_progress', chart_id: 'goal-gauge-revenue', metric: 'revenue',
-            label: 'Faturamento (Bruto − Descontos + Frete)', format: :currency,
+            label: 'Faturamento', format: :currency, query: @metrics.dig(:shopify_queries, :sales),
             reference: (@metrics[:revenue_target].to_f / days_in_month).round(2),
             current: @metrics[:revenue], target: @metrics[:revenue_target],
             progress_pct: @metrics[:revenue_target_progress_pct], remaining: @metrics[:revenue_target_remaining] %>
@@ -184,27 +184,27 @@
 
       <% if @metrics[:avg_ticket_target].present? %>
         <%= render 'sales_dashboard/goal_progress', chart_id: 'goal-gauge-avg-ticket', metric: 'avgTicket',
-            label: 'Ticket Médio', format: :currency, reference: @metrics[:avg_ticket_target],
+            label: 'Ticket Médio', format: :currency, query: @metrics.dig(:shopify_queries, :sales), reference: @metrics[:avg_ticket_target],
             current: @metrics[:avg_ticket] || 0, target: @metrics[:avg_ticket_target],
             progress_pct: @metrics[:avg_ticket_target_progress_pct], remaining: @metrics[:avg_ticket_target_remaining] %>
       <% end %>
 
       <% if @metrics[:roas_target].present? %>
         <%= render 'sales_dashboard/goal_progress', chart_id: 'goal-gauge-roas', metric: 'roas',
-            label: 'ROAS Faturado', format: :multiplier, reference: @metrics[:roas_target],
+            label: 'ROAS Faturado', format: :multiplier, query: @metrics.dig(:shopify_queries, :sales), query_note: 'o custo de anúncio vem do painel', reference: @metrics[:roas_target],
             current: @metrics[:roas] || 0, target: @metrics[:roas_target],
             progress_pct: @metrics[:roas_target_progress_pct], remaining: @metrics[:roas_target_remaining] %>
       <% end %>
 
       <% if @metrics[:cac_target].present? %>
         <%= render 'sales_dashboard/goal_ceiling', chart_id: 'goal-gauge-cac', metric: 'cac',
-            label: 'CAC', current: @metrics[:cac], target: @metrics[:cac_target],
+            label: 'CAC', query: @metrics.dig(:shopify_queries, :sales), query_note: 'clientes novos; ' + 'o custo de anúncio vem do painel', current: @metrics[:cac], target: @metrics[:cac_target],
             status: @metrics[:cac_target_status], diff: @metrics[:cac_target_diff] %>
       <% end %>
 
       <% if @metrics[:tagged_revenue_target].present? %>
         <%= render 'sales_dashboard/goal_progress', chart_id: 'goal-gauge-tagged', metric: 'taggedRevenue',
-            label: "Vendas — tag \"#{@metrics[:tagged_revenue_tag]}\"#{' (aproximado)' if @metrics[:tagged_revenue_source] == :approximate}", format: :currency,
+            label: "Vendas — tag \"#{@metrics[:tagged_revenue_tag]}\"#{' (aproximado)' if @metrics[:tagged_revenue_source] == :approximate}", format: :currency, query: @metrics.dig(:shopify_queries, :tagged),
             reference: (@metrics[:tagged_revenue_target].to_f / days_in_month).round(2),
             current: @metrics[:tagged_revenue] || 0, target: @metrics[:tagged_revenue_target],
             progress_pct: @metrics[:tagged_revenue_target_progress_pct], remaining: @metrics[:tagged_revenue_target_remaining] %>
@@ -559,3 +559,28 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 <% end %>
+
+<script>
+// Copia a consulta ShopifyQL de uma métrica (botão ao lado do nome).
+document.addEventListener('click', function (event) {
+  var button = event.target.closest('.sd-copy-query');
+  if (!button) return;
+  event.preventDefault();
+  var done = function () {
+    button.classList.add('is-copied');
+    button.setAttribute('title', 'Consulta copiada');
+    setTimeout(function () { button.classList.remove('is-copied'); }, 1500);
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(button.dataset.query).then(done);
+  } else {
+    var area = document.createElement('textarea');
+    area.value = button.dataset.query;
+    document.body.appendChild(area);
+    area.select();
+    document.execCommand('copy');
+    area.remove();
+    done();
+  }
+});
+</script>

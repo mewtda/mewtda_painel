@@ -6,7 +6,7 @@
 
 <div class="sd-goal-bar-row">
   <div class="sd-goal-bar-row__header">
-    <span class="sd-goal-bar-row__label"><%= label %></span>
+    <span class="sd-goal-bar-row__label"><%= label %><%= shopify_query_button(local_assigns[:query], note: local_assigns[:query_note]) %></span>
     <span class="sd-goal-bar-row__value">
       <strong><%= current.present? ? currency(current.to_f.round(2)) : '—' %></strong> de até <%= currency(target.to_f.round(2)) %>
     </span>

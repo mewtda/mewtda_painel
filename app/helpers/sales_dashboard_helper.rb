@@ -1,4 +1,13 @@
 module SalesDashboardHelper
+  # Botão que copia a consulta ShopifyQL usada na métrica, para colar no
+  # relatório da Shopify e conferir o número.
+  def shopify_query_button(query, note: nil)
+    return if query.blank?
+
+    title = ['Copiar consulta da Shopify', note].compact.join(' — ')
+    tag.button(type: 'button', class: 'sd-copy-query', title: title, 'aria-label': title,
+               data: { query: query }) { tag.i(class: 'fa-regular fa-copy') }
+  end
   def currency(value)
     number_to_currency(value, unit: 'R$', separator: ',', delimiter: '.')
   end

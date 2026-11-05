@@ -137,4 +137,22 @@ class SalesDashboardControllerTest < ActionDispatch::IntegrationTest
     assert_equal '1001', body15['orders'].first['number']
     assert_equal 0, body16['orders'].size
   end
+
+  test 'mostra o botão de copiar a consulta da Shopify ao lado das métricas' do
+    client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
+    user = build_user(client: client)
+    sign_in user
+    report = Object.new
+    def report.rows(query)
+      query.start_with?('FROM sessions') ? [{ 'conversion_rate' => '0.01' }] : [{ 'total_sales' => '100', 'orders' => '1' }]
+    end
+
+    Sales::ShopifyReport.stub(:new, report) do
+      get sales_dashboard_path(year: 2026, month: 3)
+    end
+
+    assert_response :success
+    assert_select 'button.sd-copy-query[data-query^="FROM sales SHOW total_sales"]'
+    assert_match 'Números do relatório da Shopify', response.body
+  end
 end

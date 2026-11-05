@@ -12,7 +12,7 @@
 
 <div class="sd-goal-bar-row">
   <div class="sd-goal-bar-row__header">
-    <span class="sd-goal-bar-row__label"><%= label %><%= sessions_disclaimer_icon if local_assigns[:warning] %></span>
+    <span class="sd-goal-bar-row__label"><%= label %><%= shopify_query_button(local_assigns[:query], note: local_assigns[:query_note]) %><%= sessions_disclaimer_icon if local_assigns[:warning] %></span>
     <span class="sd-goal-bar-row__value">
       <strong><%= progress_pct ? format_value.call(current.to_f.round(2)) : '—' %></strong> de <%= format_value.call(target.to_f.round(2)) %>
     </span>

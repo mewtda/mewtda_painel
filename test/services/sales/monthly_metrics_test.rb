@@ -245,7 +245,7 @@ class Sales::MonthlyMetricsTest < ActiveSupport::TestCase
 
   test 'tagged_revenue usa o total do relatório da Shopify quando disponível' do
     @client.goals.create!(year: 2026, month: 3, tagged_revenue_target: 1000, tagged_revenue_tag: 'VendedoraElo')
-    fake = Struct.new(:total).new(BigDecimal('777.77'))
+    fake = Struct.new(:total, :shopifyql).new(BigDecimal('777.77'), 'FROM sales SHOW total_sales')
     Sales::ShopifyTaggedSales.stub(:new, fake) do
       result = Sales::MonthlyMetrics.new(client: @client, year: 2026, month: 3).call
       assert_equal BigDecimal('777.77'), result[:tagged_revenue]
@@ -255,7 +255,7 @@ class Sales::MonthlyMetricsTest < ActiveSupport::TestCase
 
   test 'tagged_revenue cai na soma dos pedidos e marca aproximado sem a Shopify' do
     @client.goals.create!(year: 2026, month: 3, tagged_revenue_target: 1000, tagged_revenue_tag: 'VendedoraElo')
-    fake = Struct.new(:total).new(nil)
+    fake = Struct.new(:total, :shopifyql).new(nil, nil)
     Sales::ShopifyTaggedSales.stub(:new, fake) do
       result = Sales::MonthlyMetrics.new(client: @client, year: 2026, month: 3).call
       assert_equal :approximate, result[:tagged_revenue_source]

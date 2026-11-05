@@ -13,7 +13,7 @@
      data-format="<%= format %>" data-reference="<%= reference %>" data-status="<%= goal_status %>"
      data-label="<%= label %>">
   <div class="sd-goal-chart__header">
-    <span class="sd-goal-chart__label"><%= label %><%= sessions_disclaimer_icon if local_assigns[:warning] %></span>
+    <span class="sd-goal-chart__label"><%= label %><%= shopify_query_button(local_assigns[:query], note: local_assigns[:query_note]) %><%= sessions_disclaimer_icon if local_assigns[:warning] %></span>
     <span class="sd-goal-chart__comparison">
       <strong><%= progress_pct ? format_value.call(current.to_f.round(2)) : '—' %></strong> de <%= format_value.call(target.to_f.round(2)) %>
     </span>

@@ -11,6 +11,8 @@ module Sales
       {
         # :shopify = números do relatório da Shopify; :approximate = pedidos sincronizados.
         metrics_source: report_sales ? :shopify : :approximate,
+        # Consultas ShopifyQL usadas, para conferir no relatório da Shopify.
+        shopify_queries: shopify_queries,
         revenue: revenue,
         gross_sales: gross_sales,
         returns: returns,
@@ -209,8 +211,10 @@ module Sales
       goal_tag = goal&.tagged_revenue_tag
       return @tagged_revenue = nil if goal_tag.blank?
 
-      shopify = Sales::ShopifyTaggedSales.new(client: client, from: period.first, to: period.last, tags: goal_tag).total
+      tagged = Sales::ShopifyTaggedSales.new(client: client, from: period.first, to: period.last, tags: goal_tag)
+      shopify = tagged.total
       @tagged_revenue_source = shopify ? :shopify : :approximate
+      @tagged_query = tagged.shopifyql if shopify
       @tagged_revenue = shopify || orders_scope.with_any_tag(goal_tag).sum(:subtotal_price)
     end
 
@@ -237,6 +241,7 @@ module Sales
       query = 'FROM sales SHOW total_sales, gross_sales, discounts, returns, net_sales, shipping_charges, taxes, ' \
               "orders, average_order_value, new_customers #{where}WITH #{Sales::ShopifyReport::WITH_OPTIONS} " \
               "#{Sales::ShopifyReport.range(period.first, period.last)}"
+      @sales_query = query
       @report_sales = shopify_report.rows(query)&.first
     end
 
@@ -246,7 +251,17 @@ module Sales
 
       query = "FROM sessions SHOW sessions, conversion_rate WITH #{Sales::ShopifyReport::WITH_OPTIONS} " \
               "#{Sales::ShopifyReport.range(period.first, period.last)}"
+      @sessions_query = query
       @report_sessions = shopify_report.rows(query)&.first
+    end
+
+    def shopify_queries
+      tagged_revenue
+      {
+        sales: (@sales_query if report_sales),
+        sessions: (@sessions_query if report_sessions),
+        tagged: @tagged_query
+      }
     end
 
     def money(value)

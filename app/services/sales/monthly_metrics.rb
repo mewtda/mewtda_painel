@@ -42,6 +42,7 @@ module Sales
         cac_target_diff: ceiling_diff(cac, goal&.cac_target),
         tagged_revenue_tag: goal&.tagged_revenue_tag,
         tagged_revenue: tagged_revenue,
+        tagged_revenue_source: tagged_revenue_source,
         tagged_revenue_target: goal&.tagged_revenue_target,
         tagged_revenue_target_progress_pct: progress_pct(tagged_revenue, goal&.tagged_revenue_target),
         tagged_revenue_target_remaining: remaining(tagged_revenue, goal&.tagged_revenue_target)
@@ -168,13 +169,23 @@ module Sales
 
     # Faturamento (Bruto − Descontos) só dos pedidos com a tag configurada na meta
     # (ex.: nome de uma vendedora).
+    # Meta por tag: o número vem do relatório da Shopify (igual ao que a loja
+    # mostra). Se a Shopify não responder, cai na soma dos pedidos sincronizados
+    # e a tela avisa que é aproximado.
     def tagged_revenue
-      goal_tag = goal&.tagged_revenue_tag
-      return nil if goal_tag.blank?
+      return @tagged_revenue if defined?(@tagged_revenue)
 
-      orders_scope
-        .with_any_tag(goal_tag)
-        .sum(:subtotal_price)
+      goal_tag = goal&.tagged_revenue_tag
+      return @tagged_revenue = nil if goal_tag.blank?
+
+      shopify = Sales::ShopifyTaggedSales.new(client: client, from: period.first, to: period.last, tags: goal_tag).total
+      @tagged_revenue_source = shopify ? :shopify : :approximate
+      @tagged_revenue = shopify || orders_scope.with_any_tag(goal_tag).sum(:subtotal_price)
+    end
+
+    def tagged_revenue_source
+      tagged_revenue
+      @tagged_revenue_source
     end
 
     def goal

@@ -150,7 +150,7 @@
 
           <% if @metrics[:tagged_revenue_target].present? %>
             <%= render 'sales_dashboard/goal_summary_bar',
-                label: "Vendas — tag \"#{@metrics[:tagged_revenue_tag]}\"", format: :currency,
+                label: "Vendas — tag \"#{@metrics[:tagged_revenue_tag]}\"#{' (aproximado)' if @metrics[:tagged_revenue_source] == :approximate}", format: :currency,
                 current: @metrics[:tagged_revenue] || 0, target: @metrics[:tagged_revenue_target],
                 progress_pct: @metrics[:tagged_revenue_target_progress_pct], remaining: @metrics[:tagged_revenue_target_remaining] %>
           <% end %>
@@ -189,7 +189,7 @@
 
       <% if @metrics[:tagged_revenue_target].present? %>
         <%= render 'sales_dashboard/goal_progress', chart_id: 'goal-gauge-tagged', metric: 'taggedRevenue',
-            label: "Vendas — tag \"#{@metrics[:tagged_revenue_tag]}\"", format: :currency,
+            label: "Vendas — tag \"#{@metrics[:tagged_revenue_tag]}\"#{' (aproximado)' if @metrics[:tagged_revenue_source] == :approximate}", format: :currency,
             reference: (@metrics[:tagged_revenue_target].to_f / days_in_month).round(2),
             current: @metrics[:tagged_revenue] || 0, target: @metrics[:tagged_revenue_target],
             progress_pct: @metrics[:tagged_revenue_target_progress_pct], remaining: @metrics[:tagged_revenue_target_remaining] %>

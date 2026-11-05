@@ -1,6 +1,10 @@
 class ProcessCartRecoveryCampaignsJob < ApplicationJob
   queue_as :default
 
+  # A 1ª mensagem só vai para checkouts recentes: evita disparar carrinhos
+  # antigos quando a sincronização traz o histórico da Shopify.
+  FIRST_MESSAGE_MAX_AGE = 24.hours
+
   def perform(client_id = nil)
     scope = client_id ? Client.where(id: client_id) : Client.where(active: true)
 
@@ -29,6 +33,7 @@ class ProcessCartRecoveryCampaignsJob < ApplicationJob
 
     client.abandoned_checkouts.pending_first_notification.find_each do |checkout|
       next if checkout.checkout_created_at.blank?
+      next if checkout.checkout_created_at < FIRST_MESSAGE_MAX_AGE.ago
       next if client.whatsapp_evolution? && checkout.checkout_created_at < evolution_since
       next if checkout.checkout_created_at + campaign.send_delay_minutes.minutes > Time.current
 

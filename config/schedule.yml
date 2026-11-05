@@ -12,3 +12,13 @@ whatsapp_recovery:
   cron: "* * * * *"
   class: "Whatsapp::RecoveryJob"
   queue: whatsapp
+
+abandoned_checkouts_sync:
+  cron: "*/10 * * * *"
+  class: "DailyAbandonedCheckoutsSyncJob"
+  queue: default
+
+cart_recovery_processing:
+  cron: "*/5 * * * *"
+  class: "ProcessCartRecoveryCampaignsJob"
+  queue: default

@@ -32,6 +32,15 @@ class ProcessCartRecoveryCampaignsJobTest < ActiveJob::TestCase
     end
   end
 
+  test 'checkouts older than 24 hours never get the first message' do
+    create_campaign
+    create_checkout(checkout_created_at: 25.hours.ago)
+
+    assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob) do
+      ProcessCartRecoveryCampaignsJob.perform_now(@client.id)
+    end
+  end
+
   test 'does not send before the configured delay has passed' do
     create_campaign(send_delay_minutes: 120)
     create_checkout(checkout_created_at: 10.minutes.ago)
@@ -113,5 +122,12 @@ class ProcessCartRecoveryEvolutionTest < ActiveJob::TestCase
     assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob) do
       ProcessCartRecoveryCampaignsJob.perform_now(@client.id)
     end
+  end
+
+  test 'schedule.yml syncs abandoned checkouts and processes cart recovery' do
+    schedule = YAML.load_file(Rails.root.join('config/schedule.yml'))
+    classes = schedule.values.map { |job| job['class'] }
+    assert_includes classes, 'DailyAbandonedCheckoutsSyncJob'
+    assert_includes classes, 'ProcessCartRecoveryCampaignsJob'
   end
 end

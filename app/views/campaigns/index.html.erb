@@ -2,8 +2,8 @@
 
 <div class="campaigns-wrapper">
 
-  <%# Alerta Zapi %>
-  <% unless current_client.zapi_configured? %>
+  <%# Alerta WhatsApp %>
+  <% unless current_client.whatsapp_ready? %>
     <div class="campaigns-alert campaigns-alert--danger">
       <div class="campaigns-alert__icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -11,9 +11,8 @@
         </svg>
       </div>
       <div class="campaigns-alert__content">
-        <strong>Integração Zapi não configurada!</strong>
-        <p>As campanhas criadas não serão executadas enquanto a integração Zapi não estiver configurada no cliente.</p>
-        <%= link_to 'Configurar Zapi', edit_client_path(current_client), class: 'campaigns-alert__link' %>
+        <strong>Nenhum número de WhatsApp conectado!</strong>
+        <p>As campanhas criadas não serão executadas enquanto não houver um número conectado no cliente.</p>
       </div>
     </div>
   <% end %>
@@ -66,10 +65,10 @@
   <div class="campaigns-client-info">
     <span class="campaigns-client-info__label">Cliente:</span>
     <span class="campaigns-client-info__name"><%= current_client.name %></span>
-    <% if current_client.zapi_configured? %>
-      <span class="crm-tag crm-tag--success">Zapi Configurado</span>
+    <% if current_client.whatsapp_ready? %>
+      <span class="crm-tag crm-tag--success">WhatsApp conectado</span>
     <% else %>
-      <span class="crm-tag crm-tag--danger">Zapi Pendente</span>
+      <span class="crm-tag crm-tag--danger">WhatsApp pendente</span>
     <% end %>
   </div>
 

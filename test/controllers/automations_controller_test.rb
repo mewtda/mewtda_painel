@@ -161,13 +161,16 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
   test 'resend_cart_recovery enqueues SendCartRecoveryNotificationJob for an already-notified checkout' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
-    client.campaigns.create!(
+    campaign = client.campaigns.create!(
       name: 'Recuperação', kind: 'cart_recovery', message: 'Oi {nome}',
       start_date: Date.current, end_date: Date.current + 1.year, send_delay_minutes: 60
     )
+    number = client.whatsapp_connections.create!(name: 'Loja', state: 'connected')
+    Whatsapp::CampaignConnection.create!(campaign: campaign, connection: number)
     checkout = client.abandoned_checkouts.create!(
       shopify_checkout_id: SecureRandom.hex(6), phone: '+5511999999999',
-      checkout_created_at: Time.current, first_notified_at: Time.current
+      checkout_created_at: Time.current, first_notified_at: Time.current,
+      whatsapp_provider: 'evolution', whatsapp_connection_id: number.id
     )
     user = build_user(client: client)
     sign_in user
@@ -228,17 +231,6 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, Whatsapp::CampaignConnection.count
   end
 
-  test 'update_numbers is a no-op for a Z-API client' do
-    client = Client.create!(name: 'Loja', email: "z-#{SecureRandom.hex(4)}@example.com")
-    saved_cart_campaign(client)
-    sign_in build_user(client: client)
-
-    patch automation_numbers_path(kind: 'cart-recovery'), params: { connection_ids: [1] }
-
-    assert_redirected_to edit_cart_recovery_automation_path
-    assert_equal 0, Whatsapp::CampaignConnection.count
-  end
-
   test 'cart recovery edit page shows metrics and the numbers partial for evolution clients' do
     client = evolution_client
     saved_cart_campaign(client)
@@ -251,7 +243,7 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'Ticket médio'
     assert_includes response.body, 'R$ 150,00'
     assert_includes response.body, 'Importe um número responsável'
-    assert_includes response.body, 'Nenhum número Evolution conectado'
+    assert_includes response.body, 'Nenhum número de WhatsApp conectado'
   end
 
   test 'cart recovery data page shows metrics and honors period' do
@@ -268,17 +260,17 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'R$ 200,00'
   end
 
-  test 'zapi client without configuration sees the Zapi warning, not the numbers partial' do
+  test 'client without a connected number sees the WhatsApp warning and no Zapi text' do
     client = Client.create!(name: 'Loja', email: "w-#{SecureRandom.hex(4)}@example.com")
     sign_in build_user(client: client)
 
     get edit_cashback_automation_path
 
-    assert_includes response.body, 'Integração Zapi não configurada'
-    assert_not_includes response.body, 'Importe um número responsável'
+    assert_includes response.body, 'Nenhum número de WhatsApp conectado'
+    assert_not_includes response.body, 'Zapi'
   end
 
-  test 'status row shows Evolution connection instead of Zapi for evolution clients' do
+  test 'status row shows the WhatsApp connection' do
     client = evolution_client
     saved_cart_campaign(client)
     client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
@@ -286,8 +278,7 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
     get edit_cart_recovery_automation_path
 
-    assert_not_includes response.body, 'Integração Zapi'
-    assert_includes response.body, 'WhatsApp (Evolution)'
+    assert_not_includes response.body, 'Zapi'
     assert_includes response.body, 'Conectado'
   end
 

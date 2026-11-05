@@ -36,9 +36,8 @@
 
       <%# Status de cada integração (bolinha verde na aba quando configurada) %>
       <% shopify_configured = client.shopify_shop_url.present? && client.shopify_access_token.present? %>
-      <% zapi_configured = client.zapi_instance_id.present? && client.zapi_instance_token.present? && client.zapi_client_token.present? %>
       <% whatsapp_cloud_configured = client.whatsapp_cloud_configured? %>
-      <% whatsapp_configured = zapi_configured || whatsapp_cloud_configured %>
+      <% whatsapp_configured = client.persisted? && client.whatsapp_ready? %>
       <% meta_configured = client.meta_access_token.present? && client.meta_ad_account_id.present? %>
       <% google_configured = client.google_ads_connected_at.present? %>
       <% show_users_tab = current_user.admin? && client.persisted? && client.users.any? %>
@@ -123,12 +122,6 @@
             <i class="fa-brands fa-whatsapp"></i>
             Resposta automática (OpenAI)
           </div>
-
-          <% unless client.whatsapp_evolution? %>
-            <div class="cform-field">
-              <span class="cform-field__hint">A resposta automática só funciona quando o cliente usa o WhatsApp Evolution Mewtda.</span>
-            </div>
-          <% end %>
 
           <div class="cform-field">
             <div class="cform-toggle">
@@ -241,72 +234,7 @@
       </div>
 
       <div class="cform-panel" role="tabpanel" data-panel="whatsapp" hidden>
-        <div class="cform-provider">
-          <div class="cform-field">
-            <%= form.label :whatsapp_provider, 'Conexão WhatsApp', class: 'crm-label' %>
-            <%= form.select :whatsapp_provider, [['Z-API', 'zapi'], ['Evolution Mewtda', 'evolution']], {}, class: 'crm-input', id: 'client_whatsapp_provider', disabled: read_only %>
-            <small>Define por onde saem as mensagens automáticas deste cliente. Os campos da Z-API abaixo continuam editáveis.</small>
-          </div>
-        </div>
         <%= render 'clients/whatsapp_numbers', client: client %>
-
-        <div class="cform-provider">
-          <div class="cform-provider__header">
-            <span class="cform-logo cform-logo--zapi">Z</span>
-            <span class="cform-provider__title">Z-API</span>
-            <span class="cform-accordion__status <%= zapi_configured ? 'cform-accordion__status--ok' : 'cform-accordion__status--pending' %>">
-              <%= zapi_configured ? 'Configurado' : 'Pendente' %>
-            </span>
-          </div>
-          <div class="cform-provider__body">
-            <div class="cform-field">
-              <%= form.label :zapi_instance_id, 'ID da Instância', class: 'crm-label' %>
-              <%= form.text_field :zapi_instance_id, class: 'crm-input', placeholder: 'ID da instância Zapi', disabled: read_only %>
-              <span class="cform-field__hint">ID único da instância Zapi</span>
-            </div>
-
-            <div class="cform-row">
-              <div class="cform-field">
-                <%= form.label :zapi_instance_token, 'Token da Instância', class: 'crm-label' %>
-                <div class="cform-field__input-wrapper">
-                  <%= form.password_field :zapi_instance_token, class: 'crm-input cform-field__input--password', placeholder: client.zapi_instance_token.present? ? '••••••••••••••••' : 'Token da instância', disabled: read_only, value: '' %>
-                  <% if client.zapi_instance_token.present? %>
-                    <span class="crm-tag crm-tag--success">Configurado</span>
-                  <% end %>
-                </div>
-                <span class="cform-field__hint">Deixe em branco para manter o token atual.</span>
-              </div>
-              <div class="cform-field">
-                <%= form.label :zapi_client_token, 'Token do Cliente', class: 'crm-label' %>
-                <div class="cform-field__input-wrapper">
-                  <%= form.password_field :zapi_client_token, class: 'crm-input cform-field__input--password', placeholder: client.zapi_client_token.present? ? '••••••••••••••••' : 'Token do cliente', disabled: read_only, value: '' %>
-                  <% if client.zapi_client_token.present? %>
-                    <span class="crm-tag crm-tag--success">Configurado</span>
-                  <% end %>
-                </div>
-                <span class="cform-field__hint">Deixe em branco para manter o token atual.</span>
-              </div>
-            </div>
-
-            <% if client.persisted? %>
-              <% if zapi_configured %>
-                <div class="cform-alert cform-alert--success">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Integração Zapi configurada e pronta para uso.</span>
-                </div>
-              <% else %>
-                <div class="cform-alert cform-alert--warning">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                  </svg>
-                  <span>Configure os campos para ativar a integração Zapi.</span>
-                </div>
-              <% end %>
-            <% end %>
-          </div>
-        </div>
 
         <div class="cform-provider">
           <div class="cform-provider__header">
@@ -344,7 +272,7 @@
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
               </svg>
-              <span>Por enquanto as mensagens automáticas continuam saindo pela Z-API. A API Oficial só permite iniciar conversa com templates aprovados pela Meta.</span>
+              <span>Por enquanto as mensagens automáticas saem pelos números da Evolution Mewtda. A API Oficial só permite iniciar conversa com templates aprovados pela Meta.</span>
             </div>
           </div>
         </div>

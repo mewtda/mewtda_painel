@@ -4,7 +4,7 @@ class SettingsController < ApplicationController
   def edit; end
 
   def update
-    %i[meta_access_token shopify_access_token shopify_storefront_token zapi_instance_token zapi_client_token
+    %i[meta_access_token shopify_access_token shopify_storefront_token
        whatsapp_cloud_access_token].each do |secret|
       params[:client].delete(secret) if params[:client][secret].blank?
     end
@@ -29,7 +29,6 @@ class SettingsController < ApplicationController
   def client_params
     params.require(:client).permit(
       :name, :email, :shopify_shop_url, :shopify_access_token, :shopify_storefront_token,
-      :zapi_instance_id, :zapi_instance_token, :zapi_client_token,
       :whatsapp_cloud_phone_number_id, :whatsapp_cloud_business_account_id, :whatsapp_cloud_access_token,
       :meta_access_token, :meta_ad_account_id,
       :google_ads_customer_id

@@ -18,16 +18,8 @@
         </svg>
       </div>
       <div class="campaigns-alert__content">
-        <% if @client.whatsapp_evolution? %>
-          <strong>Nenhum número Evolution conectado!</strong>
-          <p>As automações não serão executadas enquanto não houver um número Evolution conectado.</p>
-        <% else %>
-          <strong>Integração Zapi não configurada!</strong>
-          <p>As automações não serão executadas enquanto a integração Zapi não estiver configurada.</p>
-        <% end %>
-        <% unless @client.whatsapp_evolution? %>
-          <%= link_to 'Configurar Zapi', edit_settings_path, class: 'campaigns-alert__link' %>
-        <% end %>
+        <strong>Nenhum número de WhatsApp conectado!</strong>
+        <p>As automações não serão executadas enquanto não houver um número conectado.</p>
       </div>
     </div>
   <% end %>

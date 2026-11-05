@@ -54,7 +54,6 @@ class AutomationsController < ApplicationController
            .fetch(kind, edit_cart_recovery_automation_path)
 
     return redirect_to back, alert: 'Salve a automação antes de importar números.' unless campaign.persisted?
-    return redirect_to back, alert: 'Este cliente não usa números Evolution.' unless @client.whatsapp_evolution?
 
     ids = @client.whatsapp_connections.where(id: Array(params[:connection_ids])).pluck(:id)
     Whatsapp::CampaignConnection.transaction do

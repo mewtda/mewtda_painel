@@ -5,10 +5,8 @@ class SendCartRecoveryNotificationJob < ApplicationJob
 
   # Verdadeiro quando o reenvio/2ª mensagem ainda pode sair pelo canal da 1ª.
   def self.channel_available?(checkout, client, campaign)
-    current = client.whatsapp_evolution? ? 'evolution' : 'zapi'
-    # Checkouts anteriores à Evolution foram todos enviados pela Z-API.
-    return false unless (checkout.whatsapp_provider.presence || 'zapi') == current
-    return true unless current == 'evolution'
+    # Checkouts enviados antes da Evolution (Z-API, já removida) não têm mais canal.
+    return false unless checkout.whatsapp_provider == 'evolution'
 
     connection_id = checkout.whatsapp_connection_id
     connection_id.present? && campaign.present? && campaign.whatsapp_connections.exists?(id: connection_id)

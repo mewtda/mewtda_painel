@@ -38,13 +38,8 @@
           </svg>
         </div>
         <div>
-          <% if @client.whatsapp_evolution? %>
-            <strong>Atenção: Nenhum número Evolution conectado!</strong>
-            <p>Esta automação não será executada até que um número Evolution esteja conectado.</p>
-          <% else %>
-            <strong>Atenção: Integração Zapi não configurada!</strong>
-            <p>Esta automação não será executada até que a integração Zapi seja configurada.</p>
-          <% end %>
+          <strong>Atenção: Nenhum número de WhatsApp conectado!</strong>
+          <p>Esta automação não será executada até que um número esteja conectado.</p>
         </div>
       </div>
     <% end %>

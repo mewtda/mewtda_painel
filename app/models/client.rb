@@ -16,7 +16,8 @@ class Client < ApplicationRecord
   before_validation :generate_slug, if: -> { slug.blank? && name.present? }
 
   validates :name, presence: true
-  validates :whatsapp_provider, inclusion: { in: %w[zapi evolution] }
+  # Só existe a Evolution Mewtda; a Z-API foi removida.
+  validates :whatsapp_provider, inclusion: { in: %w[evolution] }
   validates :email, presence: true
   validates :openai_model, presence: true, if: :auto_reply_enabled?
   validates :site_url, format: { with: %r{\Ahttps?://}, message: 'deve começar com http:// ou https://' },
@@ -29,11 +30,12 @@ class Client < ApplicationRecord
                    format: { with: LandingPage::SLUG_FORMAT, message: 'use só letras minúsculas, números e hífens' },
                    exclusion: { in: LandingPage::RESERVED_PREFIXES, message: 'é reservado pelo sistema' }
 
-  def whatsapp_evolution? = whatsapp_provider == 'evolution'
+  # Todo cliente usa os números da Evolution Mewtda (a Z-API foi removida).
+  def whatsapp_evolution? = true
 
-  # Evolution: algum número conectado; Z-API: credenciais preenchidas.
+  # Pronto para enviar: algum número da Evolution conectado.
   def whatsapp_ready?
-    whatsapp_evolution? ? whatsapp_connections.any?(&:connected?) : zapi_configured?
+    whatsapp_connections.any?(&:connected?)
   end
 
   # Resposta automática (OpenAI) só no Evolution, com chave, modelo e instruções preenchidos.
@@ -46,14 +48,8 @@ class Client < ApplicationRecord
     site_url.present?
   end
 
-  def zapi_configured?
-    zapi_instance_id.present? &&
-      zapi_instance_token.present? &&
-      zapi_client_token.present?
-  end
-
   # API Oficial do WhatsApp (Cloud API da Meta). Por ora só guarda as
-  # credenciais; o envio automático ainda sai pela Z-API.
+  # credenciais; o envio automático sai pela Evolution.
   def whatsapp_cloud_configured?
     whatsapp_cloud_phone_number_id.present? && whatsapp_cloud_access_token.present?
   end

@@ -115,12 +115,9 @@
             Automações
           <% end %>
 
-          <%# Conversas só existem nos números Evolution; cliente na Z-API não vê o item. %>
-          <% if ws_client&.whatsapp_evolution? %>
-            <%= link_to whatsapp_conversations_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(whatsapp_conversations_path)}" do %>
-              <i class="fa-solid fa-comments crm-fa"></i>
-              Conversas
-            <% end %>
+          <%= link_to whatsapp_conversations_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(whatsapp_conversations_path)}" do %>
+            <i class="fa-solid fa-comments crm-fa"></i>
+            Conversas
           <% end %>
         </div>
       </details>

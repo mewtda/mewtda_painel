@@ -7,7 +7,6 @@
   const base = section.dataset.base;
   const notice = document.getElementById("wan-notice");
   const status = document.getElementById("wan-status");
-  const provider = document.getElementById("client_whatsapp_provider");
   const labels = {
     connected: "Conectado",
     connecting: "Conectando",
@@ -169,11 +168,6 @@
     say(`Número ${created.name} criado. Leia o QR que vai aparecer.`);
     await refresh();
   });
-
-  if (provider)
-    provider.addEventListener("change", () => {
-      section.hidden = provider.value !== "evolution";
-    });
 
   const tick = async () => {
     if (!section.hidden && !document.hidden) await guard(refresh)();

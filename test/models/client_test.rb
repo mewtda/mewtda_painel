@@ -60,8 +60,8 @@ class ClientTest < ActiveSupport::TestCase
     assert_not client.reload.whatsapp_ready?
   end
 
-  test 'whatsapp_ready? com Z-API depende das credenciais' do
+  test 'todo cliente usa a Evolution Mewtda' do
+    assert build_client.whatsapp_evolution?
     assert_not build_client.whatsapp_ready?
-    assert build_client(zapi_instance_id: 'i', zapi_instance_token: 't', zapi_client_token: 'c').whatsapp_ready?
   end
 end

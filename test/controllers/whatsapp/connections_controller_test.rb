@@ -126,19 +126,13 @@ class Whatsapp::ConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 'disconnecting', connection.reload.state
   end
 
-  test 'edição do cliente mostra seletor, números e mantém campos Z-API' do
+  test 'edição do cliente mostra os números e não tem mais Z-API' do
     sign_in @admin
     get edit_client_path(@a)
 
     assert_response :success
-    assert_select 'select#client_whatsapp_provider option', text: 'Evolution Mewtda'
     assert_select '#wan-section[data-base=?]', "/crm/clients/#{@a.id}/whatsapp/connections"
-    assert_select 'input#client_zapi_instance_id'
-  end
-
-  test 'admin altera o provider do cliente' do
-    sign_in @admin
-    patch client_path(@a), params: { client: { name: @a.name, email: @a.email, whatsapp_provider: 'zapi' } }
-    assert_equal 'zapi', @a.reload.whatsapp_provider
+    assert_select 'select#client_whatsapp_provider', count: 0
+    assert_select 'input#client_zapi_instance_id', count: 0
   end
 end

@@ -1,14 +1,12 @@
 module Whatsapp
-  # Caminho único de envio das automações: Evolution (outbox) ou Z-API, conforme o cliente.
+  # Caminho único de envio das automações: números da Evolution Mewtda (outbox).
   module Outbound
     Result = Struct.new(:ok, :provider, :connection, :message, :error, keyword_init: true)
 
     def self.deliver(client:, campaign:, phone:, body:, prefer_connection: nil, strict: false)
       if campaign && campaign.client_id != client.id
-        return Result.new(ok: false, provider: client.whatsapp_evolution? ? 'evolution' : 'zapi',
-                          error: 'automação de outro cliente')
+        return Result.new(ok: false, provider: 'evolution', error: 'automação de outro cliente')
       end
-      return deliver_zapi(client, phone, body) unless client.whatsapp_evolution?
 
       return Result.new(ok: false, provider: 'evolution', error: 'telefone inválido') if Phone.normalize(phone).nil?
 
@@ -21,12 +19,6 @@ module Whatsapp
         return Result.new(ok: false, provider: 'evolution', error: 'telefone inválido')
       end
       Result.new(ok: true, provider: 'evolution', connection: connection, message: message)
-    end
-
-    def self.deliver_zapi(client, phone, body)
-      response = Zapi::Client.new(client).send_text(phone: format_phone(phone), message: body)
-      ok = response.is_a?(Hash) && response['zaapId'].present?
-      Result.new(ok: ok, provider: 'zapi', error: (ok ? nil : "Falha ao enviar via Z-API: #{response.inspect}"))
     end
 
     def self.enqueue(connection, phone, body)
@@ -57,6 +49,6 @@ module Whatsapp
       digits = phone.to_s.gsub(/\D/, '')
       digits.start_with?('55') ? digits : "55#{digits}"
     end
-    private_class_method :deliver_zapi, :enqueue
+    private_class_method :enqueue
   end
 end

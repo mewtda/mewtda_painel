@@ -15,8 +15,8 @@
         </div>
       </div>
 
-      <%# Alerta Zapi %>
-      <% unless current_client.zapi_configured? %>
+      <%# Alerta WhatsApp %>
+      <% unless current_client.whatsapp_ready? %>
         <div class="cpform-alert cpform-alert--danger">
           <div class="cpform-alert__icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -24,8 +24,8 @@
             </svg>
           </div>
           <div>
-            <strong>Atencao: Integracao Zapi nao configurada!</strong>
-            <p>Esta campanha nao sera executada ate que a integracao Zapi seja configurada no cliente.</p>
+            <strong>Atenção: Nenhum número de WhatsApp conectado!</strong>
+            <p>Esta campanha não será executada até que um número esteja conectado no cliente.</p>
           </div>
         </div>
       <% end %>
@@ -303,11 +303,11 @@
                 <% end %>
               </div>
               <div class="cpform-status-item">
-                <span class="cpform-status-item__label">Integracao Zapi</span>
-                <% if campaign.zapi_configured? %>
-                  <span class="cpform-status-item__value cpform-status-item__value--success">Configurada</span>
+                <span class="cpform-status-item__label">WhatsApp</span>
+                <% if campaign.whatsapp_ready? %>
+                  <span class="cpform-status-item__value cpform-status-item__value--success">Conectado</span>
                 <% else %>
-                  <span class="cpform-status-item__value cpform-status-item__value--danger">Nao configurada</span>
+                  <span class="cpform-status-item__value cpform-status-item__value--danger">Nenhum número conectado</span>
                 <% end %>
               </div>
               <div class="cpform-status-item">

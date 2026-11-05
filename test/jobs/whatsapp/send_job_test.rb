@@ -79,14 +79,9 @@ class Whatsapp::SendJobTest < ActiveJob::TestCase
     assert_equal 'failed', @message.reload.state
   end
 
-  test 'automação só envia para cliente com Evolution ativo' do
+  test 'mensagem de automação sai pelo número do cliente' do
     @message.update!(origin: 'automation', user: nil)
     calls = 0
-    with_gateway(->(_message) { calls += 1; response_for }) { Whatsapp::SendJob.perform_now(@message.id) }
-    assert_equal 'failed', @message.reload.state
-
-    @client.update!(whatsapp_provider: 'evolution')
-    @message.update!(state: 'queued', error_code: nil)
     with_gateway(->(_message) { calls += 1; response_for }) { Whatsapp::SendJob.perform_now(@message.id) }
     assert_equal 1, calls
     assert_equal 'sent', @message.reload.state

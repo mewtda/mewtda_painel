@@ -137,9 +137,8 @@
 .cform-logo--meta { background: #0866ff; }
 .cform-logo--google { background: #fff; border: 1px solid var(--outline); }
 .cform-logo--google i { background: conic-gradient(from -45deg, #ea4335 0 25%, #4285f4 0 50%, #34a853 0 75%, #fbbc05 0); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.cform-logo--zapi { background: #111827; font-size: 14px; }
 
-/* Provedores dentro da aba WhatsApp (Z-API e API Oficial) */
+/* Provedores dentro da aba WhatsApp (Evolution e API Oficial) */
 .cform-provider { border: 1px solid var(--outline); border-radius: var(--radius); overflow: hidden; }
 .cform-provider__header { display: flex; align-items: center; gap: 0.6rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--outline); font-weight: 600; font-size: 0.9rem; color: var(--fg); }
 .cform-provider__title { flex: 1; }

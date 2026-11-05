@@ -1,6 +1,6 @@
 <%# Números do WhatsApp (Evolution Mewtda). Sem <form> próprio: fica dentro do form do cliente; o JS fala com a API. %>
 <% base = client_whatsapp_connections_path(client) %>
-<div class="cform-provider wan" id="wan-section" data-base="<%= base %>" <%= 'hidden' unless client.whatsapp_evolution? %>>
+<div class="cform-provider wan" id="wan-section" data-base="<%= base %>">
   <div class="cform-provider__header">
     <span class="cform-logo cform-logo--whatsapp"><i class="fa-brands fa-whatsapp"></i></span>
     <span class="cform-provider__title">Números conectados</span>

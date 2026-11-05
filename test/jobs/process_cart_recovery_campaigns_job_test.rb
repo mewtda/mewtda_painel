@@ -2,18 +2,19 @@ require 'test_helper'
 
 class ProcessCartRecoveryCampaignsJobTest < ActiveJob::TestCase
   def setup
-    @client = Client.create!(
-      name: 'Loja Teste', email: "loja-#{SecureRandom.hex(4)}@example.com",
-      zapi_instance_id: 'inst', zapi_instance_token: 'tok', zapi_client_token: 'ctok'
-    )
+    @client = Client.create!(name: 'Loja Teste', email: "loja-#{SecureRandom.hex(4)}@example.com")
+    @number = @client.whatsapp_connections.create!(name: 'Loja', state: 'connected')
   end
 
   def create_campaign(attrs = {})
-    @client.campaigns.create!({
+    campaign = @client.campaigns.create!({
       name: 'Recuperação', kind: 'cart_recovery', message: 'Oi {nome}',
       start_date: Date.current - 1.day, end_date: Date.current + 1.year,
       send_delay_minutes: 60
     }.merge(attrs))
+    Whatsapp::CampaignConnection.create!(campaign: campaign, connection: @number)
+    campaign.update_column(:evolution_started_at, 3.days.ago)
+    campaign
   end
 
   def create_checkout(attrs = {})
@@ -71,8 +72,8 @@ class ProcessCartRecoveryCampaignsJobTest < ActiveJob::TestCase
     end
   end
 
-  test 'skips clients without zapi configured' do
-    @client.update!(zapi_instance_id: nil, zapi_instance_token: nil, zapi_client_token: nil)
+  test 'skips clients without a connected number' do
+    @number.update!(state: 'disconnected')
     create_campaign
     create_checkout(checkout_created_at: 2.hours.ago)
 

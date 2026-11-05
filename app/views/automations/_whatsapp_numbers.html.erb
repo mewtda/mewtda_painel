@@ -1,5 +1,4 @@
 <%# locals: (campaign:, client:, kind:) %>
-<% if client.whatsapp_evolution? %>
   <% selected_ids = campaign.persisted? ? campaign.whatsapp_connection_ids : [] %>
   <div class="cpform-section">
     <div class="cpform-section__header">
@@ -33,4 +32,3 @@
     <% end %>
     <% end %>
   </div>
-<% end %>

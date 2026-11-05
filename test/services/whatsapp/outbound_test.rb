@@ -9,53 +9,19 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
                                           start_date: Date.current, end_date: Date.current + 30)
   end
 
-  def with_zapi_stub(response)
-    calls = []
-    fake = Object.new
-    fake.define_singleton_method(:send_text) { |**kw| calls << kw; response }
-    original = Zapi::Client.method(:new)
-    Zapi::Client.define_singleton_method(:new) { |*_| fake }
-    yield calls
-  ensure
-    Zapi::Client.define_singleton_method(:new, original)
-  end
-
   def evolution!
-    @client.update!(whatsapp_provider: 'evolution')
     @conn = @client.whatsapp_connections.create!(name: 'A', state: 'connected')
     Whatsapp::CampaignConnection.create!(campaign: @campaign, connection: @conn)
   end
 
-  test 'cliente zapi envia pela Z-API sem criar mensagem' do
-    with_zapi_stub({ 'zaapId' => 'x' }) do |calls|
-      assert_no_difference 'Whatsapp::Message.count' do
-        result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '(11) 99999-0000', body: 'oi')
-        assert result.ok
-        assert_equal 'zapi', result.provider
-      end
-      assert_equal [{ phone: '5511999990000', message: 'oi' }], calls
-    end
-  end
-
-  test 'zapi sem zaapId falha' do
-    with_zapi_stub(nil) do
-      result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
-      assert_not result.ok
-      assert_match(/Z-API/, result.error)
-    end
-  end
-
-  test 'cliente evolution cria mensagem na fila e não chama a Z-API' do
+  test 'cria mensagem na fila do número da automação' do
     evolution!
-    with_zapi_stub({ 'zaapId' => 'x' }) do |calls|
-      assert_difference 'Whatsapp::Message.count', 1 do
-        assert_enqueued_with(job: Whatsapp::SendJob) do
-          result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
-          assert result.ok
-          assert_equal 'evolution', result.provider
-        end
+    assert_difference 'Whatsapp::Message.count', 1 do
+      assert_enqueued_with(job: Whatsapp::SendJob) do
+        result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
+        assert result.ok
+        assert_equal 'evolution', result.provider
       end
-      assert_empty calls
     end
     msg = Whatsapp::Message.last
     assert_equal %w[queued automation outgoing text oi], [msg.state, msg.origin, msg.direction, msg.kind, msg.body]
@@ -69,26 +35,20 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
     assert_operator r2.message.send_after, :>=, r1.message.send_after + 8.seconds
   end
 
-  test 'evolution sem número conectado não cria nada nem chama a Z-API' do
+  test 'sem número conectado não cria nada' do
     evolution!
     @conn.update!(state: 'disconnected')
-    with_zapi_stub({ 'zaapId' => 'x' }) do |calls|
-      assert_no_difference 'Whatsapp::Message.count' do
-        result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
-        assert_not result.ok
-        assert_equal 'sem número responsável conectado', result.error
-      end
-      assert_empty calls
+    assert_no_difference 'Whatsapp::Message.count' do
+      result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
+      assert_not result.ok
+      assert_equal 'sem número responsável conectado', result.error
     end
   end
 
-  test 'evolution sem campanha não cai na Z-API' do
+  test 'sem automação não envia' do
     evolution!
-    with_zapi_stub({ 'zaapId' => 'x' }) do |calls|
-      result = Whatsapp::Outbound.deliver(client: @client, campaign: nil, phone: '11999990000', body: 'oi')
-      assert_not result.ok
-      assert_empty calls
-    end
+    result = Whatsapp::Outbound.deliver(client: @client, campaign: nil, phone: '11999990000', body: 'oi')
+    assert_not result.ok
   end
 
   test 'o job é enfileirado fora da transação, com a mensagem já persistida' do
@@ -121,16 +81,13 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
     assert_enqueued_with(job: Whatsapp::SendJob, args: [result.message.id])
   end
 
-  test 'automação de outro cliente não envia por nenhum provedor' do
+  test 'automação de outro cliente não envia' do
     evolution!
     other = Client.create!(name: 'Outra', email: "o-#{SecureRandom.hex(4)}@example.com")
-    with_zapi_stub({ 'zaapId' => 'x' }) do |calls|
-      assert_no_difference 'Whatsapp::Message.count' do
-        result = Whatsapp::Outbound.deliver(client: other, campaign: @campaign, phone: '11999990000', body: 'oi')
-        assert_not result.ok
-        assert_equal 'automação de outro cliente', result.error
-      end
-      assert_empty calls
+    assert_no_difference 'Whatsapp::Message.count' do
+      result = Whatsapp::Outbound.deliver(client: other, campaign: @campaign, phone: '11999990000', body: 'oi')
+      assert_not result.ok
+      assert_equal 'automação de outro cliente', result.error
     end
   end
 

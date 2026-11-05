@@ -55,10 +55,8 @@ class Campaign < ApplicationRecord
     active? && start_date <= Date.current && end_date >= Date.current
   end
 
-  def zapi_configured?
-    client&.zapi_instance_id.present? &&
-      client&.zapi_instance_token.present? &&
-      client&.zapi_client_token.present?
+  def whatsapp_ready?
+    client&.whatsapp_ready?
   end
 
   def status

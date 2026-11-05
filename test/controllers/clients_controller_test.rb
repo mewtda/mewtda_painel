@@ -60,23 +60,19 @@ class ClientsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 'existing-token', client.reload.meta_access_token
   end
 
-  test 'blank Z-API and WhatsApp Cloud tokens preserve the stored ones' do
+  test 'blank WhatsApp Cloud token preserves the stored one' do
     admin = build_admin
     client = Client.create!(
       name: 'Loja Teste', email: "loja-#{SecureRandom.hex(4)}@example.com",
-      zapi_instance_token: 'zapi-instance', zapi_client_token: 'zapi-client',
       whatsapp_cloud_access_token: 'cloud-token'
     )
     sign_in admin
 
     patch client_path(client), params: {
-      client: { name: client.name, email: client.email, zapi_instance_token: '', zapi_client_token: '',
-                whatsapp_cloud_access_token: '' }
+      client: { name: client.name, email: client.email, whatsapp_cloud_access_token: '' }
     }
 
     client.reload
-    assert_equal 'zapi-instance', client.zapi_instance_token
-    assert_equal 'zapi-client', client.zapi_client_token
     assert_equal 'cloud-token', client.whatsapp_cloud_access_token
   end
 

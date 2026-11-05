@@ -1,284 +1,253 @@
-<% title 'Automação de Recuperação de Carrinho' %>
+<% title 'Recuperação de Carrinho' %>
 <% content_for :head do %><%= stylesheet_link_tag 'whatsapp_support', media: 'all' %><% end %>
+<%
+  brl = ->(value) { number_to_currency(value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') }
+  status_label = { running: 'Em execução', pending: 'Aguardando início', finished: 'Finalizada', inactive: 'Inativa' }
+  numbers_count = @campaign.persisted? ? @campaign.whatsapp_connections.count : 0
+  tabs = [
+    ['geral', 'Geral', 'fa-sliders'],
+    ['mensagens', 'Mensagens', 'fa-comment-dots'],
+    ['numeros', 'Números', 'fa-mobile-screen-button', numbers_count],
+    ['conversas', 'Conversas', 'fa-comments'],
+    ['resultados', 'Resultados', 'fa-chart-line']
+  ]
+  switch = lambda do |form, attribute, label, description|
+    content_tag(:label, class: 'scr-switch') do
+      safe_join([
+        content_tag(:span, safe_join([content_tag(:strong, label), (content_tag(:span, description) if description)].compact), class: 'scr-switch__text'),
+        form.check_box(attribute),
+        content_tag(:span, '', class: 'scr-switch__track')
+      ])
+    end
+  end
+%>
 
-<div class="cpform-wrapper cpform-wrapper--with-preview">
-  <div class="cpform-card">
-
-    <div class="cpform-card__header">
-      <div class="cpform-card__header-icon">
-        <i class="fa-solid fa-cart-shopping"></i>
-      </div>
-      <div>
-        <h2 class="cpform-card__title">Automação de Recuperação de Carrinho</h2>
-        <p class="cpform-card__subtitle">Cliente: <%= @client.name %></p>
-      </div>
-    </div>
-
-    <div class="cpform-alert cpform-alert--warning">
-      <div class="cpform-alert__icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-        </svg>
-      </div>
-      <div>
-        <strong>Depende de uma permissão extra da Shopify</strong>
-        <p>
-          Pra ler telefone de checkouts abandonados, a loja precisa reconectar a integração Shopify (nova
-          permissão) e, em alguns casos, aprovação de "Protected Customer Data" da própria Shopify. Enquanto isso
-          não acontece, a fila em <%= link_to 'Ver Dados', cart_recovery_data_automation_path %> fica vazia.
-        </p>
-      </div>
-    </div>
-
-    <% unless @client.whatsapp_ready? %>
-      <div class="cpform-alert cpform-alert--danger">
-        <div class="cpform-alert__icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
-        </div>
-        <div>
-          <strong>Atenção: Nenhum número de WhatsApp conectado!</strong>
-          <p>Esta automação não será executada até que um número esteja conectado.</p>
-        </div>
-      </div>
-    <% end %>
-
-    <% if @campaign.errors.any? %>
-      <div class="cpform-errors">
-        <div class="cpform-errors__icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
-        </div>
-        <div>
-          <strong>Corrija os erros abaixo:</strong>
-          <ul>
-            <% @campaign.errors.full_messages.each do |msg| %>
-              <li><%= msg %></li>
-            <% end %>
-          </ul>
-        </div>
-      </div>
-    <% end %>
-
-    <%= render 'automations/cart_recovery_metrics', metrics: @metrics, period: @period, path: { action: :edit_cart_recovery } %>
-
-    <%= render 'automations/whatsapp_numbers', campaign: @campaign, client: @client, kind: 'cart-recovery' %>
-
-    <%= form_with model: @campaign, url: cart_recovery_automation_path, method: :patch, html: { autocomplete: 'off' } do |form| %>
-      <div class="cpform-card__body">
-
-        <div class="cpform-section">
-          <div class="cpform-section__header">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-            </svg>
-            Informações Básicas
-          </div>
-
-          <div class="cpform-field">
-            <%= form.label :name, 'Nome', class: 'crm-label' %>
-            <%= form.text_field :name, class: 'crm-input', required: true %>
-          </div>
-
-          <div class="cpform-row">
-            <div class="cpform-field">
-              <%= form.label :start_date, 'Data de Início', class: 'crm-label' %>
-              <%= form.date_field :start_date, class: 'crm-input', required: true %>
-            </div>
-            <div class="cpform-field">
-              <%= form.label :end_date, 'Data de Fim', class: 'crm-label' %>
-              <%= form.date_field :end_date, class: 'crm-input', required: true %>
-            </div>
-          </div>
-
-          <div class="cpform-field">
-            <%= form.label :active, 'Status', class: 'crm-label' %>
-            <div class="cpform-toggle">
-              <%= form.check_box :active, class: 'cpform-toggle__input' %>
-              <span class="cpform-toggle__label">Automação ativa</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="cpform-section cpform-section--highlight">
-          <div class="cpform-section__header cpform-section__header--highlight">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Primeira Mensagem
-          </div>
-
-          <p class="cpform-section__description">
-            Enviada quando o cliente chega no checkout, digita o telefone e não finaliza a compra.
-          </p>
-
-          <div class="cpform-field">
-            <%= form.label :test_phone, 'Número de teste (modo teste)', class: 'crm-label' %>
-            <%= form.text_field :test_phone, class: 'crm-input cpform-field__input--half', placeholder: 'Ex: 16 99199-7608' %>
-            <span class="cpform-field__hint">Preenchido, a automação só envia para checkouts com este telefone. Deixe vazio para enviar a todos.</span>
-          </div>
-
-          <div class="cpform-field">
-            <%= form.label :send_delay_minutes, 'Enviar Após (minutos)', class: 'crm-label' %>
-            <%= form.number_field :send_delay_minutes, class: 'crm-input cpform-field__input--half', min: 1, max: 1440,
-                placeholder: 'Ex: 60' %>
-            <span class="cpform-field__hint">Tempo de espera desde o checkout até a primeira mensagem</span>
-          </div>
-
-          <div class="cpform-field">
-            <%= form.label :message, 'Texto da Mensagem', class: 'crm-label' %>
-            <%= form.text_area :message, class: 'crm-input', rows: 6, required: true,
-                placeholder: 'Use as variáveis abaixo para personalizar a mensagem' %>
-          </div>
-
-          <div class="cpform-variables">
-            <span class="cpform-variables__title">Variáveis disponíveis:</span>
-            <div class="cpform-variables__list">
-              <code class="cpform-variables__item" title="Nome do cliente">{nome}</code>
-              <code class="cpform-variables__item" title="Código do cupom">{cupom}</code>
-              <code class="cpform-variables__item" title="Link do checkout">{link}</code>
-            </div>
-          </div>
-
-          <div class="cpform-field">
-            <div class="cpform-toggle">
-              <%= form.check_box :include_coupon, class: 'cpform-toggle__input' %>
-              <span class="cpform-toggle__label">Incluir cupom de desconto nesta mensagem</span>
-            </div>
-          </div>
-
-          <div class="cpform-field">
-            <%= form.label :coupon_code, 'Código do Cupom', class: 'crm-label' %>
-            <%= form.text_field :coupon_code, class: 'crm-input cpform-field__input--half', placeholder: 'Ex: VOLTA10' %>
-            <span class="cpform-field__hint">O cupom precisa já existir na Shopify — cadastre por lá antes</span>
-          </div>
-        </div>
-
-        <div class="cpform-section cpform-section--filters">
-          <div class="cpform-section__header cpform-section__header--filters">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
-            Re-notificação (Opcional)
-          </div>
-
-          <p class="cpform-section__description">
-            Se o cliente ainda não comprou depois da primeira mensagem, envia uma segunda, com um texto
-            (e cupom) diferentes.
-          </p>
-
-          <div class="cpform-field">
-            <div class="cpform-toggle">
-              <%= form.check_box :resend_enabled, class: 'cpform-toggle__input' %>
-              <span class="cpform-toggle__label">Ativar segunda mensagem</span>
-            </div>
-          </div>
-
-          <div class="cpform-field">
-            <%= form.label :resend_delay_hours, 'Enviar Após a 1ª Mensagem (horas)', class: 'crm-label' %>
-            <%= form.number_field :resend_delay_hours, class: 'crm-input cpform-field__input--half', min: 1, max: 168,
-                placeholder: 'Ex: 24' %>
-          </div>
-
-          <div class="cpform-field">
-            <%= form.label :resend_message, 'Texto da Segunda Mensagem', class: 'crm-label' %>
-            <%= form.text_area :resend_message, class: 'crm-input', rows: 6,
-                placeholder: 'Use as mesmas variáveis: {nome}, {cupom}, {link}' %>
-          </div>
-
-          <div class="cpform-field">
-            <div class="cpform-toggle">
-              <%= form.check_box :resend_include_coupon, class: 'cpform-toggle__input' %>
-              <span class="cpform-toggle__label">Incluir cupom de desconto na segunda mensagem</span>
-            </div>
-          </div>
-
-          <div class="cpform-field">
-            <%= form.label :resend_coupon_code, 'Código do Cupom', class: 'crm-label' %>
-            <%= form.text_field :resend_coupon_code, class: 'crm-input cpform-field__input--half', placeholder: 'Ex: VOLTA15' %>
-            <span class="cpform-field__hint">O cupom precisa já existir na Shopify — cadastre por lá antes</span>
-          </div>
-        </div>
-
+<div class="scr" data-screen-tabs>
+  <div class="scr-header">
+    <div>
+      <h1>
+        <i class="fa-solid fa-cart-shopping" style="color: var(--primary)"></i> Recuperação de carrinho
         <% if @campaign.persisted? %>
-          <div class="cpform-section">
-            <div class="cpform-section__header">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Status da Automação
-            </div>
+          <span class="scr-chip <%= @campaign.status == :running ? 'scr-chip--on' : '' %>"><%= status_label[@campaign.status] %></span>
+        <% end %>
+        <% if @campaign.test_phone.present? %>
+          <span class="scr-chip scr-chip--warn"><i class="fa-solid fa-flask"></i> Modo teste</span>
+        <% end %>
+      </h1>
+      <p>Mensagens de WhatsApp para quem abandonou o checkout de <%= @client.name %></p>
+    </div>
+    <div class="scr-header__actions">
+      <%= link_to cart_recovery_data_automation_path, class: 'crm-btn crm-btn--secondary' do %>
+        <i class="fa-solid fa-table-list"></i> Checkouts abandonados
+      <% end %>
+      <%= link_to automations_path, class: 'crm-btn crm-btn--secondary' do %>
+        <i class="fa-solid fa-arrow-left"></i> Automações
+      <% end %>
+    </div>
+  </div>
 
-            <div class="cpform-status-grid">
-              <div class="cpform-status-item">
-                <span class="cpform-status-item__label">Status</span>
-                <% case @campaign.status %>
-                <% when :running %>
-                  <span class="cpform-status-item__value cpform-status-item__value--running">Em execução</span>
-                <% when :pending %>
-                  <span class="cpform-status-item__value cpform-status-item__value--pending">Aguardando início</span>
-                <% when :finished %>
-                  <span class="cpform-status-item__value cpform-status-item__value--finished">Finalizada</span>
-                <% when :inactive %>
-                  <span class="cpform-status-item__value cpform-status-item__value--inactive">Inativa</span>
-                <% end %>
+  <% unless @client.whatsapp_ready? %>
+    <div class="scr-banner scr-banner--danger">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <div><strong>Nenhum número de WhatsApp conectado.</strong>
+        <p>Esta automação não envia nada até um número estar conectado e importado em <a href="#numeros" data-tab-link="numeros">Números</a>.</p></div>
+    </div>
+  <% end %>
+
+  <% if @campaign.errors.any? %>
+    <div class="scr-banner scr-banner--danger">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <div><strong>Corrija os erros abaixo:</strong>
+        <p><%= @campaign.errors.full_messages.to_sentence %></p></div>
+    </div>
+  <% end %>
+
+  <nav class="scr-tabs" role="tablist" aria-label="Seções da automação">
+    <% tabs.each do |key, label, icon, count| %>
+      <button type="button" class="scr-tab" role="tab" data-tab="<%= key %>" aria-selected="false">
+        <i class="fa-solid <%= icon %>"></i><span><%= label %></span>
+        <% if count.to_i.positive? %><span class="scr-tab__count"><%= count %></span><% end %>
+      </button>
+    <% end %>
+  </nav>
+
+  <%= form_with model: @campaign, url: cart_recovery_automation_path, method: :patch, html: { autocomplete: 'off' } do |form| %>
+    <%= hidden_field_tag :tab, params[:tab], data: { screen_tab_input: true } %>
+
+    <section class="scr-panel" data-panel="geral" hidden>
+      <div class="scr-grid">
+        <div class="scr-stack">
+          <div class="scr-card">
+            <h2 class="scr-card__title"><i class="fa-solid fa-power-off"></i> Automação</h2>
+            <%= switch.call(form, :active, 'Automação ativa', 'Desligada, nenhum checkout recebe mensagem.') %>
+            <div class="scr-field">
+              <%= form.label :name, 'Nome' %>
+              <%= form.text_field :name, class: 'crm-input', required: true %>
+            </div>
+            <div class="scr-row">
+              <div class="scr-field">
+                <%= form.label :start_date, 'Início' %>
+                <%= form.date_field :start_date, class: 'crm-input', required: true %>
               </div>
-              <%= render 'automations/whatsapp_status_item', client: @client, campaign: @campaign %>
-              <div class="cpform-status-item">
-                <span class="cpform-status-item__label">Checkouts na fila</span>
-                <span class="cpform-status-item__value"><%= @client.abandoned_checkouts.with_phone.count %></span>
-              </div>
-              <div class="cpform-status-item">
-                <span class="cpform-status-item__label">Criada em</span>
-                <span class="cpform-status-item__value"><%= @campaign.created_at.strftime('%d/%m/%Y %H:%M') %></span>
+              <div class="scr-field">
+                <%= form.label :end_date, 'Fim' %>
+                <%= form.date_field :end_date, class: 'crm-input', required: true %>
               </div>
             </div>
           </div>
-        <% end %>
 
-      </div>
+          <div class="scr-card <%= 'scr-card--primary' if @campaign.test_phone.present? %>">
+            <h2 class="scr-card__title"><i class="fa-solid fa-flask"></i> Modo teste</h2>
+            <p class="scr-card__hint">Preenchido, a automação só envia para checkouts com este telefone. Deixe vazio para enviar a todos.</p>
+            <div class="scr-field">
+              <%= form.label :test_phone, 'Número de teste' %>
+              <%= form.text_field :test_phone, class: 'crm-input', placeholder: 'Ex: 16 99199-7608' %>
+            </div>
+          </div>
+        </div>
 
-      <div class="cpform-card__footer">
-        <%= link_to automations_path, class: 'crm-btn crm-btn--secondary' do %>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-          </svg>
-          Voltar
-        <% end %>
-        <%= link_to cart_recovery_data_automation_path, class: 'crm-btn cpform-btn--outline' do %>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-          </svg>
-          Ver Dados
-        <% end %>
-        <%= form.button class: 'crm-btn crm-btn--primary', data: { disable_with: 'Salvando...' } do %>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Salvar Automação
-        <% end %>
+        <div class="scr-stack">
+          <div class="scr-card">
+            <h2 class="scr-card__title"><i class="fa-solid fa-circle-info"></i> Situação</h2>
+            <dl class="scr-status">
+              <div><dt>Status</dt><dd><%= @campaign.persisted? ? status_label[@campaign.status] : 'Ainda não salva' %></dd></div>
+              <div><dt>WhatsApp</dt><dd><%= @client.whatsapp_ready? ? 'Conectado' : 'Nenhum número conectado' %></dd></div>
+              <div><dt>Números da automação</dt><dd><%= numbers_count %></dd></div>
+              <div><dt>Checkouts com telefone</dt><dd><%= @client.abandoned_checkouts.with_phone.count %></dd></div>
+              <% if @campaign.persisted? %>
+                <div><dt>Criada em</dt><dd><%= @campaign.created_at.strftime('%d/%m/%Y %H:%M') %></dd></div>
+              <% end %>
+            </dl>
+          </div>
+          <div class="scr-card">
+            <h2 class="scr-card__title"><i class="fa-solid fa-clock-rotate-left"></i> Como funciona</h2>
+            <p class="scr-card__hint" style="margin: 0">
+              A cada 10 minutos o painel busca os checkouts abandonados na Shopify. Depois do tempo configurado em
+              Mensagens, quem deixou o telefone recebe a 1ª mensagem por um dos números da automação, e a 2ª (se ligada)
+              sai pelo mesmo número. Só checkouts das últimas 24 horas recebem a 1ª mensagem.
+            </p>
+          </div>
+        </div>
       </div>
+    </section>
+
+    <section class="scr-panel" data-panel="mensagens" hidden>
+      <div class="scr-grid">
+        <div class="scr-stack">
+          <div class="scr-card">
+            <h2 class="scr-card__title"><i class="fa-solid fa-1"></i> Primeira mensagem</h2>
+            <p class="scr-card__hint">Enviada quando o cliente digita o telefone no checkout e não finaliza a compra.</p>
+            <div class="scr-field">
+              <%= form.label :send_delay_minutes, 'Enviar após (minutos)' %>
+              <%= form.number_field :send_delay_minutes, class: 'crm-input', min: 1, max: 1440, placeholder: 'Ex: 60' %>
+              <small>Tempo desde o checkout até a mensagem.</small>
+            </div>
+            <div class="scr-field">
+              <%= form.label :message, 'Texto' %>
+              <%= form.text_area :message, class: 'crm-input', rows: 6, required: true %>
+              <div class="scr-vars">Variáveis: <code>{nome}</code> <code>{cupom}</code> <code>{link}</code></div>
+            </div>
+            <%= switch.call(form, :include_coupon, 'Incluir cupom', 'O cupom precisa já existir na Shopify.') %>
+            <div class="scr-field">
+              <%= form.label :coupon_code, 'Código do cupom' %>
+              <%= form.text_field :coupon_code, class: 'crm-input', placeholder: 'Ex: VOLTA10' %>
+            </div>
+          </div>
+
+          <div class="scr-card">
+            <h2 class="scr-card__title"><i class="fa-solid fa-2"></i> Segunda mensagem</h2>
+            <p class="scr-card__hint">Se o cliente ainda não comprou, uma segunda mensagem pelo mesmo número da primeira.</p>
+            <%= switch.call(form, :resend_enabled, 'Enviar segunda mensagem', nil) %>
+            <div class="scr-field">
+              <%= form.label :resend_delay_hours, 'Enviar após a 1ª (horas)' %>
+              <%= form.number_field :resend_delay_hours, class: 'crm-input', min: 1, max: 168, placeholder: 'Ex: 24' %>
+            </div>
+            <div class="scr-field">
+              <%= form.label :resend_message, 'Texto' %>
+              <%= form.text_area :resend_message, class: 'crm-input', rows: 6, placeholder: 'Use as mesmas variáveis: {nome}, {cupom}, {link}' %>
+            </div>
+            <%= switch.call(form, :resend_include_coupon, 'Incluir cupom', nil) %>
+            <div class="scr-field">
+              <%= form.label :resend_coupon_code, 'Código do cupom' %>
+              <%= form.text_field :resend_coupon_code, class: 'crm-input', placeholder: 'Ex: VOLTA15' %>
+            </div>
+          </div>
+        </div>
+
+        <div class="scr-stack" style="position: sticky; top: 16px;">
+          <%= render 'automations/whatsapp_preview' %>
+        </div>
+      </div>
+    </section>
+
+    <div class="scr-sticky" data-screen-save>
+      <%= form.button class: 'crm-btn crm-btn--primary', data: { disable_with: 'Salvando...' } do %>
+        <i class="fa-solid fa-floppy-disk"></i> Salvar automação
+      <% end %>
+    </div>
+  <% end %>
+
+  <section class="scr-panel" data-panel="numeros" hidden>
+    <div class="scr-card">
+      <%= render 'automations/whatsapp_numbers', campaign: @campaign, client: @client, kind: 'cart-recovery' %>
+    </div>
+  </section>
+
+  <section class="scr-panel" data-panel="conversas" id="conversas" hidden>
+    <% if @conversation_connections %>
+      <%= render 'whatsapp/conversations/inbox', connections: @conversation_connections, campaign: @campaign,
+                                                client: @client, empty_state: false, empty_message: nil,
+                                                show_header: false %>
+    <% else %>
+      <div class="scr-card"><p class="scr-card__hint" style="margin: 0">Importe um número em Números para ver as conversas desta automação aqui.</p></div>
     <% end %>
+  </section>
 
-  </div>
-
-  <%= render 'automations/whatsapp_preview' %>
+  <section class="scr-panel" data-panel="resultados" hidden>
+    <div class="scr-header">
+      <h2 class="scr-card__title"><i class="fa-solid fa-chart-line"></i> Checkouts abandonados</h2>
+      <div class="scr-header__actions">
+        <% [7, 30, 90].each do |days| %>
+          <%= link_to "#{days} dias", edit_cart_recovery_automation_path(period: days, tab: 'resultados'),
+                      class: "crm-btn #{days == @period ? 'crm-btn--primary' : 'crm-btn--secondary'}" %>
+        <% end %>
+      </div>
+    </div>
+    <div class="scr-kpis">
+      <div class="scr-kpi"><span>Ticket médio</span><strong><%= brl.call(@metrics[:average_ticket]) %></strong></div>
+      <div class="scr-kpi"><span>Checkouts abandonados</span><strong><%= @metrics[:count] %></strong></div>
+      <div class="scr-kpi"><span>Valor abandonado</span><strong><%= brl.call(@metrics[:total]) %></strong></div>
+      <div class="scr-kpi"><span>Valor recuperado</span><strong><%= brl.call(@metrics[:recovered_total]) %></strong><span><%= @metrics[:recovered_count] %> checkout(s)</span></div>
+    </div>
+  </section>
 </div>
-
-<% if @conversation_connections %>
-  <div class="cpform-conversations" id="conversas">
-    <h3 class="cpform-section__title"><i class="fa-solid fa-comments"></i> Conversas desta automação</h3>
-    <%= render 'whatsapp/conversations/inbox', connections: @conversation_connections, campaign: @campaign,
-                                              client: @client, empty_state: false, empty_message: nil,
-                                              show_header: false %>
-  </div>
-<% end %>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
+    var root = document.querySelector('[data-screen-tabs]');
+    var tabs = root.querySelectorAll('.scr-tab');
+    var panels = root.querySelectorAll('.scr-panel');
+    var save = root.querySelector('[data-screen-save]');
+    var input = root.querySelector('[data-screen-tab-input]');
+    var formTabs = ['geral', 'mensagens'];
+    var show = function (key) {
+      if (!root.querySelector('.scr-panel[data-panel="' + key + '"]')) key = 'geral';
+      tabs.forEach(function (t) {
+        var on = t.dataset.tab === key;
+        t.classList.toggle('is-active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      panels.forEach(function (p) { p.hidden = p.dataset.panel !== key; });
+      save.hidden = formTabs.indexOf(key) === -1;
+      input.value = key;
+      history.replaceState(null, '', '#' + key);
+    };
+    tabs.forEach(function (t) { t.addEventListener('click', function () { show(t.dataset.tab); }); });
+    root.querySelectorAll('[data-tab-link]').forEach(function (a) {
+      a.addEventListener('click', function (e) { e.preventDefault(); show(a.dataset.tabLink); });
+    });
+    show((location.hash || '').slice(1) || <%= raw params[:tab].to_s.to_json %>);
+
     var samples = { '{nome}': 'Maria Silva', '{cupom}': 'VOLTA10', '{link}': 'https://loja.exemplo.com/checkouts/abc123' };
     initWhatsappPreviewMulti([
       { id: 'campaign_message', samples: samples },

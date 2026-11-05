@@ -127,10 +127,11 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
         include_coupon: '1', coupon_code: 'VOLTA10',
         resend_enabled: '1', resend_delay_hours: 24, resend_message: 'Ainda dá tempo, {nome}! {cupom}',
         resend_include_coupon: '1', resend_coupon_code: 'VOLTA15'
-      }
+      },
+      tab: 'mensagens'
     }
 
-    assert_redirected_to automations_path
+    assert_redirected_to edit_cart_recovery_automation_path(anchor: 'mensagens')
     campaign = client.campaigns.find_by(kind: 'cart_recovery')
     assert campaign.present?
     assert campaign.active?
@@ -203,7 +204,7 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
     patch automation_numbers_path(kind: 'cart-recovery'), params: { connection_ids: [mine.id, foreign.id] }
 
-    assert_redirected_to edit_cart_recovery_automation_path
+    assert_redirected_to edit_cart_recovery_automation_path(anchor: 'numeros')
     assert_equal [mine.id], campaign.reload.whatsapp_connections.pluck(:id)
   end
 
@@ -323,5 +324,20 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to cart_recovery_data_automation_path
     assert_equal 'Canal da 1ª mensagem indisponível.', flash[:alert]
     assert_nil flash[:notice]
+  end
+
+  test 'cart recovery page uses tabs in the pode-trocar layout' do
+    client = evolution_client
+    saved_cart_campaign(client)
+    sign_in build_user(client: client)
+
+    get edit_cart_recovery_automation_path
+
+    assert_response :success
+    %w[geral mensagens numeros conversas resultados].each do |tab|
+      assert_select ".scr-tab[data-tab=?]", tab
+      assert_select ".scr-panel[data-panel=?]", tab
+    end
+    assert_select '.scr-switch input[type=checkbox][name=?]', 'campaign[active]'
   end
 end

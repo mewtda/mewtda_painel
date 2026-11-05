@@ -51,7 +51,7 @@ class AutomationsController < ApplicationController
                else cart_recovery_campaign
                end
     back = { 'tracking' => edit_tracking_automation_path, 'cashback' => edit_cashback_automation_path }
-           .fetch(kind, edit_cart_recovery_automation_path)
+           .fetch(kind, edit_cart_recovery_automation_path(anchor: 'numeros'))
 
     return redirect_to back, alert: 'Salve a automação antes de importar números.' unless campaign.persisted?
 
@@ -66,9 +66,11 @@ class AutomationsController < ApplicationController
   def update_cart_recovery
     @campaign = cart_recovery_campaign
     if @campaign.update(cart_recovery_params)
-      redirect_to automations_path, notice: 'Automação de recuperação de carrinho salva com sucesso.'
+      tab = %w[geral mensagens].include?(params[:tab]) ? params[:tab] : 'geral'
+      redirect_to edit_cart_recovery_automation_path(anchor: tab), notice: 'Automação de recuperação de carrinho salva.'
     else
       load_cart_recovery_metrics
+      load_conversation_connections
       render :edit_cart_recovery, status: :unprocessable_entity
     end
   end

@@ -4,7 +4,8 @@
     <div class="cpform-section__header">
       <h3 class="cpform-section__title">Números responsáveis</h3>
       <% if selected_ids.any? %>
-        <%= link_to(campaign.cart_recovery? ? '#conversas' : whatsapp_conversations_path(campaign_id: campaign.id), class: 'btn btn-sm btn-outline-secondary') do %>
+        <%= link_to(campaign.cart_recovery? ? '#conversas' : whatsapp_conversations_path(campaign_id: campaign.id),
+                    class: 'btn btn-sm btn-outline-secondary', data: { tab_link: ('conversas' if campaign.cart_recovery?) }) do %>
           <i class="fa-solid fa-comments"></i> Conversas desta automação
         <% end %>
       <% end %>

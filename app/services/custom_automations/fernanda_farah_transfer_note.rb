@@ -184,7 +184,7 @@ module CustomAutomations
         average = (e['paid_value'] / e['quantity']).round(2)
         unit_value = (average * @run.price_percentage / 100).round(2)
         warnings << "#{e['shopify_title']} está sem SKU na Shopify." if e['sku'].blank?
-        warnings << "#{e['sku'].presence || e['shopify_title']} saiu com valor zero (brinde?)." if unit_value.zero?
+        warnings << "#{e['sku'].presence || e['shopify_title']} saiu com valor zero (troca)." if unit_value.zero?
 
         { 'sku' => e['sku'], 'shopify_title' => e['shopify_title'], 'quantity' => e['quantity'],
           'average_price' => average.to_f, 'unit_value' => unit_value.to_f,

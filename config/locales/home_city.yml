@@ -12,6 +12,7 @@ pt-BR:
       # trocadilho: o S acende e apaga feito neon, "acendeu" vira "ascendeu"
       clients_title_2_html: '<span class="pun" aria-hidden="true">a<span class="pun-s">s</span>cendeu.</span><span class="sr-only">acendeu e ascendeu.</span>'
       clients_text: "Alguns dos mais de 100 clientes da Mewtda. Cada letreiro é uma loja de verdade: passe o mouse e vá conhecer."
+      clients_placeholder: "Sua marca aqui"
       nav_label: "Principal"
       kicker: "[ Mewtda ] — soluções para e-commerce"
       headline_prefix: "Sua"
@@ -59,6 +60,7 @@ en:
       clients_title_1: "Who's already"
       clients_title_2_html: "lit up."
       clients_text: "Some of Mewtda's 100+ clients. Every sign is a real store: hover and go take a look."
+      clients_placeholder: "Your brand here"
       nav_label: "Main"
       kicker: "[ Mewtda ] — e-commerce solutions"
       headline_prefix: "Your"
@@ -106,6 +108,7 @@ es:
       clients_title_1: "Quién ya"
       clients_title_2_html: "se encendió."
       clients_text: "Algunos de los más de 100 clientes de Mewtda. Cada letrero es una tienda real: pasa el mouse y ve a conocerla."
+      clients_placeholder: "Tu marca aquí"
       nav_label: "Principal"
       kicker: "[ Mewtda ] — soluciones para e-commerce"
       headline_prefix: "Tu"

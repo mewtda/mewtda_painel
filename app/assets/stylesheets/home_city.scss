@@ -163,6 +163,12 @@ a.sign:hover::before, a.sign:focus-visible::before { opacity: 1; }
 a.sign:hover img, a.sign:focus-visible img { transform: scale(1.06); }
 a.sign:hover .plate, a.sign:focus-visible .plate { opacity: 1; transform: none; }
 a.sign:focus-visible { outline-offset: -3px; }
+/* vaga livre na fachada: letreiro apagado chamando a próxima marca */
+.sign-vaga[hidden] { display: none; }
+.sign-vaga span { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; text-align: center; color: var(--muted, #fff); opacity: .18; border: 1px dashed currentColor; padding: 10px 14px; transition: opacity .25s ease; }
+.facade.is-lit .sign.sign-vaga:nth-child(n) { animation: none; }
+a.sign-vaga:hover span, a.sign-vaga:focus-visible span { opacity: .5; }
+a.sign-vaga::before { display: none; }
 
 /* ---------------- CONTATO ---------------- */
 .contact { position: relative; border-top: 1px solid var(--line); overflow: hidden; }

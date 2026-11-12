@@ -189,6 +189,12 @@
             <div class="sign" style="<%= style %>"><%= sign %></div>
           <% end %>
         <% end %>
+        <%# vagas pra completar a última fileira: o JS abaixo mostra só as que faltam %>
+        <% 6.times do %>
+          <a class="sign sign-vaga" href="<%= whatsapp %>" target="_blank" rel="noopener" hidden>
+            <span><%= t('home.city.clients_placeholder') %></span>
+          </a>
+        <% end %>
       </div>
     </div>
   </section>
@@ -237,6 +243,16 @@
   ;(function () {
     var facade = document.querySelector('[data-facade]')
     if (!facade) return
+    // completa a última fileira com "sua marca aqui" (apagadas), conforme quantas colunas cabem
+    var vagas = facade.querySelectorAll('.sign-vaga')
+    var lojas = facade.querySelectorAll('.sign:not(.sign-vaga)').length
+    function fillRow () {
+      var cols = getComputedStyle(facade).gridTemplateColumns.split(' ').length
+      var faltam = (cols - lojas % cols) % cols
+      vagas.forEach(function (v, i) { v.hidden = i >= faltam })
+    }
+    fillRow()
+    window.addEventListener('resize', fillRow)
     if (!('IntersectionObserver' in window)) return facade.classList.add('is-lit')
     var io = new IntersectionObserver(function (entries) {
       if (!entries[0].isIntersecting) return

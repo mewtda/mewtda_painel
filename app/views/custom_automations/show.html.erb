@@ -98,6 +98,9 @@
     <div class="crm-card custom-automations-stat">
       <span class="custom-automations-stat__label">Nota no Tiny</span>
       <strong class="custom-automations-stat__value"><%= @run.tiny_note_number.presence || @run.tiny_note_id.presence || '—' %></strong>
+      <% if @run.tiny_note_url %>
+        <%= link_to 'Abrir no Tiny', @run.tiny_note_url, target: '_blank', rel: 'noopener', class: 'custom-automations-stat__link' %>
+      <% end %>
     </div>
   </div>
 

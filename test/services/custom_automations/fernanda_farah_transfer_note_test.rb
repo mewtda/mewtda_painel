@@ -114,6 +114,21 @@ class CustomAutomations::FernandaFarahTransferNoteTest < ActiveSupport::TestCase
     assert(@run.warnings.any? { |w| w.include?('SKU-Z') && w.include?('não foi encontrado') })
   end
 
+  test 'uses the current Shopify SKU of the variant instead of the one stored on the order' do
+    old_line = line(id: 1, sku: 'SKU-VELHO', price: 10, quantity: 2).merge('variant_id' => 555)
+    new_line = line(id: 2, sku: 'SKU-A', price: 10, quantity: 1).merge('variant_id' => 555)
+    CustomAutomations::FernandaFarahTransferNote.new(@run, matriz: @matriz, ecommerce: FakeTiny.new,
+                                                           shopify_orders: [order(name: '#1', lines: [old_line, new_line])],
+                                                           current_skus: { 555 => 'SKU-A' }).build!
+    @run.reload
+
+    assert_equal 1, @run.items.size
+    assert_equal 'SKU-A', @run.items.first['sku']
+    assert_equal 3, @run.items.first['quantity']
+    assert_equal true, @run.items.first['tiny_found']
+    assert(@run.warnings.any? { |w| w.include?('SKU-VELHO') && w.include?('SKU-A') })
+  end
+
   test 'fails without creating a note when there are no items' do
     build([])
 

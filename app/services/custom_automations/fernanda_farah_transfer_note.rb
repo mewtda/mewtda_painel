@@ -26,12 +26,13 @@ module CustomAutomations
       ENV.fetch('FERNANDA_FARAH_TINY_ECOMMERCE_TOKEN', nil)
     end
 
-    def initialize(run, matriz: nil, ecommerce: nil, shopify_orders: nil)
+    def initialize(run, matriz: nil, ecommerce: nil, shopify_orders: nil, current_skus: nil)
       @run = run
       @client = run.client
       @matriz = matriz
       @ecommerce = ecommerce
       @shopify_orders = shopify_orders
+      @current_skus = current_skus
     end
 
     def build!
@@ -48,7 +49,12 @@ module CustomAutomations
       @run.update!(items: items, warnings: warnings, orders_count: orders.size,
                    total_value: items.sum { |i| i['total'] })
 
-      registro = matriz.create_invoice(invoice_payload(items))
+      begin
+        registro = matriz.create_invoice(invoice_payload(items))
+      rescue Net::ReadTimeout, Net::OpenTimeout
+        raise Error, 'O Tiny não respondeu a tempo ao incluir a nota — ela pode ter sido criada mesmo assim. ' \
+                     'Confira as notas pendentes no Tiny da matriz antes de gerar de novo.'
+      end
       @run.update!(status: 'awaiting_review', tiny_note_id: registro['id'].to_s,
                    tiny_note_number: registro['numero'].to_s, tiny_response: registro.to_json)
     rescue StandardError => e
@@ -146,6 +152,8 @@ module CustomAutomations
       subtract_refunds = @run.order_filter != 'all'
       warnings = []
       grouped = {}
+      skus = current_skus(orders)
+      renamed = {}
 
       orders.each do |order|
         refunded = subtract_refunds ? refunded_quantities(order) : Hash.new(0)
@@ -160,7 +168,9 @@ module CustomAutomations
           discount = Array(line['discount_allocations']).sum { |d| d['amount'].to_d }
           unit_paid = ((line['price'].to_d * original_quantity) - discount) / original_quantity
 
-          sku = line['sku'].to_s.strip
+          original_sku = line['sku'].to_s.strip
+          sku = skus[line['variant_id'].to_s].presence || original_sku
+          renamed[original_sku] = sku if original_sku.present? && sku != original_sku
           key = sku.presence || "variant:#{line['variant_id'] || line['title']}"
           entry = grouped[key] ||= { 'sku' => sku, 'shopify_title' => line_title(line),
                                      'quantity' => 0, 'paid_value' => 0.to_d, 'orders' => [] }
@@ -174,14 +184,35 @@ module CustomAutomations
         average = (e['paid_value'] / e['quantity']).round(2)
         unit_value = (average * @run.price_percentage / 100).round(2)
         warnings << "#{e['shopify_title']} está sem SKU na Shopify." if e['sku'].blank?
-        warnings << "#{e['sku'].presence || e['shopify_title']} saiu com valor zero (brinde?)." if unit_value.zero?
+        warnings << "#{e['sku'].presence || e['shopify_title']} saiu com valor zero (troca)." if unit_value.zero?
 
         { 'sku' => e['sku'], 'shopify_title' => e['shopify_title'], 'quantity' => e['quantity'],
           'average_price' => average.to_f, 'unit_value' => unit_value.to_f,
           'total' => (unit_value * e['quantity']).round(2).to_f, 'orders_count' => e['orders'].uniq.size }
       end
 
+      renamed.each do |old_sku, new_sku|
+        warnings << "SKU #{old_sku} dos pedidos é hoje #{new_sku} na Shopify — a nota usa #{new_sku}."
+      end
+
       [items, warnings]
+    end
+
+    # O pedido guarda o SKU que a variação tinha na hora da venda; se o
+    # cadastro mudou depois, vale o SKU atual da variação na Shopify.
+    # Devolve { "variant_id" => "sku atual" }.
+    def current_skus(orders)
+      return @current_skus.transform_keys(&:to_s) if @current_skus
+
+      ids = orders.flat_map { |o| Array(o['line_items']).map { |l| l['variant_id'] } }.compact.uniq
+      return {} if ids.empty?
+
+      shopify = Shopify::Client.new(@client)
+      ids.each_slice(250).each_with_object({}) do |slice, acc|
+        gids = slice.map { |id| %("gid://shopify/ProductVariant/#{id}") }.join(',')
+        data = shopify.query("{ nodes(ids: [#{gids}]) { ... on ProductVariant { legacyResourceId sku } } }")
+        Array(data['nodes']).compact.each { |v| acc[v['legacyResourceId'].to_s] = v['sku'].to_s.strip }
+      end
     end
 
     def refunded_quantities(order)

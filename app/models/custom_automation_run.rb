@@ -58,6 +58,11 @@ class CustomAutomationRun < ApplicationRecord
     status.in?(%w[awaiting_review failed])
   end
 
+  # A nota fica na conta Tiny da matriz — o link só abre logado nela.
+  def tiny_note_url
+    "https://erp.tiny.com.br/notas_fiscais#edit/#{tiny_note_id}" if tiny_note_id.present?
+  end
+
   def total_quantity
     items.sum { |i| i['quantity'].to_i }
   end

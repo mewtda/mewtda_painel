@@ -167,7 +167,7 @@
     <% if current_user.profile_id != Profile::AFFILIATE %>
       <% settings_href = current_user.admin? ? (session[:selected_client_id].presence && edit_client_path(session[:selected_client_id])) : edit_settings_path %>
       <% if settings_href %>
-        <% conta_active = current_user.admin? ? request.path.start_with?('/crm/clients/') : current_page?(edit_settings_path) %>
+        <% conta_active = [settings_href, settings_href.delete_suffix('/edit')].include?(request.path) %>
         <details class="crm-sidebar__submenu" <%= 'open' if conta_active %>>
           <summary class="crm-sidebar__link crm-sidebar__link--parent">
             <i class="fa-solid fa-gear crm-fa"></i>
@@ -185,7 +185,8 @@
     <% end %>
 
     <% if current_user.admin? %>
-      <% admin_active = request.path.start_with?(users_path) || request.path.start_with?(clients_path) ||
+      <% clients_active = request.path.start_with?(clients_path) && !conta_active %>
+      <% admin_active = request.path.start_with?(users_path) || clients_active ||
                          request.path.start_with?(profiles_path) || request.path.start_with?(try_on_index_path) %>
       <details class="crm-sidebar__submenu" <%= 'open' if admin_active %>>
         <summary class="crm-sidebar__link crm-sidebar__link--parent">
@@ -199,7 +200,7 @@
             Usuários
           <% end %>
 
-          <%= link_to clients_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(clients_path)}" do %>
+          <%= link_to clients_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if clients_active}" do %>
             <i class="fa-solid fa-building crm-fa"></i>
             Clientes
           <% end %>

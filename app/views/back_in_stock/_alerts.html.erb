@@ -1,0 +1,129 @@
+<% status = filters[:status] %>
+
+<div class="scr-kpis">
+  <div class="scr-kpi"><span>Aguardando</span><strong><%= status_counts.fetch('pending', 0) %></strong></div>
+  <div class="scr-kpi"><span>Avisados</span><strong><%= status_counts.fetch('notified', 0) %></strong></div>
+  <div class="scr-kpi"><span>Variações com alerta</span><strong><%= pending_variants %></strong></div>
+  <div class="scr-kpi"><span>Valor em espera</span><strong><%= back_in_stock_currency(pending_value) %></strong></div>
+</div>
+
+<nav class="bis-filters">
+  <% BackInStockAlert.statuses.each_key do |key| %>
+    <%= link_to back_in_stock_path(filters.merge(status: key, anchor: 'alertas')),
+                class: "crm-btn #{key == status ? 'crm-btn--primary' : 'crm-btn--secondary'}" do %>
+      <%= back_in_stock_status_label(key) %> <span class="bis-filters__count"><%= status_counts.fetch(key, 0) %></span>
+    <% end %>
+  <% end %>
+</nav>
+
+<%= form_with url: back_in_stock_path(anchor: 'alertas'), method: :get, class: 'bis-toolbar', data: { autosubmit: true } do |form| %>
+  <%= form.hidden_field :status, value: status %>
+  <div class="bis-toolbar__search">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <%= form.search_field :q, value: filters[:q], class: 'crm-input', placeholder: 'Buscar produto, SKU ou e-mail',
+                              maxlength: BackInStockController::SEARCH_MAX_LENGTH %>
+  </div>
+  <label class="bis-toolbar__sort">
+    Ordenar por
+    <%= form.select :sort, back_in_stock_sort_options(filters[:sort]), {}, class: 'crm-input' %>
+  </label>
+  <%= form.button class: 'crm-btn crm-btn--secondary' do %>
+    <i class="fa-solid fa-filter"></i> Filtrar
+  <% end %>
+<% end %>
+
+<% if groups.empty? %>
+  <div class="scr-card bis-empty">
+    <i class="fa-solid fa-bell-slash"></i>
+    <% if filters[:q] %>
+      <p>Nenhum alerta encontrado para "<%= filters[:q] %>".</p>
+    <% else %>
+      <p>Nenhum alerta <%= back_in_stock_status_label(status).downcase %> por enquanto.</p>
+    <% end %>
+  </div>
+<% else %>
+  <div class="bis-groups">
+    <% groups.each do |group| %>
+      <details class="scr-card bis-group">
+        <summary class="bis-group__summary">
+          <% if group.image_url.present? %>
+            <%= image_tag group.image_url, class: 'bis-group__image', alt: '', loading: 'lazy' %>
+          <% else %>
+            <span class="bis-group__image bis-group__image--empty"><i class="fa-solid fa-shirt"></i></span>
+          <% end %>
+
+          <span class="bis-group__info">
+            <strong><%= group.product_title %></strong>
+            <span class="bis-group__meta">
+              <span class="bis-group__variant"><%= group.variant_title.presence || 'Sem variação' %></span>
+              <%= "SKU #{group.sku}" if group.sku.present? %>
+            </span>
+            <span class="bis-group__meta">
+              <% if status == 'pending' %>
+                <small title="<%= back_in_stock_requested_range(group) %>"><%= back_in_stock_waiting(group) %></small>
+              <% else %>
+                <small><%= back_in_stock_requested_range(group) %></small>
+              <% end %>
+              <% if group.recent_count.positive? %>
+                <span class="bis-group__trend"><i class="fa-solid fa-arrow-trend-up"></i> +<%= group.recent_count %> em 7 dias</span>
+              <% end %>
+            </span>
+          </span>
+
+          <span class="bis-group__value">
+            <strong><%= back_in_stock_currency(group.demand_value) %></strong>
+            <small><%= back_in_stock_currency(group.price) %> cada</small>
+          </span>
+
+          <span class="bis-group__count"><%= group.alerts_count %> <small><%= 'pessoa'.pluralize(group.alerts_count) %></small></span>
+        </summary>
+
+        <div class="bis-group__body">
+          <%= link_to back_in_stock_product_url(client, group.product_handle), target: '_blank', rel: 'noopener', class: 'bis-group__link' do %>
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver produto na loja
+          <% end %>
+
+          <table class="bis-contacts">
+            <thead>
+              <tr>
+                <th>E-mail</th>
+                <th>WhatsApp</th>
+                <th>Pedido em</th>
+                <% if status == 'notified' %><th>Avisado em</th><% end %>
+                <% if status == 'cancelled' %><th>Cancelado em</th><% end %>
+                <% if status == 'pending' %><th></th><% end %>
+              </tr>
+            </thead>
+            <tbody>
+              <% contacts.fetch(group.shopify_variant_id, []).each do |contact| %>
+                <tr>
+                  <td><%= contact.email %></td>
+                  <td><%= back_in_stock_phone(contact.phone) %></td>
+                  <td><%= contact.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+                  <% if status == 'notified' %>
+                    <td><%= contact.notified_at&.strftime('%d/%m/%Y %H:%M') || '—' %></td>
+                  <% end %>
+                  <% if status == 'cancelled' %>
+                    <td><%= contact.cancelled_at&.strftime('%d/%m/%Y %H:%M') || '—' %></td>
+                  <% end %>
+                  <% if status == 'pending' %>
+                    <td class="bis-contacts__action">
+                      <%= button_to cancel_alert_back_in_stock_path(alert_id: contact.id), method: :patch,
+                                    class: 'crm-btn crm-btn--secondary bis-contacts__cancel',
+                                    form: { data: { confirm: "Cancelar o alerta de #{contact.email}? Essa pessoa não será avisada." } } do %>
+                        <i class="fa-solid fa-xmark"></i> Cancelar
+                      <% end %>
+                    </td>
+                  <% end %>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    <% end %>
+  </div>
+
+  <%= will_paginate groups, params: filters.merge(anchor: 'alertas'),
+                            list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
+<% end %>

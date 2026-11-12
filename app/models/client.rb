@@ -6,9 +6,15 @@ class Client < ApplicationRecord
   has_many :goals, dependent: :destroy
   has_many :abandoned_checkouts, dependent: :destroy
   has_one :popup, dependent: :destroy
+  has_one :back_in_stock_setting, dependent: :destroy
+  has_many :back_in_stock_alerts, dependent: :destroy
   has_many :email_templates, dependent: :destroy
   has_many :landing_pages, dependent: :destroy
   has_many :whatsapp_connections, class_name: 'Whatsapp::Connection', dependent: :restrict_with_exception
+  has_one_attached :logo
+
+  LOGO_CONTENT_TYPES = %w[image/png image/jpeg image/avif].freeze
+  LOGO_MAX_SIZE = 2.megabytes
 
   encrypts :meta_access_token, :google_ads_refresh_token, :shopify_api_secret, :shopify_storefront_token,
            :whatsapp_cloud_access_token, :openai_api_key
@@ -26,6 +32,8 @@ class Client < ApplicationRecord
             format: { with: /\A([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}\z/i,
                       message: 'não parece um domínio válido' },
             allow_blank: true
+  validate :logo_must_be_png_or_jpeg, if: -> { logo.attached? }
+  validate :logo_must_be_small, if: -> { logo.attached? }
   validates :slug, presence: true, uniqueness: true,
                    format: { with: LandingPage::SLUG_FORMAT, message: 'use só letras minúsculas, números e hífens' },
                    exclusion: { in: LandingPage::RESERVED_PREFIXES, message: 'é reservado pelo sistema' }
@@ -82,6 +90,14 @@ class Client < ApplicationRecord
     ses_verification_status == 'verified'
   end
 
+  def storefront_url
+    (site_url.presence || shopify_shop_url).to_s.sub(%r{\A(?!https?://)}, 'https://').delete_suffix('/')
+  end
+
+  def clear_email_sending!
+    update!(email_sending_domain: nil, ses_dkim_tokens: [], ses_verification_status: 'unverified', ses_verified_at: nil)
+  end
+
   # Registros CNAME do Easy DKIM da SES — cada token vira um registro que o
   # cliente precisa cadastrar no DNS do domínio pra provar a propriedade e
   # habilitar o DKIM (formato padrão da AWS quando a identidade é criada sem
@@ -99,6 +115,14 @@ class Client < ApplicationRecord
   end
 
   private
+
+  def logo_must_be_png_or_jpeg
+    errors.add(:logo, 'deve ser PNG, JPG ou AVIF') unless logo.content_type.in?(LOGO_CONTENT_TYPES)
+  end
+
+  def logo_must_be_small
+    errors.add(:logo, 'deve ter no máximo 2 MB') if logo.byte_size > LOGO_MAX_SIZE
+  end
 
   def generate_slug
     base = name.parameterize.presence || 'cliente'

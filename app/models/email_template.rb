@@ -11,8 +11,19 @@ class EmailTemplate < ApplicationRecord
     cart_recovery: 2,
     inactive_customer: 3,
     post_purchase: 4,
-    cashback: 5
+    cashback: 5,
+    back_in_stock: 6
   }
+
+  TRIGGER_LABELS = {
+    'manual' => 'Envio manual',
+    'welcome' => 'Boas-vindas (novo cadastro)',
+    'cart_recovery' => 'Carrinho abandonado',
+    'inactive_customer' => 'Cliente inativo',
+    'post_purchase' => 'Pós-compra',
+    'cashback' => 'Cashback disponível',
+    'back_in_stock' => 'Produto de volta ao estoque'
+  }.freeze
 
   PRESETS = {
     welcome: {
@@ -74,6 +85,16 @@ class EmailTemplate < ApplicationRecord
       layout: 'banner',
       trigger_kind: 'cashback',
       trigger_config: {}
+    },
+    back_in_stock: {
+      name: 'De volta ao estoque',
+      subject: '{produto} voltou ao estoque!',
+      heading: 'Voltou pra você!',
+      body: 'O produto que você pediu para ser avisado já está disponível na {loja}. Garanta o seu antes que acabe de novo.',
+      button_text: 'Comprar agora',
+      layout: 'image_left',
+      trigger_kind: 'back_in_stock',
+      trigger_config: {}
     }
   }.freeze
 
@@ -93,6 +114,10 @@ class EmailTemplate < ApplicationRecord
   }.each do |method_name, key|
     define_method(method_name) { trigger_config[key] }
     define_method(:"#{method_name}=") { |v| self.trigger_config = trigger_config.merge(key => v.presence) }
+  end
+
+  def trigger_label
+    TRIGGER_LABELS.fetch(trigger_kind)
   end
 
   def self.preset(key)

@@ -41,6 +41,8 @@ class ClientsController < ApplicationController
       params[:client].delete(secret) if params[:client][secret].blank?
     end
 
+    @client.logo.purge if params.dig(:client, :remove_logo) == '1'
+
     if @client.update(client_params)
       redirect_to clients_path, notice: 'Cliente atualizado com sucesso.'
     else
@@ -77,11 +79,12 @@ class ClientsController < ApplicationController
 
   def client_params
     params.require(:client).permit(
-      :name, :email, :active, :shopify_shop_url, :shopify_access_token,
+      :name, :email, :active, :shopify_shop_url, :site_url, :shopify_access_token,
       :shopify_api_key, :shopify_api_secret, :shopify_storefront_token, :slug,
       :whatsapp_cloud_phone_number_id, :whatsapp_cloud_business_account_id, :whatsapp_cloud_access_token,
       :meta_access_token, :meta_ad_account_id,
-      :google_ads_customer_id, :auto_reply_enabled, :openai_api_key, :openai_model, :auto_reply_instructions
+      :google_ads_customer_id, :auto_reply_enabled, :openai_api_key, :openai_model, :auto_reply_instructions,
+      :logo
     )
   end
 end

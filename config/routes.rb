@@ -25,6 +25,10 @@ Rails.application.routes.draw do
   namespace :widget do
     get  'popup/config',      to: 'popup#show_config'
     post 'popup/submissions', to: 'popup#create_submission'
+    get  'back_in_stock/config', to: 'back_in_stock#show_config'
+    post 'back_in_stock/alerts', to: 'back_in_stock#create_alert'
+    get  'back_in_stock/descadastrar/:token', to: 'back_in_stock_unsubscribes#show', as: :back_in_stock_unsubscribe
+    post 'back_in_stock/descadastrar/:token', to: 'back_in_stock_unsubscribes#create'
   end
 
   scope '/crm' do
@@ -136,7 +140,14 @@ Rails.application.routes.draw do
     end
     get 'popup/cadastros', to: 'popups#submissions', as: :submissions_popup
 
-    resources :email_templates, except: [:show]
+    resource :back_in_stock, path: 'de-volta-ao-estoque', controller: 'back_in_stock', only: %i[show create update] do
+      patch :regenerate_token, path: 'novo-token'
+      patch 'alertas/:alert_id/cancelar', action: :cancel_alert, as: :cancel_alert
+    end
+
+    resources :email_templates, except: [:show] do
+      post :preview, on: :collection
+    end
     resource :email_configuration, only: %i[edit update]
     post 'email_configuration/refresh', to: 'email_configurations#refresh_status', as: :refresh_email_configuration
 

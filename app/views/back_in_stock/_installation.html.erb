@@ -1,0 +1,57 @@
+<div class="scr-grid">
+  <div class="scr-stack">
+    <div class="scr-card">
+      <h2 class="scr-card__title"><i class="fa-solid fa-code"></i> Script da loja</h2>
+      <p class="scr-card__hint">Script exclusivo desta loja. Cole uma única vez no tema.</p>
+      <pre class="bis-snippet"><code data-snippet><%= back_in_stock_snippet(setting) %></code></pre>
+      <button type="button" class="crm-btn crm-btn--primary" data-copy>
+        <i class="fa-solid fa-copy"></i> <span>Copiar script</span>
+      </button>
+    </div>
+
+    <div class="scr-card">
+      <h2 class="scr-card__title"><i class="fa-solid fa-list-ol"></i> Como instalar</h2>
+      <ol class="bis-steps">
+        <li>Na Shopify, abra <strong>Loja virtual &gt; Temas</strong>.</li>
+        <li>No tema publicado, clique em <strong>⋯ &gt; Editar código</strong>.</li>
+        <li>Abra o arquivo <code>layout/theme.liquid</code>.</li>
+        <li>Cole o script logo antes de <code>&lt;/body&gt;</code> e salve.</li>
+      </ol>
+      <p class="scr-card__hint" style="margin: 0">Trocou de tema? Cole o script de novo no tema novo.</p>
+    </div>
+  </div>
+
+  <div class="scr-stack">
+    <div class="scr-card">
+      <h2 class="scr-card__title"><i class="fa-solid fa-shield-halved"></i> Domínios autorizados</h2>
+      <p class="scr-card__hint">O botão só registra alertas vindos destes domínios, cadastrados no cliente.</p>
+      <ul class="bis-hosts">
+        <% setting.allowed_hosts.each do |host| %>
+          <li><i class="fa-solid fa-globe"></i> <%= host %></li>
+        <% end %>
+      </ul>
+
+      <% unless setting.client.site_url_configured? %>
+        <div class="scr-banner scr-banner--warn">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <div>
+            <strong>Domínio da loja não cadastrado.</strong>
+            <p>
+              Sem ele, o botão só funciona no preview do tema.
+              <%= link_to 'Informe a URL do site da loja', site_url_settings_path(setting.client) %>.
+            </p>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="scr-card">
+      <h2 class="scr-card__title"><i class="fa-solid fa-key"></i> Token</h2>
+      <p class="scr-card__hint">Gere um novo token se o script estiver sendo usado fora da loja. O script antigo para de funcionar.</p>
+      <%= button_to regenerate_token_back_in_stock_path, method: :patch, class: 'crm-btn crm-btn--secondary',
+                    form: { data: { confirm: 'Gerar novo token? O script atual da loja para de funcionar.' } } do %>
+        <i class="fa-solid fa-rotate"></i> Gerar novo token
+      <% end %>
+    </div>
+  </div>
+</div>

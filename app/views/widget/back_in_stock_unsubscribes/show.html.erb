@@ -1,0 +1,8 @@
+<% content_for :title, 'Cancelar aviso' %>
+
+<p class="notice__store"><%= @alert.client.name %></p>
+<h1 class="notice__title">Cancelar aviso de estoque?</h1>
+<p class="notice__text">
+  Você não vai mais receber e-mails sobre <strong><%= @alert.product_title %></strong><%= " (#{@alert.variant_title})" if @alert.variant_title.present? %>.
+</p>
+<%= button_to 'Cancelar aviso', widget_back_in_stock_unsubscribe_path(token: params[:token]), class: 'notice__button' %>

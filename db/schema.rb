@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_05_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -120,6 +120,43 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_05_130000) do
     t.integer "bling_order_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "back_in_stock_alerts", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.bigint "shopify_product_id", null: false
+    t.bigint "shopify_variant_id", null: false
+    t.bigint "shopify_customer_id"
+    t.string "product_handle", null: false
+    t.string "product_title"
+    t.string "variant_title"
+    t.string "sku"
+    t.decimal "price", precision: 10, scale: 2
+    t.string "image_url"
+    t.string "email", null: false
+    t.string "phone"
+    t.string "status", default: "pending", null: false
+    t.datetime "notified_at"
+    t.datetime "consented_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "cancelled_at"
+    t.index "client_id, shopify_variant_id, lower((email)::text)", name: "idx_bis_alerts_pending_unique", unique: true, where: "((status)::text = 'pending'::text)"
+    t.index ["client_id", "status"], name: "index_back_in_stock_alerts_on_client_id_and_status"
+    t.index ["status", "client_id", "product_handle"], name: "idx_bis_alerts_restock"
+  end
+
+  create_table "back_in_stock_settings", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.boolean "active", default: true, null: false
+    t.string "public_token", null: false
+    t.string "button_text", default: "Me avise quando voltar ao estoque", null: false
+    t.string "modal_title", default: "Avise-me quando chegar", null: false
+    t.string "accent_color", default: "#111111", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id"], name: "index_back_in_stock_settings_on_client_id", unique: true
+    t.index ["public_token"], name: "index_back_in_stock_settings_on_public_token", unique: true
   end
 
   create_table "campaign_actions", force: :cascade do |t|
@@ -737,6 +774,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_05_130000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ad_cost_snapshots", "clients"
   add_foreign_key "ad_costs", "clients"
+  add_foreign_key "back_in_stock_alerts", "clients"
+  add_foreign_key "back_in_stock_settings", "clients"
   add_foreign_key "campaign_actions", "campaigns"
   add_foreign_key "campaign_actions", "customers"
   add_foreign_key "campaign_actions", "orders"

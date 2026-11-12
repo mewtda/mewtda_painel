@@ -1,0 +1,11 @@
+<div class="scr-card bis-activation">
+  <i class="fa-solid fa-bell bis-activation__icon"></i>
+  <h2>Avise seus clientes quando o produto voltar</h2>
+  <p class="scr-card__hint">
+    Nos produtos esgotados aparece o botão "Me avise quando voltar ao estoque". O cliente deixa o e-mail
+    e recebe o aviso assim que a variante voltar. Ao ativar, geramos o script exclusivo desta loja.
+  </p>
+  <%= button_to back_in_stock_path, class: 'crm-btn crm-btn--primary' do %>
+    <i class="fa-solid fa-power-off"></i> Ativar De volta ao estoque
+  <% end %>
+</div>

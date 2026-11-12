@@ -49,6 +49,9 @@
       <div class="users-form-page__field">
         <%= form.label :body, 'Texto', class: 'crm-label' %>
         <%= form.text_area :body, class: 'crm-input', rows: 4, id: 'email-field-body' %>
+        <span class="cpform-field__hint email-templates-trigger-config" data-trigger="back_in_stock">
+          Use {produto}, {variacao} e {loja} no assunto, no título e no texto.
+        </span>
       </div>
 
       <div class="users-form-page__row">
@@ -56,7 +59,7 @@
           <%= form.label :button_text, 'Texto do botão', class: 'crm-label' %>
           <%= form.text_field :button_text, class: 'crm-input', id: 'email-field-button-text' %>
         </div>
-        <div class="users-form-page__field">
+        <div class="users-form-page__field" data-hide-for="back_in_stock">
           <%= form.label :button_url, 'Link do botão', class: 'crm-label' %>
           <%= form.text_field :button_url, class: 'crm-input', placeholder: 'https://...' %>
         </div>
@@ -86,7 +89,7 @@
         </div>
       </div>
 
-      <div class="users-form-page__field">
+      <div class="users-form-page__field" data-hide-for="back_in_stock">
         <%= form.label :image, 'Imagem (topo) — ignorada no layout Banner sem imagem', class: 'crm-label' %>
         <% if email_template.image.attached? %>
           <div class="popups-image-preview">
@@ -125,16 +128,9 @@
         <div class="users-form-page__field">
           <%= form.label :trigger_kind, 'Quando enviar', class: 'crm-label' %>
           <%= form.select :trigger_kind,
-              options_for_select([
-                ['Envio manual', 'manual'],
-                ['Boas-vindas (novo cadastro)', 'welcome'],
-                ['Carrinho abandonado', 'cart_recovery'],
-                ['Cliente inativo', 'inactive_customer'],
-                ['Pós-compra', 'post_purchase'],
-                ['Cashback disponível', 'cashback']
-              ], form.object.trigger_kind),
+              options_for_select(EmailTemplate::TRIGGER_LABELS.invert, form.object.trigger_kind),
               {}, class: 'crm-input', id: 'email-field-trigger' %>
-          <span class="cpform-field__hint">O disparo automático será configurado numa próxima etapa — por enquanto isso só marca a finalidade do e-mail.</span>
+          <span class="cpform-field__hint" id="email-trigger-pending-hint">O disparo automático será configurado numa próxima etapa — por enquanto isso só marca a finalidade do e-mail.</span>
         </div>
 
         <div class="users-form-page__field email-templates-trigger-config" data-trigger="cart_recovery">
@@ -145,6 +141,13 @@
         <div class="users-form-page__field email-templates-trigger-config" data-trigger="inactive_customer">
           <%= form.label :trigger_inactive_days, 'Enviar após quantos dias sem comprar', class: 'crm-label' %>
           <%= form.text_field :trigger_inactive_days, class: 'crm-input', value: email_template.trigger_inactive_days %>
+        </div>
+
+        <div class="users-form-page__field email-templates-trigger-config" data-trigger="back_in_stock">
+          <span class="cpform-field__hint">
+            Enviado quando o produto que o cliente pediu volta ao estoque. A imagem e o botão usam o próprio produto,
+            então o link do botão é ignorado.
+          </span>
         </div>
 
         <div class="users-form-page__field email-templates-trigger-config" data-trigger="post_purchase">
@@ -174,108 +177,12 @@
     Preview
   </div>
   <div class="email-templates-preview__stage">
-    <div class="email-preview" id="email-preview">
-      <div class="email-preview__subject" id="email-preview-subject"><%= email_template.subject.presence || 'Assunto do e-mail' %></div>
-      <div class="email-preview__card">
-        <div class="email-preview__image" id="email-preview-image-wrap" <%= 'hidden' unless email_template.image.attached? %>>
-          <img id="email-preview-image" alt="" <% if email_template.image.attached? %>src="<%= url_for(email_template.image) %>"<% end %>>
-        </div>
-        <div class="email-preview__content">
-          <h2 class="email-preview__heading" id="email-preview-heading"><%= email_template.heading.presence || 'Título do e-mail' %></h2>
-          <p class="email-preview__body" id="email-preview-body"><%= email_template.body.presence || 'Texto do e-mail.' %></p>
-          <div class="email-preview__coupon" id="email-preview-coupon" <%= 'hidden' if email_template.coupon_code.blank? %>><%= email_template.coupon_code %></div>
-          <button type="button" class="email-preview__button" id="email-preview-button"><%= email_template.button_text.presence || 'Ver mais' %></button>
-        </div>
-        <div class="email-preview__image" id="email-preview-image-bottom-wrap" <%= 'hidden' unless email_template.image_bottom.attached? %>>
-          <img id="email-preview-image-bottom" alt="" <% if email_template.image_bottom.attached? %>src="<%= url_for(email_template.image_bottom) %>"<% end %>>
-        </div>
-      </div>
+    <div class="email-preview" id="email-preview"
+         data-url="<%= preview_email_templates_path(id: email_template.id) %>">
+      <div class="email-preview__subject"><strong>Assunto:</strong> <span id="email-preview-subject"></span></div>
+      <iframe class="email-preview__frame" id="email-preview-frame" title="Preview do e-mail" sandbox="allow-same-origin"></iframe>
     </div>
   </div>
 </div>
 
-<script>
-  (function () {
-    var stage = document.getElementById('email-preview');
-    if (!stage) return;
-
-    var subjectEl = document.getElementById('email-field-subject');
-    var headingEl = document.getElementById('email-field-heading');
-    var bodyEl = document.getElementById('email-field-body');
-    var buttonEl = document.getElementById('email-field-button-text');
-    var couponEl = document.getElementById('email-field-coupon');
-    var layoutEl = document.getElementById('email-field-layout');
-    var colorEl = document.getElementById('email-field-color');
-    var triggerEl = document.getElementById('email-field-trigger');
-    var imageInput = document.getElementById('email-field-image');
-    var imageBottomInput = document.getElementById('email-field-image-bottom');
-
-    function byId(id) { return document.getElementById(id); }
-
-    function updatePreview() {
-      byId('email-preview-subject').textContent = subjectEl.value || 'Assunto do e-mail';
-      byId('email-preview-heading').textContent = headingEl.value || 'Título do e-mail';
-      byId('email-preview-body').textContent = bodyEl.value || 'Texto do e-mail.';
-      byId('email-preview-button').textContent = buttonEl.value || 'Ver mais';
-
-      var couponWrap = byId('email-preview-coupon');
-      couponWrap.textContent = couponEl.value;
-      couponWrap.hidden = !couponEl.value;
-
-      var layout = layoutEl.value;
-      stage.className = 'email-preview email-preview--' + layout;
-      byId('email-preview-image-wrap').hidden = layout === 'banner' || !byId('email-preview-image').getAttribute('src');
-      byId('email-preview-image-bottom-wrap').hidden = layout !== 'image_top_bottom' || !byId('email-preview-image-bottom').getAttribute('src');
-
-      var color = colorEl.value || '#7c3aed';
-      stage.style.setProperty('--email-preview-accent', color);
-    }
-
-    function updateTriggerFields() {
-      var current = triggerEl.value;
-      document.querySelectorAll('.email-templates-trigger-config').forEach(function (el) {
-        el.hidden = el.getAttribute('data-trigger') !== current;
-      });
-    }
-
-    function updateLayoutFields() {
-      var current = layoutEl.value;
-      document.querySelectorAll('.email-templates-layout-config').forEach(function (el) {
-        el.hidden = el.getAttribute('data-layout') !== current;
-      });
-    }
-
-    [subjectEl, headingEl, bodyEl, buttonEl, couponEl, colorEl].forEach(function (el) {
-      el.addEventListener('input', updatePreview);
-      el.addEventListener('change', updatePreview);
-    });
-
-    layoutEl.addEventListener('change', function () {
-      updatePreview();
-      updateLayoutFields();
-    });
-
-    triggerEl.addEventListener('change', updateTriggerFields);
-
-    function bindImageInput(input, previewImgId) {
-      if (!input) return;
-      input.addEventListener('change', function (e) {
-        var file = e.target.files[0];
-        if (!file) return;
-        var reader = new FileReader();
-        reader.onload = function (e) {
-          byId(previewImgId).src = e.target.result;
-          updatePreview();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    bindImageInput(imageInput, 'email-preview-image');
-    bindImageInput(imageBottomInput, 'email-preview-image-bottom');
-
-    updatePreview();
-    updateTriggerFields();
-    updateLayoutFields();
-  })();
-</script>
+<%= javascript_include_tag 'email_templates', defer: true %>

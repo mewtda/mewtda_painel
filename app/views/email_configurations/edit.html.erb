@@ -52,6 +52,8 @@
                 <span class="crm-tag crm-tag--success">Verificado</span>
               <% when 'pending' %>
                 <span class="crm-tag crm-tag--warning">Verificação pendente</span>
+              <% when 'failed' %>
+                <span class="crm-tag crm-tag--danger">DNS não encontrado</span>
               <% else %>
                 <span class="crm-tag crm-tag--neutral">Não configurado</span>
               <% end %>
@@ -59,7 +61,7 @@
           </div>
         </div>
 
-        <div class="users-form-page__footer">
+        <div class="users-form-page__footer email-config-footer">
           <%= form.button class: 'crm-btn crm-btn--primary', data: { disable_with: 'Salvando...' } do %>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -95,17 +97,33 @@
                 <% current_client.ses_dns_records.each do |record| %>
                   <tr>
                     <td><%= record[:type] %></td>
-                    <td class="email-config-dns-table__mono"><%= record[:name] %></td>
-                    <td class="email-config-dns-table__mono"><%= record[:value] %></td>
+                    <td class="email-config-dns-table__mono">
+                      <span class="email-config-dns-copy">
+                        <span><%= record[:name] %></span>
+                        <button type="button" class="email-config-dns-copy__btn" data-copy-value="<%= record[:name] %>" aria-label="Copiar nome" title="Copiar nome">
+                          <i class="fa-solid fa-copy"></i>
+                        </button>
+                      </span>
+                    </td>
+                    <td class="email-config-dns-table__mono">
+                      <span class="email-config-dns-copy">
+                        <span><%= record[:value] %></span>
+                        <button type="button" class="email-config-dns-copy__btn" data-copy-value="<%= record[:value] %>" aria-label="Copiar valor" title="Copiar valor">
+                          <i class="fa-solid fa-copy"></i>
+                        </button>
+                      </span>
+                    </td>
                   </tr>
                 <% end %>
               </tbody>
             </table>
           </div>
 
-          <%= button_to 'Verificar novamente', refresh_email_configuration_path, method: :post, class: 'crm-btn crm-btn--secondary' %>
+          <%= button_to 'Verificar novamente', refresh_email_configuration_path, method: :post, class: 'crm-btn crm-btn--secondary email-config-dns__verify' %>
         </div>
       <% end %>
     </div>
   </div>
 </div>
+
+<%= javascript_include_tag 'email_configurations', defer: true %>

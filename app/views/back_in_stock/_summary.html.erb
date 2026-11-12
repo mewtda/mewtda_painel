@@ -1,0 +1,13 @@
+<% this_month, last_month = notified_by_month.values %>
+
+<div class="scr-kpis">
+  <div class="scr-kpi"><span>E-mails neste mês</span><strong><%= this_month %></strong></div>
+  <div class="scr-kpi"><span>E-mails no mês passado</span><strong><%= last_month %></strong></div>
+  <div class="scr-kpi"><span>Total enviado</span><strong><%= total_notified %></strong></div>
+</div>
+
+<div class="scr-card bis-summary">
+  <h2>Avisos enviados por mês</h2>
+  <p class="bis-summary__hint">Cada aviso de volta ao estoque enviado a um cliente final conta como 1 e-mail.</p>
+  <div class="bis-summary__chart" data-summary-chart <%= tag.attributes(data: back_in_stock_chart_data(notified_by_month)) %>></div>
+</div>

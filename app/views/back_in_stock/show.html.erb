@@ -1,0 +1,64 @@
+<% title 'De volta ao estoque' %>
+
+<div class="scr" id="bis-screen">
+  <div class="scr-header">
+    <div>
+      <h1>
+        <i class="fa-solid fa-bell" style="color: var(--primary)"></i> De volta ao estoque
+        <% if @setting %>
+          <span class="scr-chip <%= 'scr-chip--on' if @setting.active? %>"><%= @setting.active? ? 'Ativo' : 'Pausado' %></span>
+        <% end %>
+      </h1>
+      <p>Botão "avise-me" nos produtos esgotados de <%= @client.name %></p>
+    </div>
+  </div>
+
+  <% if @setting %>
+    <% if @setting.errors.any? %>
+      <div class="scr-banner scr-banner--danger">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <div><strong>Corrija os erros abaixo:</strong><p><%= @setting.errors.full_messages.to_sentence %></p></div>
+      </div>
+    <% end %>
+
+    <nav class="scr-tabs" role="tablist">
+      <button type="button" class="scr-tab" role="tab" data-tab="alertas">
+        <i class="fa-solid fa-bell"></i><span>Alertas</span>
+        <% if @status_counts.fetch('pending', 0).positive? %>
+          <span class="scr-tab__count"><%= @status_counts['pending'] %></span>
+        <% end %>
+      </button>
+      <button type="button" class="scr-tab" role="tab" data-tab="resumo">
+        <i class="fa-solid fa-chart-column"></i><span>Resumo</span>
+      </button>
+      <button type="button" class="scr-tab" role="tab" data-tab="configuracoes">
+        <i class="fa-solid fa-sliders"></i><span>Configurações</span>
+      </button>
+      <button type="button" class="scr-tab" role="tab" data-tab="instalacao">
+        <i class="fa-solid fa-code"></i><span>Instalação</span>
+      </button>
+    </nav>
+
+    <section class="scr-panel" data-panel="alertas" hidden>
+      <%= render 'alerts', client: @client, filters: @filters, status_counts: @status_counts,
+                           pending_value: @pending_value, pending_variants: @pending_variants,
+                           groups: @groups, contacts: @contacts %>
+    </section>
+
+    <section class="scr-panel" data-panel="resumo" hidden>
+      <%= render 'summary', notified_by_month: @notified_by_month, total_notified: @status_counts.fetch('notified', 0) %>
+    </section>
+
+    <section class="scr-panel" data-panel="configuracoes" hidden>
+      <%= render 'settings', setting: @setting, email_template: @email_template %>
+    </section>
+
+    <section class="scr-panel" data-panel="instalacao" hidden>
+      <%= render 'installation', setting: @setting %>
+    </section>
+  <% else %>
+    <%= render 'activation' %>
+  <% end %>
+</div>
+
+<%= javascript_include_tag 'back_in_stock', defer: true if @setting %>

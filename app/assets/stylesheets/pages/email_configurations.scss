@@ -1,2 +1,12 @@
-.email-config-dns-table-wrap { overflow-x: auto; margin: 0.75rem 0 1rem; }
-.email-config-dns-table__mono { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.8rem; }
+.email-config-dns-table-wrap { margin: 0.75rem 0 1rem; }
+.email-config-dns-table-wrap .crm-table { table-layout: fixed; width: 100%; }
+.email-config-dns-table-wrap .crm-table th:first-child { width: 5.5rem; }
+.email-config-dns-table__mono { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.8rem; white-space: normal; overflow-wrap: anywhere; }
+.email-config-dns-copy { display: flex; align-items: center; gap: 0.5rem; }
+.email-config-dns-copy > span { min-width: 0; }
+.email-config-dns-copy__btn { display: inline-flex; align-items: center; justify-content: center; width: 1.7rem; height: 1.7rem; flex-shrink: 0; border: 1px solid var(--outline-strong); border-radius: 6px; background: var(--bg); color: var(--fg-alt); font-size: 0.75rem; cursor: pointer; transition: color .15s, border-color .15s; }
+.email-config-dns-copy__btn:hover { color: var(--fg); border-color: var(--fg-alt); }
+.email-config-dns-copy__btn.is-copied { color: #1a7f4b; border-color: #1a7f4b; }
+.email-config-dns__verify { background: var(--bg); border-color: var(--outline-strong); }
+.email-config-dns__verify:hover { background: var(--bg); border-color: var(--fg); color: var(--fg); }
+.email-config-footer { background: transparent; border-top: 0; padding-top: 0; }

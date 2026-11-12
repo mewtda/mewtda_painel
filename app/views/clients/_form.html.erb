@@ -98,6 +98,21 @@
             </div>
           </div>
 
+          <div class="cform-field">
+            <%= form.label :logo, 'Logo da loja', class: 'crm-label' %>
+            <% if client.logo.attached? %>
+              <div class="cform-logo-preview">
+                <%= image_tag url_for(client.logo), class: 'cform-logo-preview__img' %>
+                <label class="cform-toggle">
+                  <%= check_box_tag 'client[remove_logo]', '1', false, class: 'cform-toggle__input', disabled: read_only %>
+                  <span class="cform-toggle__label">Remover logo atual</span>
+                </label>
+              </div>
+            <% end %>
+            <%= form.file_field :logo, class: 'crm-input', accept: 'image/png,image/jpeg,image/avif', disabled: read_only %>
+            <span class="cform-field__hint">Aparece no cabeçalho dos e-mails (PNG, JPG ou AVIF, até 2 MB). Sem logo, o e-mail mostra o nome da loja.</span>
+          </div>
+
           <% if current_user.admin? && client.persisted? %>
             <div class="cform-field">
               <%= form.label :slug, 'Slug', class: 'crm-label' %>
@@ -160,6 +175,12 @@
             <%= form.label :shopify_shop_url, 'URL da Loja Shopify', class: 'crm-label' %>
             <%= form.text_field :shopify_shop_url, class: 'crm-input', placeholder: 'sua-loja.myshopify.com', disabled: read_only %>
             <span class="cform-field__hint">Domínio da loja, sem "https://" (ex.: dunas-beachwear.myshopify.com)</span>
+          </div>
+
+          <div class="cform-field">
+            <%= form.label :site_url, 'URL do Site', class: 'crm-label' %>
+            <%= form.url_field :site_url, class: 'crm-input', placeholder: 'https://www.sualoja.com.br', disabled: read_only %>
+            <span class="cform-field__hint">Endereço da loja no ar, com "https://". Usado nos links de afiliados e no De volta ao estoque.</span>
           </div>
 
           <div class="cform-field">

@@ -173,3 +173,5 @@
 .wan__users { border: 0; padding: 0; margin: 0; }
 .wan__users label { display: block; font-size: 0.9rem; }
 .wan-card__warn { color: #b45309; font-size: 0.85rem; margin: 0; }
+.cform-logo-preview { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+.cform-logo-preview__img { height: 56px; width: auto; max-width: 240px; object-fit: contain; padding: 0.5rem 0.75rem; background: #fff; border: 1px solid var(--outline); border-radius: var(--radius); }

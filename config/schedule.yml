@@ -22,3 +22,8 @@ cart_recovery_processing:
   cron: "*/5 * * * *"
   class: "ProcessCartRecoveryCampaignsJob"
   queue: default
+
+back_in_stock_restock_check:
+  cron: "*/15 * * * *"
+  class: "BackInStock::RestockCheckJob"
+  queue: default

@@ -1,0 +1,79 @@
+<%= form_with model: setting, url: back_in_stock_path, method: :patch, html: { autocomplete: 'off' } do |form| %>
+  <div class="scr-grid">
+    <div class="scr-stack">
+      <div class="scr-card">
+        <h2 class="scr-card__title"><i class="fa-solid fa-power-off"></i> Widget</h2>
+        <label class="scr-switch">
+          <span class="scr-switch__text">
+            <strong>Widget ativo</strong>
+            <span>Desligado, o botão some da loja e nenhum alerta é registrado.</span>
+          </span>
+          <%= form.check_box :active %>
+          <span class="scr-switch__track"></span>
+        </label>
+      </div>
+
+      <div class="scr-card">
+        <h2 class="scr-card__title"><i class="fa-solid fa-font"></i> Textos e cor</h2>
+        <div class="scr-field">
+          <%= form.label :button_text, 'Texto do botão' %>
+          <%= form.text_field :button_text, class: 'crm-input', maxlength: 80, required: true %>
+        </div>
+        <div class="scr-field">
+          <%= form.label :modal_title, 'Título da janela' %>
+          <%= form.text_field :modal_title, class: 'crm-input', maxlength: 80, required: true %>
+        </div>
+        <div class="scr-field">
+          <%= form.label :accent_color, 'Cor do botão' %>
+          <%= form.color_field :accent_color, class: 'crm-input bis-color-input' %>
+        </div>
+      </div>
+    </div>
+
+    <div class="scr-stack">
+      <div class="scr-card">
+        <h2 class="scr-card__title"><i class="fa-solid fa-circle-info"></i> Como funciona</h2>
+        <p class="scr-card__hint" style="margin: 0">
+          Na página do produto, quando a variante escolhida está esgotada, o botão aparece logo abaixo do
+          botão de compra. O cliente informa o e-mail e o tamanho, e o alerta fica registrado aqui no painel.
+        </p>
+      </div>
+
+      <div class="scr-card">
+        <h2 class="scr-card__title"><i class="fa-solid fa-envelope"></i> E-mail do aviso</h2>
+        <p class="scr-card__hint">Quando a variação volta ao estoque, cada pessoa recebe este e-mail com a foto e o link do produto.</p>
+        <% domain_verified = setting.client.ses_domain_verified? %>
+        <ul class="bis-checklist">
+          <li class="<%= email_template ? 'is-ok' : 'is-pending' %>">
+            <i class="fa-solid <%= email_template ? 'fa-circle-check' : 'fa-circle-exclamation' %>"></i>
+            <span>
+              <strong><%= email_template ? email_template.name : 'Nenhum e-mail ativo' %></strong>
+              <% if email_template %>
+                <%= link_to 'Editar e-mail', edit_email_template_path(email_template) %>
+              <% else %>
+                <%= link_to 'Criar e-mail de aviso', new_email_template_path(preset: :back_in_stock) %>
+              <% end %>
+            </span>
+          </li>
+          <li class="<%= domain_verified ? 'is-ok' : 'is-pending' %>">
+            <i class="fa-solid <%= domain_verified ? 'fa-circle-check' : 'fa-circle-exclamation' %>"></i>
+            <span>
+              <% if domain_verified %>
+                <strong>Envio por <%= setting.client.email_sending_domain %></strong>
+              <% else %>
+                <strong>Domínio de envio não verificado</strong>
+                <%= link_to 'Configurar domínio', edit_email_configuration_path %>
+              <% end %>
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="scr-sticky">
+    <%= form.button class: 'crm-btn crm-btn--primary' do %>
+      <i class="fa-solid fa-floppy-disk"></i> Salvar configurações
+    <% end %>
+  </div>
+<% end %>

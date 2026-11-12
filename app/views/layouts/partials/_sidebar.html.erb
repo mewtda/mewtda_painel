@@ -83,7 +83,7 @@
       <% end %>
 
       <% operacoes_active = request.path.start_with?(orders_path) || request.path.start_with?(customers_path) ||
-                             request.path.start_with?(products_path) %>
+                             request.path.start_with?(products_path) || request.path.start_with?(back_in_stock_path) %>
       <details class="crm-sidebar__submenu" <%= 'open' if operacoes_active %>>
         <summary class="crm-sidebar__link crm-sidebar__link--parent">
           <i class="fa-solid fa-boxes-stacked crm-fa"></i>
@@ -96,6 +96,10 @@
           <%= link_to orders_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if loja_active}" do %>
             <i class="fa-solid fa-store crm-fa"></i>
             Loja
+          <% end %>
+          <%= link_to back_in_stock_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(back_in_stock_path)}" do %>
+            <i class="fa-solid fa-bell crm-fa"></i>
+            De volta ao estoque
           <% end %>
         </div>
       </details>

@@ -16,6 +16,7 @@ module HeaderHelper
       { label: 'Pedidos', url: orders_path, icon: 'fa-solid fa-box' },
       { label: 'Clientes', url: customers_path, icon: 'fa-solid fa-users' },
       { label: 'Produtos', url: products_path, icon: 'fa-solid fa-bag-shopping' },
+      { label: 'De volta ao estoque', url: back_in_stock_path, icon: 'fa-solid fa-bell' },
       { label: 'Campanhas', url: campaigns_path, icon: 'fa-solid fa-bullseye' },
       { label: 'E-mail Marketing', url: email_templates_path, icon: 'fa-solid fa-envelope-open-text' },
       { label: 'Afiliados', url: affiliates_path, icon: 'fa-solid fa-user-group' },

@@ -1,31 +1,42 @@
 module Ses
   class DomainIdentityService
+    FAILED_DKIM_STATUSES = %w[FAILED TEMPORARY_FAILURE].freeze
+
     def initialize(client, ses: Aws::SESV2::Client.new)
       @client = client
       @ses = ses
     end
 
-    # Cria a identidade de domínio na SES (Easy DKIM) e guarda os tokens
-    # retornados — cada um vira um registro CNAME que o cliente precisa
-    # cadastrar no DNS pra provar a propriedade do domínio e habilitar o DKIM.
-    def create!
-      response = @ses.create_email_identity(email_identity: @client.email_sending_domain)
-      tokens = response.dkim_attributes.tokens
-
-      @client.update!(ses_dkim_tokens: tokens, ses_verification_status: 'pending', ses_verified_at: nil)
-      tokens
+    def register!(domain)
+      client.update!(email_sending_domain: domain, ses_dkim_tokens: dkim_tokens_for(domain),
+                     ses_verification_status: 'pending', ses_verified_at: nil)
     end
 
-    # Consulta o status atual na SES e atualiza o cliente de acordo.
     def refresh_status!
-      response = @ses.get_email_identity(email_identity: @client.email_sending_domain)
-      verified = response.verified_for_sending_status
+      status = status_from(ses.get_email_identity(email_identity: client.email_sending_domain))
+      client.update!(ses_verification_status: status, ses_verified_at: verified_at_for(status))
+      status
+    end
 
-      @client.update!(
-        ses_verification_status: verified ? 'verified' : 'pending',
-        ses_verified_at: verified ? Time.current : nil
-      )
-      verified
+    private
+
+    attr_reader :client, :ses
+
+    def dkim_tokens_for(domain)
+      ses.create_email_identity(email_identity: domain).dkim_attributes.tokens
+    rescue Aws::SESV2::Errors::AlreadyExistsException
+      ses.get_email_identity(email_identity: domain).dkim_attributes.tokens
+    end
+
+    def status_from(identity)
+      return 'verified' if identity.verified_for_sending_status
+      return 'failed' if identity.dkim_attributes.status.in?(FAILED_DKIM_STATUSES)
+
+      'pending'
+    end
+
+    def verified_at_for(status)
+      client.ses_verified_at || Time.current if status == 'verified'
     end
   end
 end

@@ -27,46 +27,14 @@
   display: flex; align-items: center; gap: 0.5rem; padding: 1rem 1.25rem; font-weight: 600;
   color: var(--fg); border-bottom: 1px solid var(--outline);
 }
-.email-templates-preview__stage {
-  padding: 2rem 1rem; display: flex; justify-content: center;
-  background: repeating-linear-gradient(45deg, rgba(127, 127, 127, 0.06), rgba(127, 127, 127, 0.06) 10px, transparent 10px, transparent 20px);
-}
+.email-templates-preview__stage { padding: 1rem; display: flex; justify-content: center; background: #f4f4f5; }
 
-.email-preview {
-  width: 100%; max-width: 420px; font-family: Arial, Helvetica, sans-serif; color: #111;
-  --email-preview-accent: #7c3aed;
-}
+.email-preview { width: 100%; max-width: 600px; font-family: Arial, Helvetica, sans-serif; }
 .email-preview__subject { font-size: 12px; color: #777; margin-bottom: 8px; padding: 0 2px; }
-.email-preview__card {
-  background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  display: flex;
-}
-.email-preview--image_top .email-preview__card,
-.email-preview--image_top_bottom .email-preview__card { flex-direction: column; }
-.email-preview--image_top .email-preview__image img,
-.email-preview--image_top_bottom .email-preview__image img { width: 100%; display: block; max-height: 160px; object-fit: cover; }
-.email-preview--image_left .email-preview__card { flex-direction: row; }
-.email-preview--image_left .email-preview__image { width: 38%; }
-.email-preview--image_right .email-preview__card { flex-direction: row-reverse; }
-.email-preview--image_right .email-preview__image { width: 38%; }
-.email-preview--image_left .email-preview__image img,
-.email-preview--image_right .email-preview__image img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.email-preview--banner .email-preview__card { flex-direction: column; }
-.email-preview__content { padding: 20px; flex: 1; text-align: center; }
-.email-preview__heading { margin: 0 0 10px; font-size: 18px; }
-.email-preview__body { margin: 0 0 14px; font-size: 13px; color: #555; line-height: 1.5; }
-.email-preview__coupon {
-  display: inline-block; margin: 0 0 14px; padding: 6px 14px; border: 1px dashed var(--email-preview-accent);
-  border-radius: 6px; font-weight: 700; font-size: 13px; color: var(--email-preview-accent); letter-spacing: 0.05em;
-}
-.email-preview__coupon[hidden] { display: none; }
+.email-preview__frame { display: block; width: 100%; height: 480px; border: 0; background: #f4f4f5; }
 
 // .users-form-page__field já define display: flex — precisa ser sobrescrito
 // explicitamente aqui, senão o atributo [hidden] (usado pra esconder os
 // campos de configuração do gatilho não selecionado) não tem efeito.
 .email-templates-trigger-config[hidden] { display: none; }
 .email-templates-layout-config[hidden] { display: none; }
-.email-preview__button {
-  background: var(--email-preview-accent); color: #fff; border: none; border-radius: 6px;
-  padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: default;
-}

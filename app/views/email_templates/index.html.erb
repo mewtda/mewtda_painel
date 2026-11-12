@@ -35,7 +35,7 @@
             <td><%= email_template.name %></td>
             <td><%= email_template.subject %></td>
             <td>
-              <span class="crm-tag crm-tag--warning"><%= email_template.trigger_kind.humanize %></span>
+              <span class="crm-tag crm-tag--warning"><%= email_template.trigger_label %></span>
             </td>
             <td class="text-center">
               <% if email_template.active? %>

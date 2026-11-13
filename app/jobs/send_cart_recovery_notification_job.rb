@@ -4,12 +4,12 @@ class SendCartRecoveryNotificationJob < ApplicationJob
   SKIP_REASON = 'canal da 1ª mensagem indisponível'.freeze
 
   # Verdadeiro quando o reenvio/2ª mensagem ainda pode sair pelo canal da 1ª.
-  def self.channel_available?(checkout, client, campaign)
+  def self.channel_available?(checkout, client, automation)
     # Checkouts enviados antes da Evolution (Z-API, já removida) não têm mais canal.
     return false unless checkout.whatsapp_provider == 'evolution'
 
     connection_id = checkout.whatsapp_connection_id
-    connection_id.present? && campaign.present? && campaign.whatsapp_connections.exists?(id: connection_id)
+    connection_id.present? && automation.present? && automation.whatsapp_connections.exists?(id: connection_id)
   end
 
   # 2ª mensagem (e reenvios) saem pelo mesmo canal da 1ª.
@@ -34,14 +34,14 @@ class SendCartRecoveryNotificationJob < ApplicationJob
     return if !manual && (first ? checkout.first_notified_at : checkout.second_notified_at).present?
 
     client = checkout.client
-    campaign = client.campaigns.find_by(kind: :cart_recovery)
+    automation = client.automations.find_by(kind: :cart_recovery)
     channel_locked = self.class.channel_locked?(checkout, slot)
-    if channel_locked && !self.class.channel_available?(checkout, client, campaign)
+    if channel_locked && !self.class.channel_available?(checkout, client, automation)
       return skip_unavailable_channel(checkout, first)
     end
 
     message = build_message(template, checkout, coupon_code)
-    result = Whatsapp::Outbound.deliver(client: client, campaign: campaign, phone: checkout.phone, body: message,
+    result = Whatsapp::Outbound.deliver(client: client, automation: automation, phone: checkout.phone, body: message,
                                         prefer_connection: channel_locked ? checkout.whatsapp_connection : nil,
                                         strict: channel_locked)
     # Evolution sem número disponível: mantém o checkout pendente para tentar de novo.

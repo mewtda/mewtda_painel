@@ -22,6 +22,7 @@
  *= require components/card
  *= require components/tag
  *= require components/confirm
+ *= require components/select
  *= require layouts/topbar
  *= require layouts/sidebar
  *= require layouts/footer
@@ -46,6 +47,7 @@
  *= require pages/automations
  *= require pages/screen
  *= require pages/back_in_stock
+ *= require pages/campaign_builder
  *= require pages/custom_automations
  *= require pages/affiliates
  *= require pages/auth

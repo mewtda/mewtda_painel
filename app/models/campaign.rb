@@ -1,112 +1,156 @@
 class Campaign < ApplicationRecord
-  extend FriendlyId
-  friendly_id :name, use: :slugged
+  STATUSES = {
+    'draft' => 'Rascunho', 'scheduled' => 'Agendada', 'sending' => 'Enviando',
+    'paused' => 'Pausada', 'sent' => 'Enviada', 'cancelled' => 'Cancelada'
+  }.freeze
+  SEND_MODES = %w[now scheduled window].freeze
+  CHANNELS = { 'email' => 'E-mail' }.freeze
+  TIME_FORMAT = /\A([01]\d|2[0-3]):[0-5]\d\z/
+  RESUME_HOUR = 8
+  RUNNABLE = %w[scheduled sending paused].freeze
 
   belongs_to :client
-  has_many :campaign_actions, dependent: :destroy
-  has_many :whatsapp_campaign_connections, class_name: 'Whatsapp::CampaignConnection', dependent: :destroy
-  has_many :whatsapp_connections, through: :whatsapp_campaign_connections, source: :connection
+  belongs_to :email_template, optional: true
+  belongs_to :segment, optional: true
+  belongs_to :created_by, class_name: 'User', optional: true
+  belongs_to :published_by, class_name: 'User', optional: true
+  has_many :recipients, class_name: 'CampaignRecipient', dependent: :delete_all
 
-  enum kind: {
-    cashback: 0,
-    cashback_expiration: 1,
-    marketing_notification: 2,
-    shipping_tracking: 3,
-    cart_recovery: 4
-  }
+  attr_writer :scheduled_on, :scheduled_time
 
-  validates :name, presence: true
-  validates :kind, presence: true
-  validates :message, presence: true
-  validates :days_after_purchase, presence: true, numericality: { greater_than: 0 }, unless: -> {
-    marketing_notification? || shipping_tracking? || cart_recovery?
-  }
-  validates :max_sends, presence: true, numericality: { greater_than: 0 }, if: :shipping_tracking?
-  validates :interval_days, presence: true, numericality: { greater_than: 0 }, if: :shipping_tracking?
-  validates :send_delay_minutes, presence: true, numericality: { greater_than: 0 }, if: :cart_recovery?
-  # O cupom é criado manualmente na Shopify por fora — aqui só guarda o código
-  # já pronto, não gera nada via API.
-  validates :coupon_code, presence: true, if: -> { cart_recovery? && include_coupon? }
-  validates :resend_message, presence: true, if: -> { cart_recovery? && resend_enabled? }
-  validates :resend_delay_hours, presence: true, numericality: { greater_than: 0 },
-                                 if: -> { cart_recovery? && resend_enabled? }
-  validates :resend_coupon_code, presence: true,
-                                 if: -> { cart_recovery? && resend_enabled? && resend_include_coupon? }
-  validates :start_date, presence: true
-  validates :end_date, presence: true
-  validate :end_date_after_start_date
+  before_validation :compose_scheduled_at
 
-  # Accessors para os filtros armazenados no campo jsonb :filters
-  # Exemplo de estrutura:
-  # { "inactive_days" => "30", "min_orders" => "2", "product_name" => "Camiseta", "maderite" => "1" }
-  %w[inactive_days min_orders product_name maderite].each do |key|
-    define_method(:"filter_#{key}")        { filters[key] }
-    define_method(:"filter_#{key}=") { |v| self.filters = filters.merge(key => v.presence) }
+  validates :name, length: { maximum: 120 }
+  validates :status, inclusion: { in: STATUSES.keys }
+  validates :send_mode, inclusion: { in: SEND_MODES }
+  validates :channel, inclusion: { in: CHANNELS.keys }
+  validates :window_from, :window_to, format: { with: TIME_FORMAT }
+  validate :template_and_segment_belong_to_client
+
+  def window_days=(value)
+    super(Array(value).compact_blank.map(&:to_i).select { |day| (0..6).cover?(day) }.uniq.sort)
   end
 
-  def filter_maderite?
-    filters['maderite'] == '1'
+  def draft? = status == 'draft'
+  def cancelable? = status.in?(RUNNABLE)
+
+  def recount!
+    counts = recipients.group(:status).count
+    update_columns(sent_count: counts.fetch('sent', 0), failed_count: counts.fetch('failed', 0),
+                   blocked_count: counts.fetch('blocked', 0))
   end
 
-  scope :active,   -> { where(active: true) }
-  scope :running,  -> { active.where('start_date <= ? AND end_date >= ?', Date.current, Date.current) }
+  def progress_label
+    return unless recipients_count
 
-  def running?
-    active? && start_date <= Date.current && end_date >= Date.current
+    parts = ["#{sent_count} de #{recipients_count} enviados"]
+    parts << "#{failed_count} #{'falha'.pluralize(failed_count)}" if failed_count.positive?
+    parts << "#{blocked_count} #{'bloqueio'.pluralize(blocked_count)}" if blocked_count.positive?
+    parts.join(' · ')
   end
 
-  def whatsapp_ready?
-    client&.whatsapp_ready?
+  def status_note(now = Time.current)
+    return unless status.in?(RUNNABLE)
+    return 'Confira o e-mail e o público desta campanha' if next_run_at.nil?
+
+    when_label = I18n.l(next_run_at, format: '%d/%m às %H:%M')
+    return "Começa em #{when_label}" if status == 'scheduled' && next_run_at > now
+    return "Continua em #{when_label}" if next_run_at > now
+
+    'Enviando agora'
   end
+  def status_label = STATUSES.fetch(status)
+  def channel_label = CHANNELS.fetch(channel)
+  def display_name = name.presence || 'Campanha sem nome'
 
-  def status
-    return :inactive unless active?
-    return :pending  if start_date > Date.current
-    return :finished if end_date < Date.current
+  def scheduled_on = @scheduled_on || scheduled_at&.to_date
+  def scheduled_time = @scheduled_time || scheduled_at&.strftime('%H:%M')
 
-    :running
-  end
+  def window = Campaigns::SendWindow.new(days: window_days, from: window_from, to: window_to)
 
-  def kind_label
-    case kind
-    when 'cashback'               then 'Cashback'
-    when 'cashback_expiration'    then 'Expiração de Cashback'
-    when 'marketing_notification' then 'Notificação de Marketing'
-    when 'shipping_tracking'      then 'Rastreio de Pedido'
-    when 'cart_recovery'          then 'Recuperação de Carrinho'
-    else kind
+  def audience = Campaigns::Audience.new(client, segment).call
+
+  # Primeiro instante em que a campanha pode sair: agora, a data marcada ou a
+  # próxima abertura da janela de envio.
+  def first_send_at(from = Time.current)
+    case send_mode
+    when 'scheduled' then [scheduled_at, from].compact.max
+    when 'window' then window.next_opening(from) || from
+    else from
     end
   end
 
-  def days_after_purchase_label
-    return nil if marketing_notification? || shipping_tracking? || cart_recovery?
+  # Depois de bater o limite diário a campanha continua às 8h do dia seguinte,
+  # ou na próxima abertura da janela de envio.
+  def resume_at(from = Time.current)
+    start = first_send_at(from).in_time_zone.tomorrow.beginning_of_day
+    return window.next_opening(start) if send_mode == 'window' && window.valid?
 
-    cashback_expiration? ? 'dias antes da expiração' : 'dias após a compra'
+    start.change(hour: RESUME_HOUR)
   end
 
-  def actions_count = campaign_actions.count
-  def sent_count    = campaign_actions.sent.count
-  def pending_count = campaign_actions.pending.count
-  def failed_count  = campaign_actions.failed.count
+  # Textos do aviso de limite diário: sempre com o dia da semana e a data.
+  def first_day_label(from = Time.current)
+    time = first_send_at(from)
+    label = day_label(time, from)
+    case send_mode
+    when 'scheduled' then scheduled_at && scheduled_at > from ? "#{label} às #{time.strftime('%H:%M')}" : label
+    when 'window' then "#{label}, das #{window_from} às #{window_to}"
+    else label
+    end
+  end
 
-  def filtered_customers
-    return Customer.none unless marketing_notification?
+  def resume_label(from = Time.current)
+    time = resume_at(from)
+    label = day_label(time, from)
+    send_mode == 'window' ? "#{label}, das #{window_from} às #{window_to}" : "#{label} às #{time.strftime('%H:%M')}"
+  end
 
-    scope = Customer.joins(:orders).where(orders: { client_id: }).distinct
+  def timing_summary
+    case send_mode
+    when 'scheduled' then scheduled_at ? I18n.l(scheduled_at, format: '%d/%m/%Y às %H:%M') : 'Escolha a data e a hora'
+    when 'window' then window.summary
+    else 'Assim que você confirmar'
+    end
+  end
 
-    scope = scope.inactive_days(filter_inactive_days.to_i) if filter_inactive_days.present?
-    scope = scope.with_min_orders(filter_min_orders.to_i)  if filter_min_orders.present?
-    scope = scope.bought_product(filter_product_name)      if filter_product_name.present?
-    scope = scope.maderite                                 if filter_maderite?
+  def missing_steps
+    steps = []
+    steps << 'Dê um nome à campanha' if name.blank?
+    steps << 'Escolha o e-mail' unless email_template
+    steps << 'Escolha para quem enviar' unless segment
+    steps << 'Escolha a data e a hora' if send_mode == 'scheduled' && !scheduled_at
+    steps << 'Escolha os dias e o horário' if send_mode == 'window' && !window.valid?
+    steps
+  end
 
-    scope
+  def step_done
+    {
+      'name' => name.present?, 'template' => email_template.present?, 'audience' => segment.present?,
+      'timing' => send_mode == 'now' || (send_mode == 'scheduled' && scheduled_at.present?) ||
+                  (send_mode == 'window' && window.valid?)
+    }
   end
 
   private
 
-  def end_date_after_start_date
-    return if start_date.blank? || end_date.blank?
+  def day_label(time, from)
+    label = I18n.l(time, format: '%A, %d/%m').upcase_first
+    time.to_date == from.in_time_zone.to_date ? "#{label} (hoje)" : label
+  end
 
-    errors.add(:end_date, 'deve ser posterior à data de início') if end_date < start_date
+  def compose_scheduled_at
+    return if @scheduled_on.nil? && @scheduled_time.nil?
+
+    date = (@scheduled_on.presence || scheduled_on).to_s
+    time = (@scheduled_time.presence || scheduled_time).to_s
+    self.scheduled_at = (Time.zone.parse("#{date} #{time}") if date.present? && time.present?)
+  rescue ArgumentError
+    self.scheduled_at = nil
+  end
+
+  def template_and_segment_belong_to_client
+    errors.add(:email_template_id, 'não pertence a esta loja') if email_template && email_template.client_id != client_id
+    errors.add(:segment_id, 'não pertence a esta loja') if segment && segment.client_id != client_id
   end
 end

@@ -1,2 +1,206 @@
-<% title 'Editar Campanha' %>
-<%= render 'form', campaign: @campaign, read_only: false %>
+<% title 'Nova campanha' %>
+
+<% weekdays = [[1, 'Seg'], [2, 'Ter'], [3, 'Qua'], [4, 'Qui'], [5, 'Sex'], [6, 'Sáb'], [0, 'Dom']] %>
+
+<div class="clients-wrapper cx-page">
+  <%= form_with model: @campaign, url: campaign_path(@campaign), method: :patch, id: 'campaign-form',
+                html: { autocomplete: 'off', data: { preview_url: preview_campaign_path(@campaign) } } do |form| %>
+
+    <div class="sg-topbar">
+      <div class="sg-topbar__left">
+        <%= link_to campaigns_path, class: 'sg-back' do %><i class="fa-solid fa-arrow-left"></i> Campanhas<% end %>
+        <span class="crm-tag crm-tag--info"><i class="fa-solid fa-envelope"></i> E-mail</span>
+        <span class="crm-tag crm-tag--neutral">Rascunho</span>
+        <span class="ec-saved" id="ec-saved"><i class="fa-solid fa-cloud-arrow-up"></i> <span id="ec-saved-text">Salvo automaticamente</span></span>
+      </div>
+      <button type="button" class="crm-btn crm-btn--primary" id="ec-review" disabled
+              title="Complete os passos para poder enviar">
+        <i class="fa-solid fa-paper-plane"></i> Revisar e enviar
+      </button>
+    </div>
+
+    <p class="ec-author">
+      Criada por <strong><%= @campaign.created_by&.name || 'não informado' %></strong>
+      em <%= l(@campaign.created_at, format: '%d/%m/%Y às %H:%M') %>
+    </p>
+
+    <div class="ec-layout">
+      <div class="ec-steps">
+
+        <section class="crm-card ec-step <%= 'is-done' if @campaign.step_done['name'] %>" data-step="name">
+          <header class="ec-step__head">
+            <span class="ec-step__num"><i class="fa-solid fa-check"></i><b>1</b></span>
+            <div><h2>Nome da campanha</h2><p class="ec-hint">Só para você achar depois. O cliente não vê.</p></div>
+          </header>
+          <%= form.text_field :name, class: 'crm-input', maxlength: 120, placeholder: 'Ex.: Promoção de verão' %>
+        </section>
+
+        <section class="crm-card ec-step <%= 'is-done' if @campaign.step_done['template'] %>" data-step="template">
+          <header class="ec-step__head">
+            <span class="ec-step__num"><i class="fa-solid fa-check"></i><b>2</b></span>
+            <div><h2>Qual e-mail enviar</h2><p class="ec-hint">Escolha um dos seus modelos. A prévia aparece ao lado.</p></div>
+          </header>
+          <% if @email_templates.any? %>
+            <%= form.collection_select :email_template_id, @email_templates, :id, :name,
+                                       { include_blank: 'Escolha um modelo de e-mail…' }, class: 'crm-input crm-select-block',
+                                       data: { custom_select: true } %>
+            <p class="ec-hint ec-subject" id="ec-template-subject"><%= "Assunto: #{@campaign.email_template.subject}" if @campaign.email_template %></p>
+            <div class="ec-actions">
+              <%= link_to email_templates_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
+                <i class="fa-solid fa-pen"></i> Editar modelos
+              <% end %>
+              <%= link_to new_email_template_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
+                <i class="fa-solid fa-plus"></i> Criar novo modelo
+              <% end %>
+            </div>
+          <% else %>
+            <div class="ec-empty">
+              Você ainda não tem nenhum modelo de e-mail.
+              <%= link_to new_email_template_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
+                <i class="fa-solid fa-plus"></i> Criar o primeiro modelo
+              <% end %>
+            </div>
+          <% end %>
+        </section>
+
+        <section class="crm-card ec-step <%= 'is-done' if @campaign.step_done['audience'] %>" data-step="audience">
+          <header class="ec-step__head">
+            <span class="ec-step__num"><i class="fa-solid fa-check"></i><b>3</b></span>
+            <div><h2>Para quem enviar</h2><p class="ec-hint">Escolha um segmento ou uma lista. Quem pediu para sair nunca recebe.</p></div>
+          </header>
+          <%= form.collection_select :segment_id, @segments, :id, ->(segment) { "#{segment.kind_label}: #{segment.name}" },
+                                     { include_blank: 'Escolha um segmento ou lista…' }, class: 'crm-input crm-select-block', data: { custom_select: true } %>
+          <div class="ec-actions">
+            <%= link_to segments_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
+              <i class="fa-solid fa-plus"></i> Criar um segmento
+            <% end %>
+          </div>
+          <div class="ec-audience" id="ec-audience" hidden>
+            <div class="ec-audience__line"><strong data-summary="recipients">0</strong> pessoas vão receber</div>
+            <div class="ec-audience__sub" data-summary-consent></div>
+            <div class="ec-audience__sub" data-summary-excluded></div>
+          </div>
+        </section>
+
+        <section class="crm-card ec-step <%= 'is-done' if @campaign.step_done['timing'] %>" data-step="timing">
+          <header class="ec-step__head">
+            <span class="ec-step__num"><i class="fa-solid fa-check"></i><b>4</b></span>
+            <div><h2>Quando enviar</h2><p class="ec-hint">Agora, em uma data, ou só em certos dias da semana e horários.</p></div>
+          </header>
+
+          <div class="ec-modes">
+            <% { 'now' => ['Agora', 'Assim que você confirmar'], 'scheduled' => ['Em uma data', 'Um dia e hora marcados'],
+                 'window' => ['Dias e horários', 'Ex.: toda segunda e quarta, das 8h às 12h'] }.each do |mode, (title, hint)| %>
+              <label class="ec-mode">
+                <%= form.radio_button :send_mode, mode, class: 'ec-mode__input' %>
+                <span class="ec-mode__body"><strong><%= title %></strong><small class="cx-muted"><%= hint %></small></span>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="ec-panel" data-mode-panel="scheduled" hidden>
+            <div class="ec-row">
+              <div><%= form.label :scheduled_on, 'Data', class: 'crm-label' %><%= form.date_field :scheduled_on, class: 'crm-input' %></div>
+              <div><%= form.label :scheduled_time, 'Hora', class: 'crm-label' %><%= form.time_field :scheduled_time, class: 'crm-input' %></div>
+            </div>
+          </div>
+
+          <div class="ec-panel" data-mode-panel="window" hidden>
+            <%= hidden_field_tag 'campaign[window_days][]', '', id: nil %>
+            <div class="ec-days">
+              <% weekdays.each do |day, label| %>
+                <label class="cx-chip <%= 'is-on' if @campaign.window_days.include?(day) %>">
+                  <%= check_box_tag 'campaign[window_days][]', day, @campaign.window_days.include?(day), id: "ec-day-#{day}" %>
+                  <%= label %>
+                </label>
+              <% end %>
+            </div>
+            <div class="ec-row">
+              <div><%= form.label :window_from, 'Das', class: 'crm-label' %><%= form.time_field :window_from, class: 'crm-input' %></div>
+              <div><%= form.label :window_to, 'Até', class: 'crm-label' %><%= form.time_field :window_to, class: 'crm-input' %></div>
+            </div>
+            <p class="ec-hint">Se a lista for maior do que cabe em um dia, a campanha continua no próximo dia marcado.</p>
+          </div>
+        </section>
+      </div>
+
+      <aside class="ec-side">
+        <div class="crm-card ec-summary">
+          <h3>Resumo</h3>
+          <div class="ec-summary__big"><strong data-summary="recipients">0</strong><span>pessoas</span></div>
+          <dl class="ec-summary__list">
+            <% price = number_to_currency(Billing::Invoice::EMAIL_PRICE_PER_THOUSAND, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %>
+            <div><dt>Custo estimado <span class="ec-info" tabindex="0" title="Cobramos <%= price %> a cada 1.000 e-mails enviados. O valor entra na sua fatura do mês, somado aos outros envios (avisos de estoque e testes também contam). Campanhas pequenas custam menos de um centavo.">
+                <i class="fa-solid fa-circle-info"></i></span></dt><dd data-summary="cost">R$ 0,00</dd></div>
+            <div><dt>Envio</dt><dd data-summary="timing"><%= @campaign.timing_summary %></dd></div>
+            <div><dt>Limite de hoje</dt><dd><span data-summary="limit">—</span><small data-summary="limit-left"></small></dd></div>
+          </dl>
+          <p class="ec-warn" id="ec-limit-warn" hidden></p>
+          <div class="ec-missing" id="ec-missing" hidden>
+            <strong>Falta:</strong>
+            <ul id="ec-missing-list"></ul>
+          </div>
+        </div>
+
+        <div class="crm-card ec-preview">
+          <div class="ec-preview__head">
+            <h3>Prévia do e-mail</h3>
+            <div class="eb-device" role="group" aria-label="Tamanho da prévia">
+              <button type="button" class="eb-device__btn active" data-ec-device="desktop" title="Computador"><i class="fa-solid fa-desktop"></i></button>
+              <button type="button" class="eb-device__btn" data-ec-device="mobile" title="Celular"><i class="fa-solid fa-mobile-screen"></i></button>
+            </div>
+          </div>
+          <div class="ec-preview__stage" id="ec-stage" data-live-spinner>
+            <iframe class="ec-preview__frame" id="ec-frame" title="Prévia do e-mail" sandbox="allow-same-origin"
+                    <% if @campaign.email_template_id %>src="<%= preview_campaign_path(@campaign) %>"<% end %>></iframe>
+          </div>
+          <% if @campaign.email_template_id %>
+            <div class="ec-actions">
+              <%= link_to edit_email_template_path(@campaign.email_template_id), class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
+                <i class="fa-solid fa-pen"></i> Editar este modelo
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="crm-card ec-test">
+          <h3>Enviar um teste</h3>
+          <div class="ec-test__row">
+            <%= email_field_tag :test_email, nil, id: 'ec-test-email', class: 'crm-input', placeholder: 'seu@email.com', autocomplete: 'off' %>
+            <button type="button" class="crm-btn crm-btn--secondary" id="ec-test-send" data-url="<%= send_test_campaign_path(@campaign) %>">
+              <i class="fa-solid fa-paper-plane"></i> Enviar
+            </button>
+          </div>
+          <p class="ec-hint" id="ec-test-status"></p>
+        </div>
+      </aside>
+    </div>
+  <% end %>
+</div>
+
+<dialog class="crm-confirm ec-review" id="ec-review-dialog">
+  <h2 class="crm-confirm__title">Revisar e enviar</h2>
+  <p class="ec-review__intro">Confira antes de confirmar. Depois que começar, o envio segue sozinho e você pode cancelar quando quiser.</p>
+  <dl class="ec-review__list">
+    <div><dt>Campanha</dt><dd data-review="name"></dd></div>
+    <div><dt>E-mail</dt><dd data-review="template"></dd></div>
+    <div><dt>Para quem</dt><dd data-review="segment"></dd></div>
+    <div><dt>Pessoas</dt><dd data-review="recipients"></dd></div>
+    <div><dt>Envio</dt><dd data-review="timing"></dd></div>
+    <div><dt>Custo estimado</dt><dd data-review="cost"></dd></div>
+  </dl>
+  <div class="ec-warn" data-review="limit" hidden></div>
+  <%= form_with url: schedule_campaign_path(@campaign), method: :post, id: 'ec-schedule-form' do %>
+    <label class="ec-review__consent" id="ec-consent" hidden>
+      <%= check_box_tag :accept_not_subscribed, '1', false, id: 'ec-accept' %>
+      <span data-review="consent"></span>
+    </label>
+    <div class="crm-confirm__actions">
+      <button type="button" class="crm-btn crm-btn--secondary" id="ec-review-back">Voltar e ajustar</button>
+      <button type="submit" class="crm-btn crm-btn--primary" id="ec-schedule-submit">Enviar campanha</button>
+    </div>
+  <% end %>
+</dialog>
+
+<%= javascript_include_tag 'leave_guard', defer: true %>
+<%= javascript_include_tag 'campaigns', defer: true %>

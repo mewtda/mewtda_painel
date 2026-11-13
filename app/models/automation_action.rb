@@ -1,8 +1,8 @@
-class CampaignAction < ApplicationRecord
+class AutomationAction < ApplicationRecord
   extend FriendlyId
   friendly_id :random_slug, use: :slugged
 
-  belongs_to :campaign
+  belongs_to :automation
   belongs_to :customer
   belongs_to :order, optional: true
 

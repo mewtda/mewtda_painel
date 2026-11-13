@@ -5,7 +5,7 @@
   const inbox = $("wa-inbox");
   if (!inbox || !inbox.querySelector(".wa-workspace")) return;
   const base = inbox.dataset.apiBase;
-  const campaignId = inbox.dataset.campaignId || "";
+  const automationId = inbox.dataset.automationId || "";
   const stateLabels = {
     connected: "Conectado",
     qr: "Escaneie o QR",
@@ -215,7 +215,7 @@
       unread: $("wa-unread").checked ? "1" : "",
       page: listPage,
     });
-    if (campaignId) p.set("campaign_id", campaignId);
+    if (automationId) p.set("automation_id", automationId);
     const result = await api(`/conversations.json?${p}`);
     numbers = result.connections;
     renderTabs();

@@ -1,14 +1,14 @@
-<%# Caixa de conversas do WhatsApp. Usada na tela de Conversas e dentro de cada automação (campaign). %>
+<%# Caixa de conversas do WhatsApp. Usada na tela de Conversas e dentro de cada automação (automation). %>
 <section class="wa-app wa-chat-app" id="wa-inbox" data-wa-theme="dark" aria-label="Conversas do WhatsApp"
          data-api-base="<%= whatsapp_conversations_path.delete_suffix('/conversations') %>"
-         data-campaign-id="<%= campaign&.id %>">
+         data-automation-id="<%= automation&.id %>">
   <% if local_assigns[:show_header] != false %>
   <header class="wa-page-head">
     <div>
       <h1><i class="fa-brands fa-whatsapp"></i> Conversas</h1>
       <p>
-        <% if campaign %>
-          Números da automação <strong><%= campaign.name %></strong>.
+        <% if automation %>
+          Números da automação <strong><%= automation.name %></strong>.
           <%= link_to 'Ver todas as conversas', whatsapp_conversations_path %>
         <% else %>
           Conversas dos números liberados para você, em um só lugar.
@@ -35,7 +35,7 @@
     <% end %>
     <% if connections.empty? %>
       <span class="wa-number-none">
-        <%= campaign ? 'Esta automação ainda não tem números liberados para você.' : 'Nenhum número liberado para você. Peça acesso à administração.' %>
+        <%= automation ? 'Esta automação ainda não tem números liberados para você.' : 'Nenhum número liberado para você. Peça acesso à administração.' %>
       </span>
     <% end %>
   </nav>

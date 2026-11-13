@@ -3,14 +3,14 @@ module Whatsapp
   module Outbound
     Result = Struct.new(:ok, :provider, :connection, :message, :error, keyword_init: true)
 
-    def self.deliver(client:, campaign:, phone:, body:, prefer_connection: nil, strict: false)
-      if campaign && campaign.client_id != client.id
+    def self.deliver(client:, automation:, phone:, body:, prefer_connection: nil, strict: false)
+      if automation && automation.client_id != client.id
         return Result.new(ok: false, provider: 'evolution', error: 'automação de outro cliente')
       end
 
       return Result.new(ok: false, provider: 'evolution', error: 'telefone inválido') if Phone.normalize(phone).nil?
 
-      connection = Router.pick(campaign: campaign, phone: phone, prefer: prefer_connection, strict: strict)
+      connection = Router.pick(automation: automation, phone: phone, prefer: prefer_connection, strict: strict)
       return Result.new(ok: false, provider: 'evolution', error: 'sem número responsável conectado') unless connection
 
       message = begin

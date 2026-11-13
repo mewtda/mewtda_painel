@@ -37,7 +37,7 @@
       </div>
       <div class="cx-toolbar__right">
         <%= select_tag :segment_id, options_for_select([['Toda a base', '']] + @segments.map { |s| ["#{s.kind_label}: #{s.name}", s.id] }, params[:segment_id]),
-                       class: 'crm-input cx-select', data: { autosubmit: true } %>
+                       class: 'crm-input cx-select', data: { autosubmit: true, custom_select: true } %>
         <div class="cx-search">
           <i class="fa-solid fa-magnifying-glass"></i>
           <%= search_field_tag :q, params[:q], class: 'crm-input', placeholder: 'Nome, e-mail ou telefone',
@@ -70,7 +70,7 @@
       <span id="cx-bulk-count"></span>
       <button type="button" class="cx-link" id="cx-select-all-filtered">Selecionar todos os <%= number_with_delimiter(@filtered_count, delimiter: '.') %> do filtro</button>
       <span class="cx-bulk__spacer"></span>
-      <%= select_tag :list_id, options_for_select(@lists.map { |l| [l.name, l.id] }), include_blank: 'Escolha uma lista…', class: 'crm-input cx-select' %>
+      <%= select_tag :list_id, options_for_select(@lists.map { |l| [l.name, l.id] }), include_blank: 'Escolha uma lista…', class: 'crm-input cx-select', data: { custom_select: true } %>
       <span class="eb-muted">ou</span>
       <%= text_field_tag :new_list_name, nil, class: 'crm-input', placeholder: 'Nova lista' %>
       <button class="crm-btn crm-btn--primary"><i class="fa-solid fa-list-check"></i> Adicionar à lista</button>

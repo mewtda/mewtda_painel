@@ -1,97 +1,38 @@
 <% title 'Campanhas' %>
 
-<div class="campaigns-wrapper">
+<% status_tags = { 'draft' => 'neutral', 'scheduled' => 'info', 'sending' => 'warning', 'paused' => 'warning',
+                   'sent' => 'success', 'cancelled' => 'danger' } %>
 
-  <%# Alerta WhatsApp %>
-  <% unless current_client.whatsapp_ready? %>
-    <div class="campaigns-alert campaigns-alert--danger">
-      <div class="campaigns-alert__icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-        </svg>
-      </div>
-      <div class="campaigns-alert__content">
-        <strong>Nenhum número de WhatsApp conectado!</strong>
-        <p>As campanhas criadas não serão executadas enquanto não houver um número conectado no cliente.</p>
-      </div>
-    </div>
-  <% end %>
-
-  <%# Filtros %>
-  <%= form_tag(campaigns_path, method: 'get') do %>
-    <div class="campaigns-filters">
-      <div class="campaigns-filters__row">
-        <div class="campaigns-filters__field">
-          <label class="crm-label">Buscar</label>
-          <%= text_field_tag :search, params[:search], class: 'crm-input', placeholder: 'Nome da campanha...' %>
-        </div>
-        <div class="campaigns-filters__field campaigns-filters__field--small">
-          <label class="crm-label">Status</label>
-          <%= select_tag :status,
-              options_for_select([['Todos', ''], ['Ativos', 'active'], ['Inativos', 'inactive'], ['Em execução', 'running']], params[:status]),
-              class: 'crm-input campaigns-filters__input--select' %>
-        </div>
-        <div class="campaigns-filters__field campaigns-filters__field--small">
-          <label class="crm-label">Tipo</label>
-          <%= select_tag :kind,
-              options_for_select([['Todos', ''], ['Cashback', 'cashback'], ['Expiracao de Cashback', 'cashback_expiration'], ['Notificacao de Marketing', 'marketing_notification'], ['Rastreio de Pedido', 'shipping_tracking']], params[:kind]),
-              class: 'crm-input campaigns-filters__input--select' %>
-        </div>
-        <div class="campaigns-filters__actions">
-          <%= button_tag class: 'crm-btn crm-btn--primary', name: '' do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
-            Filtrar
-          <% end %>
-          <%= link_to campaigns_path, class: 'crm-btn crm-btn--secondary' do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Limpar
-          <% end %>
-          <%= link_to new_campaign_path, class: 'crm-btn campaigns-btn--success' do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Nova Campanha
-          <% end %>
-        </div>
+<div class="clients-wrapper cx-page">
+  <div class="clients-table-wrap">
+    <div class="clients-table-header">
+      <span class="clients-table-header__title"><i class="fa-solid fa-bullhorn"></i> Campanhas</span>
+      <div class="sg-header-actions">
+        <%= form_with url: campaigns_path, method: :get, class: 'ec-filters', data: { live_regions: 'ec-table' } do %>
+          <%= select_tag :canal, options_for_select([['Todos os canais', '']] + Campaign::CHANNELS.invert.to_a, params[:canal]),
+                         class: 'crm-input cx-select', data: { autosubmit: true, custom_select: true } %>
+          <div class="cx-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <%= search_field_tag :q, params[:q], class: 'crm-input', placeholder: 'Buscar campanha',
+                                 autofocus: params[:q].present?, data: { autosubmit_typing: true } %>
+          </div>
+        <% end %>
+        <%= button_to campaigns_path, method: :post, class: 'crm-btn crm-btn--primary' do %>
+          <i class="fa-solid fa-plus"></i> Criar campanha
+        <% end %>
       </div>
     </div>
-  <% end %>
 
-  <%# Info do Cliente %>
-  <div class="campaigns-client-info">
-    <span class="campaigns-client-info__label">Cliente:</span>
-    <span class="campaigns-client-info__name"><%= current_client.name %></span>
-    <% if current_client.whatsapp_ready? %>
-      <span class="crm-tag crm-tag--success">WhatsApp conectado</span>
-    <% else %>
-      <span class="crm-tag crm-tag--danger">WhatsApp pendente</span>
-    <% end %>
-  </div>
-
-  <%# Tabela %>
-  <div class="campaigns-table-wrap">
-    <div class="campaigns-table-header">
-      <span class="campaigns-table-header__title">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 010 3.46" />
-        </svg>
-        Campanhas
-      </span>
-      <span class="campaigns-table-header__count"><%= @campaigns.total_entries rescue @campaigns.count %> encontradas</span>
-    </div>
-
+    <div id="ec-table" data-live-spinner>
     <table class="crm-table">
       <thead>
         <tr>
-          <th>Campanha</th>
-          <th>Tipo</th>
-          <th>Dias após compra</th>
-          <th>Período</th>
+          <th>Nome</th>
+          <th>Canal de envio</th>
           <th>Status</th>
+          <th>Para quem</th>
+          <th>Envio</th>
+          <th>Criada por</th>
           <th class="text-center">Ações</th>
         </tr>
       </thead>
@@ -99,55 +40,40 @@
         <% @campaigns.each do |campaign| %>
           <tr>
             <td>
-              <div class="campaigns-table__campaign">
-                <div class="campaigns-table__name"><%= campaign.name %></div>
-                <div class="campaigns-table__id">ID #<%= campaign.id %></div>
-              </div>
+              <%= link_to campaign.display_name, (campaign.draft? ? edit_campaign_path(campaign) : '#'), class: 'cx-link' %>
+              <% if campaign.email_template %><small class="cx-muted ec-sub"><%= campaign.email_template.name %></small><% end %>
             </td>
-            <td>
-              <span class="crm-tag crm-tag--warning">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
-                </svg>
-                <%= campaign.kind.humanize %>
-              </span>
+            <td><span class="crm-tag crm-tag--info"><i class="fa-solid fa-envelope"></i> <%= campaign.channel_label %></span></td>
+            <td><span class="crm-tag crm-tag--<%= status_tags.fetch(campaign.status) %>"><%= campaign.status_label %></span></td>
+            <td class="cx-muted"><%= campaign.segment&.name || '—' %></td>
+            <td class="cx-muted">
+              <%= campaign.timing_summary %>
+              <% if campaign.progress_label %><small class="ec-sub"><%= campaign.progress_label %></small><% end %>
+              <% if campaign.status_note %><small class="ec-sub"><%= campaign.status_note %></small><% end %>
             </td>
-            <td>
-              <span class="campaigns-table__days"><%= campaign.days_after_purchase %> dias</span>
-            </td>
-            <td>
-              <div class="campaigns-table__period">
-                <span><%= campaign.start_date.strftime('%d/%m/%Y') %></span>
-                <span class="campaigns-table__period-separator">até</span>
-                <span><%= campaign.end_date.strftime('%d/%m/%Y') %></span>
-              </div>
-            </td>
-            <td>
-              <% case campaign.status %>
-              <% when :running %>
-                <span class="crm-tag crm-tag--success">
-                  <span class="campaigns-table__status-dot"></span>
-                  Em execução
-                </span>
-              <% when :pending %>
-                <span class="crm-tag crm-tag--info">Aguardando</span>
-              <% when :finished %>
-                <span class="crm-tag crm-tag--neutral">Finalizada</span>
-              <% when :inactive %>
-                <span class="crm-tag crm-tag--danger">Inativa</span>
-              <% end %>
+            <td class="cx-nowrap">
+              <%= campaign.created_by&.name || '—' %>
+              <small class="cx-muted ec-sub"><%= l(campaign.created_at, format: '%d/%m/%Y às %H:%M') %></small>
             </td>
             <td class="text-center">
-              <div class="campaigns-table__actions">
-                <%= link_to edit_campaign_path(campaign), class: 'crm-btn campaigns-btn--icon', title: 'Editar' do %>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
-                  </svg>
+              <div class="clients-table__actions">
+                <% if campaign.draft? %>
+                  <%= link_to edit_campaign_path(campaign), class: 'crm-btn clients-btn--icon', title: 'Continuar editando' do %>
+                    <i class="fa-solid fa-pen"></i>
+                  <% end %>
                 <% end %>
-                <%= link_to campaign_path(campaign), method: :delete, data: { confirm: 'Tem certeza que deseja excluir esta campanha?' }, class: 'crm-btn campaigns-btn--icon campaigns-btn--danger', title: 'Excluir' do %>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                  </svg>
+                <% if campaign.cancelable? %>
+                  <%= button_to cancel_campaign_path(campaign), method: :post, class: 'crm-btn clients-btn--icon clients-btn--danger', title: 'Cancelar campanha',
+                      form: { data: { confirm: "Cancelar a campanha \"#{campaign.display_name}\"? Quem já recebeu não é afetado e o restante não será enviado.",
+                                      confirm_label: 'Cancelar campanha', confirm_cancel_label: 'Voltar' } } do %>
+                    <i class="fa-solid fa-ban"></i>
+                  <% end %>
+                <% end %>
+                <% if campaign.status.in?(%w[draft cancelled]) %>
+                  <%= button_to campaign_path(campaign), method: :delete, class: 'crm-btn clients-btn--icon clients-btn--danger', title: 'Excluir',
+                      form: { data: { confirm: "Excluir a campanha \"#{campaign.display_name}\"?", confirm_label: 'Excluir' } } do %>
+                    <i class="fa-solid fa-trash-can"></i>
+                  <% end %>
                 <% end %>
               </div>
             </td>
@@ -155,30 +81,13 @@
         <% end %>
         <% if @campaigns.empty? %>
           <tr>
-            <td colspan="6" class="campaigns-table__empty">
-              <div class="campaigns-table__empty-content">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 010 3.46" />
-                </svg>
-                <p>Nenhuma campanha encontrada.</p>
-                <%= link_to new_campaign_path, class: 'crm-btn crm-btn--primary' do %>
-                  Criar primeira campanha
-                <% end %>
-              </div>
+            <td colspan="7" class="clients-table__empty">
+              Você ainda não criou nenhuma campanha. Clique em <strong>Criar campanha</strong> para começar.
             </td>
           </tr>
         <% end %>
       </tbody>
-      <% if @campaigns.any? %>
-        <tfoot>
-          <tr>
-            <td colspan="6"><%= page_entries_info @campaigns rescue '' %></td>
-          </tr>
-        </tfoot>
-      <% end %>
     </table>
-
-    <%= will_paginate @campaigns, list_classes: %w[campaigns-pagination] rescue nil %>
+    </div>
   </div>
-
 </div>

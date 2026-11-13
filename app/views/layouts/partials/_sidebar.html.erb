@@ -112,7 +112,7 @@
 
       <% modelos_active = request.path.start_with?(email_templates_path) || request.path.start_with?('/crm/email_configuration') ||
                            request.path.start_with?(email_suppressions_path) %>
-      <% comunicacao_active = request.path.start_with?(segments_path) || modelos_active %>
+      <% comunicacao_active = request.path.start_with?(segments_path) || request.path.start_with?(campaigns_path) || modelos_active %>
       <details class="crm-sidebar__submenu" <%= 'open' if comunicacao_active %>>
         <summary class="crm-sidebar__link crm-sidebar__link--parent">
           <i class="fa-solid fa-paper-plane crm-fa"></i>
@@ -127,6 +127,10 @@
           <%= link_to email_templates_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if modelos_active}" do %>
             <i class="fa-solid fa-envelope-open-text crm-fa"></i>
             Modelos de mensagem
+          <% end %>
+          <%= link_to campaigns_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(campaigns_path)}" do %>
+            <i class="fa-solid fa-bullhorn crm-fa"></i>
+            Campanhas
           <% end %>
         </div>
       </details>

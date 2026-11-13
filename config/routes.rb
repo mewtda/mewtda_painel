@@ -73,10 +73,14 @@ Rails.application.routes.draw do
       end
     end
 
-    resources :campaigns do
-      resources :campaign_actions, only: [:index, :show], path: 'actions'
+    resources :automations, only: [] do
+      resources :actions, controller: 'automation_actions', only: :index do
+        post :resend, on: :member
+      end
     end
-    post 'campaigns/:campaign_id/actions/:action_id/resend', to: 'campaigns#resend_action', as: :resend_campaign_action
+
+    get 'campaigns', to: redirect('/crm/automations'), as: nil
+    get 'campaigns/:id', to: redirect('/crm/automations/%{id}/actions'), as: nil
 
     get   'automations',                    to: 'automations#index',           as: :automations
     get   'automations/tracking',           to: 'automations#edit_tracking',   as: :edit_tracking_automation
@@ -155,6 +159,14 @@ Rails.application.routes.draw do
       end
     end
     resources :email_suppressions, path: 'lista-de-recusa', only: %i[index create destroy]
+    resources :campaigns, path: 'campanhas', only: %i[index create edit update destroy] do
+      member do
+        get :preview
+        post :send_test
+        post :schedule
+        post :cancel
+      end
+    end
     resource :email_configuration, only: %i[edit update]
     post 'email_configuration/refresh', to: 'email_configurations#refresh_status', as: :refresh_email_configuration
 

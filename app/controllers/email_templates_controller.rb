@@ -7,6 +7,9 @@ class EmailTemplatesController < ApplicationController
 
   helper_method :editor_state
 
+  rate_limit to: 5, within: 1.minute, only: :send_test,
+             with: -> { render json: { error: 'Muitos testes seguidos. Aguarde um minuto.' }, status: :too_many_requests }
+
   PREVIEW_PRODUCT = { title: 'Vestido Linho Off White', variant: 'M' }.freeze
   PREVIEW_VARIABLES = { produto: PREVIEW_PRODUCT[:title], variacao: PREVIEW_PRODUCT[:variant], nome: 'Maria' }.freeze
   UPLOAD_CONTENT_TYPES = %w[image/png image/jpeg image/gif image/webp].freeze
@@ -51,6 +54,28 @@ class EmailTemplatesController < ApplicationController
     message = preview_message(template)
 
     render json: { subject: message.subject, preheader: message.preheader, html: message.html }
+  end
+
+  def send_test
+    address = params[:test_email].to_s.strip
+    return render_test_error('Informe um e-mail válido.') unless address.match?(URI::MailTo::EMAIL_REGEXP)
+    return render_test_error('O domínio de envio da loja ainda não foi verificado.') unless current_client.ses_domain_verified?
+
+    template = current_client.email_templates.find_by(id: params[:id]) || current_client.email_templates.new
+    template.assign_attributes(email_template_params)
+    return render_test_error('O e-mail tem erros: confira o nome, o assunto e os blocos.') unless template.valid?
+
+    message = test_message(template, address)
+    sent = Ses::SendEmailService.new(current_client).call(
+      to: address, subject: "[TESTE] #{message.subject}", html_body: message.html,
+      text_body: message.text, unsubscribe_url: message.unsubscribe_url
+    )
+    return render json: { message: "Teste enviado para #{address}." } if sent
+
+    render_test_error('Não foi possível enviar: o e-mail está na lista de recusa ou o limite de envios foi atingido.')
+  rescue Aws::Errors::ServiceError => e
+    Rails.logger.error "[EmailTemplates] Teste para #{address}: #{e.message}"
+    render_test_error('A AWS recusou o envio. Tente de novo em instantes.')
   end
 
   # Upload de imagem dos blocos: devolve o signed_id (guardado no bloco) e uma
@@ -100,6 +125,27 @@ class EmailTemplatesController < ApplicationController
     )
   end
 
+  def test_message(template, address)
+    EmailTemplates::Message.new(
+      template,
+      variables: PREVIEW_VARIABLES.merge(loja: current_client.name),
+      product: PREVIEW_PRODUCT.merge(url: storefront_or_root_url),
+      default_url: storefront_or_root_url,
+      logo_url: public_logo_url,
+      unsubscribe_url: EmailSuppression.unsubscribe_url(current_client, address, template: template.persisted? ? template : nil)
+    )
+  end
+
+  def public_logo_url
+    return unless current_client.logo.attached?
+
+    Rails.application.routes.url_helpers.rails_blob_url(current_client.logo, host: BackInStockSetting::WIDGET_HOST)
+  end
+
+  def render_test_error(message)
+    render json: { error: message }, status: :unprocessable_entity
+  end
+
   def storefront_or_root_url
     url = current_client.storefront_url
     url.match?(%r{\Ahttps?://[^/]+\z}) ? url : root_url
@@ -141,8 +187,7 @@ class EmailTemplatesController < ApplicationController
 
   def email_template_params
     params.require(:email_template).permit(
-      :name, :subject, :accent_color, :trigger_kind, :active, :blocks_json, :design_json,
-      :trigger_delay_hours, :trigger_inactive_days, :trigger_days_after_purchase
+      :name, :subject, :accent_color, :blocks_json, :design_json
     )
   end
 end

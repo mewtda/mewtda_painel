@@ -19,7 +19,7 @@ class EmailTemplate < ApplicationRecord
   }
 
   TRIGGER_LABELS = {
-    'manual' => 'Envio manual',
+    'manual' => 'Campanhas',
     'welcome' => 'Boas-vindas (novo cadastro)',
     'cart_recovery' => 'Carrinho abandonado',
     'inactive_customer' => 'Cliente inativo',

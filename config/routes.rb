@@ -150,6 +150,7 @@ Rails.application.routes.draw do
     resources :email_templates, except: [:show] do
       collection do
         post :preview
+        post :send_test
         post :upload_image
       end
     end

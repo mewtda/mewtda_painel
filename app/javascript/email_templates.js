@@ -26,6 +26,10 @@
     { kind: "segmented", key: "pad", label: "Espaçamento interno", options: PADDING_OPTIONS },
   ];
   const COMMON_DEFAULTS = { bg: "", pad: "md" };
+  const SOCIAL_NETWORKS = [
+    ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["whatsapp", "WhatsApp"],
+    ["linkedin", "LinkedIn"], ["x", "X"], ["pinterest", "Pinterest"], ["site", "Site"],
+  ];
 
   const TYPES = {
     logo: {
@@ -97,11 +101,11 @@
       ],
     },
     product: {
-      label: "Produto", icon: "fa-bag-shopping", onlyFor: "back_in_stock",
+      label: "Produto", icon: "fa-bag-shopping",
       defaults: { button_text: "Comprar agora", color: "" },
       summary: () => "Foto, nome e variação do produto",
       fields: [
-        { kind: "hint", text: "Mostra automaticamente a foto, o nome e a variação do produto que voltou ao estoque, com botão para a página dele." },
+        { kind: "hint", text: "Só aparece no aviso de \"De volta ao estoque\": mostra a foto, o nome e a variação do produto que voltou, com botão para a página dele." },
         { kind: "text", key: "button_text", label: "Texto do botão", vars: true },
         { kind: "color", key: "color", label: "Cor do botão", empty: "Cor da marca" },
       ],
@@ -144,17 +148,30 @@
     },
     social: {
       label: "Redes sociais", icon: "fa-share-nodes",
-      defaults: { instagram: "", facebook: "", tiktok: "", youtube: "", whatsapp: "", site: "", align: "center", color: "" },
-      summary: (b) => ["instagram", "facebook", "tiktok", "youtube", "whatsapp", "site"].filter((k) => b[k]).join(", ") || "Sem links",
+      defaults: { ...Object.fromEntries(SOCIAL_NETWORKS.map(([key]) => [key, ""])), shape: "circle", tone: "custom", color: "", size: "md", align: "center" },
+      summary: (b) => SOCIAL_NETWORKS.filter(([key]) => b[key]).map(([, label]) => label).join(", ") || "Sem links",
       fields: [
-        { kind: "url", key: "instagram", label: "Instagram" },
-        { kind: "url", key: "facebook", label: "Facebook" },
-        { kind: "url", key: "tiktok", label: "TikTok" },
-        { kind: "url", key: "youtube", label: "YouTube" },
-        { kind: "url", key: "whatsapp", label: "WhatsApp (link wa.me)" },
-        { kind: "url", key: "site", label: "Site" },
+        { kind: "segmented", key: "shape", label: "Formato dos ícones", options: [["circle", "Círculo"], ["square", "Quadrado"]] },
+        { kind: "segmented", key: "tone", label: "Cores", options: [["custom", "Cor única"], ["brand", "Cores da rede"]] },
+        { kind: "color", key: "color", label: "Cor dos ícones (cor única)", empty: "Preto" },
+        { kind: "segmented", key: "size", label: "Tamanho", options: [["sm", "P"], ["md", "M"], ["lg", "G"]] },
         ALIGN,
-        { kind: "color", key: "color", label: "Cor", empty: "Cor do texto" },
+        ...SOCIAL_NETWORKS.map(([key, label]) => ({ kind: "url", key, label: key === "whatsapp" ? "WhatsApp (link wa.me)" : label })),
+      ],
+    },
+    menu: {
+      label: "Menu", icon: "fa-bars",
+      defaults: {
+        items: [{ label: "Novidades", link: "" }, { label: "Mulher", link: "" }, { label: "Sale", link: "" }],
+        size: "md", align: "center", color: "", uppercase: true,
+      },
+      summary: (b) => b.items.map((item) => item.label).filter(Boolean).join(" · ") || "Sem links",
+      fields: [
+        { kind: "links", key: "items", label: "Links do menu (até 8)" },
+        { kind: "segmented", key: "size", label: "Tamanho", options: [["sm", "P"], ["md", "M"], ["lg", "G"]] },
+        ALIGN,
+        { kind: "toggle", key: "uppercase", label: "Letras maiúsculas" },
+        { kind: "color", key: "color", label: "Cor do texto", empty: "Padrão" },
       ],
     },
   };
@@ -171,6 +188,7 @@
       { type: "heading", text: "Mais vendidos", size: "md" },
       { type: "gallery", items: [1, 2, 3].map(() => ({ image_id: "", link: "", caption: "Produto" })) },
     ] },
+    { label: "Cabeçalho", icon: "fa-bars", blocks: [{ type: "logo" }, { type: "menu" }] },
     { label: "Assinatura", icon: "fa-signature", blocks: [
       { type: "divider" }, { type: "text", text: "Siga a gente nas redes 💜", size: "sm" }, { type: "social", pad: "sm" },
     ] },
@@ -191,8 +209,8 @@
   const VARIABLES = [
     { name: "nome", label: "Nome do cliente" },
     { name: "loja", label: "Nome da loja" },
-    { name: "produto", label: "Produto", onlyFor: "back_in_stock" },
-    { name: "variacao", label: "Variação", onlyFor: "back_in_stock" },
+    { name: "produto", label: "Produto (aviso de estoque)" },
+    { name: "variacao", label: "Variação (aviso de estoque)" },
   ];
 
   // ----------------------------------------------------------------- state --
@@ -206,7 +224,6 @@
 
   const blocksInput = $("#email-field-blocks");
   const designInput = $("#email-field-design");
-  const trigger = $("#email-field-trigger");
   const accentInput = $("#email-field-color");
   const preview = $("#email-preview");
   const frame = $("#email-preview-frame");
@@ -225,8 +242,6 @@
 
   const findIndex = (id) => state.blocks.findIndex((block) => block.id === id);
   const selected = () => state.blocks.find((block) => block.id === state.selectedId);
-  const currentTrigger = () => trigger?.value;
-  const availableFor = (entry) => !entry.onlyFor || entry.onlyFor === currentTrigger();
 
   // Campos de URL de miniatura não vão pro servidor.
   const serializableBlocks = () =>
@@ -349,10 +364,8 @@
     const index = findIndex(id);
     if (index < 0) return;
     state.blocks.splice(index, 1);
-    const neighbor = state.blocks[index] || state.blocks[index - 1];
     state.selectedId = null;
-    if (neighbor) select(neighbor.id, { silent: true });
-    else showPane("content");
+    showPane(listTab);
     changed({ inspector: true });
     flashStatus("Bloco excluído — Ctrl+Z desfaz");
   }
@@ -370,13 +383,16 @@
       renderLayers();
       renderInspector();
     }
-    showPane(id ? "inspector" : "content");
+    showPane(id ? "inspector" : listTab);
     highlightPreview(scroll);
   }
 
+  let listTab = "blocks";
+
   function showPane(name) {
+    if (name === "blocks" || name === "structure") listTab = name;
     $$(".eb-pane", root).forEach((pane) => pane.classList.toggle("active", pane.dataset.pane === name));
-    const tab = name === "inspector" ? "content" : name;
+    const tab = name === "inspector" ? listTab : name;
     $$(".eb-tabs__tab", root).forEach((button) => button.classList.toggle("active", button.dataset.tab === tab));
   }
 
@@ -385,8 +401,7 @@
   function renderPalette() {
     $("#eb-palette").innerHTML = Object.entries(TYPES)
       .map(([type, def]) => {
-        const disabled = !availableFor(def);
-        return `<button type="button" class="eb-tile" draggable="${!disabled}" data-add="${type}" ${disabled ? 'disabled title="Disponível só no gatilho De volta ao estoque"' : ""}>
+        return `<button type="button" class="eb-tile" draggable="true" data-add="${type}">
           <i class="fa-solid ${def.icon}"></i><span>${def.label}</span></button>`;
       })
       .join("");
@@ -423,11 +438,10 @@
       .map((block, index) => {
         const def = TYPES[block.type];
         const summary = def.summary ? def.summary(block) : "";
-        const warning = def.onlyFor && !availableFor(def) ? ' <i class="fa-solid fa-triangle-exclamation" title="Este bloco só aparece no gatilho De volta ao estoque"></i>' : "";
         return `<li class="eb-layer ${block.id === state.selectedId ? "active" : ""}" draggable="true" data-id="${block.id}">
           <span class="eb-layer__handle" title="Arraste pra reordenar"><i class="fa-solid fa-grip-vertical"></i></span>
           <span class="eb-layer__icon"><i class="fa-solid ${def.icon}"></i></span>
-          <span class="eb-layer__text"><strong>${def.label}${warning}</strong>${summary ? `<small>${escapeHtml(String(summary).slice(0, 60))}</small>` : ""}</span>
+          <span class="eb-layer__text"><strong>${def.label}</strong>${summary ? `<small>${escapeHtml(String(summary).slice(0, 60))}</small>` : ""}</span>
           <span class="eb-layer__actions">
             <button type="button" data-layer-action="up" title="Subir" ${index === 0 ? "disabled" : ""}><i class="fa-solid fa-chevron-up"></i></button>
             <button type="button" data-layer-action="down" title="Descer" ${index === state.blocks.length - 1 ? "disabled" : ""}><i class="fa-solid fa-chevron-down"></i></button>
@@ -486,6 +500,7 @@
   root.addEventListener("dragend", () => {
     dragSource = null;
     marker.remove();
+    clearFrameMarker();
     root.classList.remove("is-dragging");
     $$(".is-dragged", root).forEach((element) => element.classList.remove("is-dragged"));
   });
@@ -657,6 +672,10 @@
         wrapper.appendChild(imageControl(target, field.key, onChange));
         break;
       }
+      case "links": {
+        wrapper.appendChild(linksControl(target));
+        break;
+      }
       case "items": {
         wrapper.appendChild(itemsControl(target));
         break;
@@ -678,7 +697,7 @@
       <input type="color" class="eb-color__swatch" value="${value || "#ffffff"}">
       <span class="eb-color__value">${value || emptyLabel || ""}</span>
       <span class="eb-color__presets">${swatchesHtml}</span>
-      ${emptyLabel ? `<button type="button" class="eb-link-btn eb-color__reset" ${value ? "" : "hidden"}>${emptyLabel}</button>` : ""}`;
+      ${emptyLabel ? `<button type="button" class="eb-link-btn eb-color__reset" title="Voltar ao padrão" ${value ? "" : "hidden"}><i class="fa-solid fa-rotate-left"></i> ${emptyLabel}</button>` : ""}`;
     const picker = $("input", control);
     const label = $(".eb-color__value", control);
     const reset = $(".eb-color__reset", control);
@@ -703,7 +722,7 @@
   function variableChips(input) {
     const chips = document.createElement("div");
     chips.className = "eb-vars";
-    chips.innerHTML = VARIABLES.filter(availableFor)
+    chips.innerHTML = VARIABLES
       .map((variable) => `<button type="button" data-var="${variable.name}" title="Inserir ${variable.label}">{${variable.name}}</button>`)
       .join("");
     chips.addEventListener("click", (event) => {
@@ -854,6 +873,44 @@
     return list;
   }
 
+  function linksControl(block) {
+    const MAX_LINKS = 8;
+    const list = document.createElement("div");
+    list.className = "eb-items";
+    const render = () => {
+      list.innerHTML = "";
+      block.items.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "eb-items__card";
+        card.innerHTML = `<div class="eb-items__head"><strong>Link ${index + 1}</strong>
+          ${block.items.length > 1 ? '<button type="button" class="eb-link-btn eb-link-btn--danger" data-remove-item><i class="fa-solid fa-trash-can"></i></button>' : ""}</div>`;
+        const onItemChange = (key, value) => { item[key] = value; changed(); };
+        card.appendChild(buildField({ kind: "text", key: "label", label: "Texto" }, item, onItemChange));
+        card.appendChild(buildField({ kind: "url", key: "link", label: "Link" }, item, onItemChange));
+        $("[data-remove-item]", card)?.addEventListener("click", () => {
+          block.items.splice(index, 1);
+          changed();
+          render();
+        });
+        list.appendChild(card);
+      });
+      if (block.items.length < MAX_LINKS) {
+        const add = document.createElement("button");
+        add.type = "button";
+        add.className = "crm-btn eb-items__add";
+        add.innerHTML = '<i class="fa-solid fa-plus"></i> Adicionar link';
+        add.addEventListener("click", () => {
+          block.items.push({ label: "", link: "" });
+          changed();
+          render();
+        });
+        list.appendChild(add);
+      }
+    };
+    render();
+    return list;
+  }
+
   // ---------------------------------------------------------------- design --
 
   function renderDesign() {
@@ -878,17 +935,21 @@
   let previewTimer;
   let previewController;
 
-  async function refreshPreview() {
-    previewController?.abort();
-    previewController = new AbortController();
+  function formPayload() {
     sync();
     const data = new FormData(form);
     data.delete("_method");
     data.delete("authenticity_token");
+    return data;
+  }
+
+  async function refreshPreview() {
+    previewController?.abort();
+    previewController = new AbortController();
 
     const response = await fetch(preview.dataset.url, {
       method: "POST",
-      body: data,
+      body: formPayload(),
       headers: { Accept: "application/json", "X-CSRF-Token": csrfToken() },
       signal: previewController.signal,
     }).catch(() => null);
@@ -908,24 +969,108 @@
   function fitFrame() {
     const doc = frame.contentDocument;
     if (!doc?.documentElement) return;
+    frame.style.height = "0px";
     frame.style.height = `${doc.documentElement.scrollHeight}px`;
+  }
+
+  const BAR_ICONS = {
+    up: '<path d="m6 15 6-6 6 6"/>',
+    down: '<path d="m6 9 6 6 6-6"/>',
+    duplicate: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>',
+    remove: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/>',
+  };
+  const BAR_TITLES = { up: "Subir", down: "Descer", duplicate: "Duplicar", remove: "Excluir" };
+
+  function canvasBar(doc, id) {
+    const index = findIndex(id);
+    const bar = doc.createElement("div");
+    bar.className = "eb-canvas-bar";
+    bar.style.cssText = "position:absolute;top:6px;right:6px;z-index:10;display:flex;gap:2px;padding:3px;border-radius:8px;background:#7c3aed;box-shadow:0 4px 12px rgba(0,0,0,.25);";
+
+    Object.entries(BAR_ICONS).forEach(([action, path]) => {
+      const button = doc.createElement("button");
+      button.type = "button";
+      button.title = BAR_TITLES[action];
+      button.disabled = (action === "up" && index === 0) || (action === "down" && index === state.blocks.length - 1);
+      button.style.cssText = `width:26px;height:26px;padding:0;border:0;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:${button.disabled ? 0.4 : 1};`;
+      button.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!button.disabled) runAction(action, id);
+      });
+      bar.appendChild(button);
+    });
+    return bar;
   }
 
   function highlightPreview(scroll) {
     const doc = frame.contentDocument;
     if (!doc) return;
     $$("[data-block-id]", doc).forEach((cell) => cell.classList.toggle("is-selected", cell.dataset.blockId === state.selectedId));
-    if (!scroll || !state.selectedId) return;
-    const cell = $(`[data-block-id="${CSS.escape(state.selectedId)}"]`, doc);
-    const viewport = $("#eb-viewport");
+    $$(".eb-canvas-bar", doc).forEach((bar) => bar.remove());
+    const cell = state.selectedId && $(`[data-block-id="${CSS.escape(state.selectedId)}"]`, doc);
     if (cell) {
-      const top = cell.getBoundingClientRect().top + frame.offsetTop - 40;
-      viewport.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+      cell.style.position = "relative";
+      cell.appendChild(canvasBar(doc, state.selectedId));
     }
+    if (!scroll || !state.selectedId) return;
+    const phone = $("#eb-device-frame");
+    const mobile = phone.classList.contains("is-mobile");
+    if (cell) {
+      const offset = cell.getBoundingClientRect().top + frame.offsetTop;
+      const top = mobile ? offset - 20 : offset * zoomLevel() - 40;
+      (mobile ? phone : $("#eb-viewport")).scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+    }
+  }
+
+  let frameMarker = null;
+
+  function clearFrameMarker() {
+    frameMarker?.remove();
+    frameMarker = null;
+  }
+
+  function frameDrop(doc, clientY) {
+    const cells = $$("[data-block-id]", doc);
+    const found = cells.findIndex((cell) => {
+      const rect = cell.getBoundingClientRect();
+      return clientY < rect.top + rect.height / 2;
+    });
+    return { cells, index: found === -1 ? cells.length : found };
+  }
+
+  function bindFrameDrop(doc) {
+    doc.addEventListener("dragover", (event) => {
+      if (!dragSource) return;
+      event.preventDefault();
+      const { cells, index } = frameDrop(doc, event.clientY);
+      const edge = cells[index] ? cells[index].getBoundingClientRect().top : (cells.at(-1)?.getBoundingClientRect().bottom ?? 0);
+      if (!frameMarker) {
+        frameMarker = doc.createElement("div");
+        frameMarker.style.cssText = "position:absolute;left:0;right:0;height:3px;background:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.2);pointer-events:none;z-index:20;";
+        doc.body.appendChild(frameMarker);
+      }
+      frameMarker.style.top = `${edge + doc.documentElement.scrollTop - 1.5}px`;
+    });
+    doc.addEventListener("dragleave", (event) => {
+      if (!event.relatedTarget) clearFrameMarker();
+    });
+    doc.addEventListener("drop", (event) => {
+      if (!dragSource) return;
+      event.preventDefault();
+      clearFrameMarker();
+      const { index } = frameDrop(doc, event.clientY);
+      if (dragSource.move) moveBlockTo(dragSource.move, index);
+      else insertBlocks(blocksFromSource(dragSource), index);
+    });
   }
 
   frame.addEventListener("load", () => {
     const doc = frame.contentDocument;
+    frameMarker = null;
+    bindFrameDrop(doc);
+    doc.addEventListener("keydown", confirmReload);
     fitFrame();
     // Imagens carregam depois do load do srcdoc em alguns navegadores.
     $$("img", doc).forEach((img) => img.addEventListener("load", fitFrame));
@@ -938,12 +1083,55 @@
     scrollAfterPreview = false;
   });
 
-  $$(".eb-device__btn", root).forEach((button) => {
+  const ZOOM_STEPS = [50, 65, 80, 100];
+  let zoomIndex = 0;
+  const zoomLevel = () => ZOOM_STEPS[zoomIndex] / 100;
+
+  $$("[data-zoom]", root).forEach((button) => {
     button.addEventListener("click", () => {
-      $$(".eb-device__btn", root).forEach((b) => b.classList.toggle("active", b === button));
+      zoomIndex = Math.min(Math.max(zoomIndex + Number(button.dataset.zoom), 0), ZOOM_STEPS.length - 1);
+      $("#eb-device-frame").style.zoom = zoomLevel();
+      $("#eb-zoom-value").textContent = `${ZOOM_STEPS[zoomIndex]}%`;
+    });
+  });
+  $("#eb-device-frame").style.zoom = zoomLevel();
+
+  $$("[data-device]", root).forEach((button) => {
+    button.addEventListener("click", () => {
+      $$("[data-device]", root).forEach((b) => b.classList.toggle("active", b === button));
       $("#eb-device-frame").classList.toggle("is-mobile", button.dataset.device === "mobile");
       setTimeout(fitFrame, 260);
     });
+  });
+
+  const testEmail = $("#eb-test-email");
+  const testButton = $("#eb-test-send");
+
+  async function sendTest() {
+    if (!testEmail.value.trim() || !testEmail.checkValidity()) return flashStatus("Informe um e-mail válido.", false, true);
+
+    const data = formPayload();
+    data.append("test_email", testEmail.value.trim());
+    testButton.disabled = true;
+    flashStatus("Enviando teste…", true);
+
+    const response = await fetch(testButton.dataset.url, {
+      method: "POST",
+      body: data,
+      headers: { Accept: "application/json", "X-CSRF-Token": csrfToken() },
+    }).catch(() => null);
+    const result = await response?.json().catch(() => ({}));
+    testButton.disabled = false;
+
+    if (response?.ok) return flashStatus(result.message);
+    flashStatus(result?.error || "Não foi possível enviar o teste.", false, true);
+  }
+
+  testButton.addEventListener("click", sendTest);
+  testEmail.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    sendTest();
   });
 
   let statusTimer;
@@ -955,31 +1143,18 @@
     if (!sticky) statusTimer = setTimeout(() => status.classList.remove("visible"), 2200);
   }
 
-  // ----------------------------------------------------- tabs & triggers --
+  // ------------------------------------------------------------------ tabs --
 
   $$(".eb-tabs__tab", root).forEach((tab) => {
     tab.addEventListener("click", () => {
-      if (tab.dataset.tab === "content" && state.selectedId) state.selectedId = null;
+      if (["blocks", "structure"].includes(tab.dataset.tab) && state.selectedId) state.selectedId = null;
       renderLayers();
       highlightPreview(false);
       showPane(tab.dataset.tab);
     });
   });
 
-  const AUTOMATED_TRIGGERS = ["back_in_stock"];
-  const pendingHint = $("#email-trigger-pending-hint");
-  function updateTriggerFields() {
-    $$(".email-templates-trigger-config").forEach((element) => {
-      element.hidden = element.dataset.trigger !== trigger.value;
-    });
-    pendingHint.hidden = AUTOMATED_TRIGGERS.includes(trigger.value);
-    renderPalette();
-    renderLayers();
-    if (selected()) renderInspector();
-  }
-  trigger.addEventListener("change", updateTriggerFields);
-
-  // Campos fora do editor (nome, assunto, gatilho...) também atualizam o preview.
+  // Campos fora do editor (nome, assunto...) também atualizam o preview.
   form.addEventListener("input", (event) => {
     if (!root.contains(event.target)) {
       dirty = true;
@@ -1039,6 +1214,42 @@
     event.returnValue = "";
   });
 
+  const confirmLeave = (title, confirmLabel) =>
+    window.CrmConfirm.ask({
+      title,
+      message: "Você tem alterações que ainda não foram salvas. Se continuar, elas serão perdidas.",
+      confirmLabel,
+      cancelLabel: "Continuar editando",
+    });
+
+  document.addEventListener("click", async (event) => {
+    const link = event.target.closest?.("a[href]");
+    const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+    if (!dirty || !link || !window.CrmConfirm || link.target === "_blank" || event.defaultPrevented || modified) return;
+
+    const url = new URL(link.href, location.href);
+    if (url.origin !== location.origin || (url.pathname === location.pathname && url.hash)) return;
+
+    event.preventDefault();
+    if (!(await confirmLeave("Sair sem salvar?", "Sair sem salvar"))) return;
+
+    dirty = false;
+    location.href = link.href;
+  });
+
+  async function confirmReload(event) {
+    const reload = event.key === "F5" || ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "r");
+    if (!reload || !dirty || !window.CrmConfirm) return;
+
+    event.preventDefault();
+    if (!(await confirmLeave("Atualizar a página?", "Atualizar sem salvar"))) return;
+
+    dirty = false;
+    location.reload();
+  }
+
+  document.addEventListener("keydown", confirmReload);
+
   // ------------------------------------------------------------------ boot --
 
   function renderAll() {
@@ -1047,12 +1258,11 @@
     renderInspector();
     renderDesign();
     syncAccentLabel();
-    showPane(state.selectedId ? "inspector" : "content");
+    showPane(state.selectedId ? "inspector" : listTab);
   }
 
   sync();
   history = [snapshot()];
-  updateTriggerFields();
   renderAll();
   refreshPreview();
 })();

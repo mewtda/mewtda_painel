@@ -1,4 +1,4 @@
-<% title 'Modelos de e-mail' %>
+<% title 'Modelos de mensagem' %>
 
 <div class="clients-wrapper">
   <%= render 'shared/email_marketing_tabs' %>
@@ -24,8 +24,6 @@
         <tr>
           <th>Nome</th>
           <th>Assunto</th>
-          <th>Gatilho</th>
-          <th class="text-center">Status</th>
           <th class="text-center">Ações</th>
         </tr>
       </thead>
@@ -34,16 +32,6 @@
           <tr>
             <td><%= email_template.name %></td>
             <td><%= email_template.subject %></td>
-            <td>
-              <span class="crm-tag crm-tag--warning"><%= email_template.trigger_label %></span>
-            </td>
-            <td class="text-center">
-              <% if email_template.active? %>
-                <span class="crm-tag crm-tag--success">Ativo</span>
-              <% else %>
-                <span class="crm-tag crm-tag--neutral">Rascunho</span>
-              <% end %>
-            </td>
             <td class="text-center">
               <div class="clients-table__actions">
                 <%= link_to edit_email_template_path(email_template), class: 'crm-btn clients-btn--icon' do %>
@@ -64,7 +52,7 @@
         <% end %>
         <% if @email_templates.empty? %>
           <tr>
-            <td colspan="5" class="clients-table__empty">
+            <td colspan="3" class="clients-table__empty">
               Nenhum e-mail criado ainda. <%= link_to 'Criar o primeiro', new_email_template_path %>
             </td>
           </tr>

@@ -14,9 +14,17 @@ module EmailTemplates
     LOGO_HEIGHTS = { 'sm' => 32, 'md' => 48, 'lg' => 72 }.freeze
     BUTTON_RADIUS = { '0' => 0, '4' => 4, '12' => 8, '24' => 999 }.freeze
     SOCIAL_LABELS = {
-      'instagram' => 'Instagram', 'facebook' => 'Facebook', 'tiktok' => 'TikTok',
-      'youtube' => 'YouTube', 'whatsapp' => 'WhatsApp', 'site' => 'Site'
+      'instagram' => 'Instagram', 'facebook' => 'Facebook', 'tiktok' => 'TikTok', 'youtube' => 'YouTube',
+      'whatsapp' => 'WhatsApp', 'linkedin' => 'LinkedIn', 'x' => 'X', 'pinterest' => 'Pinterest', 'site' => 'Site'
     }.freeze
+    SOCIAL_BRAND_COLORS = {
+      'instagram' => '#E4405F', 'facebook' => '#1877F2', 'tiktok' => '#111111', 'youtube' => '#FF0000',
+      'whatsapp' => '#25D366', 'linkedin' => '#0A66C2', 'x' => '#111111', 'pinterest' => '#E60023', 'site' => '#5B5B66'
+    }.freeze
+    SOCIAL_ICON_SIZES = { 'sm' => 28, 'md' => 36, 'lg' => 44 }.freeze
+    SOCIAL_DEFAULT_COLOR = '#111111'.freeze
+    MENU_SIZES = { 'sm' => 12, 'md' => 14, 'lg' => 16 }.freeze
+    SOCIAL_ICONS_PATH = '/email/icons'.freeze
 
     attr_reader :logo_url, :unsubscribe_url, :product
 
@@ -93,6 +101,27 @@ module EmailTemplates
     def text_size(block) = TEXT_SIZES.fetch(block['size'], 15)
     def logo_height(block) = LOGO_HEIGHTS.fetch(block['size'], 48)
 
+    def menu_size(block) = MENU_SIZES.fetch(block['size'], 14)
+    def social_icon_size(block) = SOCIAL_ICON_SIZES.fetch(block['size'], 36)
+
+    def social_background(network, block)
+      return SOCIAL_BRAND_COLORS.fetch(network) if block['tone'] == 'brand'
+
+      color(block['color'], SOCIAL_DEFAULT_COLOR)
+    end
+
+    def social_glyph_url(network, background)
+      host = preview? ? '' : BackInStockSetting::WIDGET_HOST
+      "#{host}#{SOCIAL_ICONS_PATH}/#{network}-#{light_color?(background) ? 'black' : 'white'}.png"
+    end
+
+    def social_radius(block) = block['shape'] == 'square' ? '0' : '50%'
+
+    def light_color?(hex)
+      red, green, blue = hex.delete('#').scan(/../).map { |channel| channel.to_i(16) }
+      ((0.299 * red) + (0.587 * green) + (0.114 * blue)) > 160
+    end
+
     def link(url)
       [url, @default_url].find { |candidate| candidate.to_s.match?(SAFE_URL) }
     end
@@ -143,6 +172,7 @@ module EmailTemplates
       when 'heading', 'text' then [plain(block['text'])]
       when 'button' then [link_line(block['text'], link(block['link']))]
       when 'coupon' then [[interpolate(block['label']), block['code']].compact_blank.join(': ')]
+      when 'menu' then Array(block['items']).map { |item| link_line(item['label'], link(item['link'])) }
       when 'image_text' then [plain(block['heading']), plain(block['text']), link_line(block['button_text'], link(block['link']))]
       when 'product' then product_text(block)
       else []

@@ -176,4 +176,44 @@ class EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to email_templates_path
   end
+
+  test 'send_test rejects an invalid address' do
+    client = build_client
+    sign_in build_user(client: client)
+
+    post send_test_email_templates_path, params: { email_template: valid_params, test_email: 'nao-e-email' }
+
+    assert_response :unprocessable_entity
+    assert_match 'e-mail válido', response.parsed_body['error']
+  end
+
+  test 'send_test requires a verified sending domain' do
+    client = build_client
+    sign_in build_user(client: client)
+
+    post send_test_email_templates_path, params: { email_template: valid_params, test_email: 'ana@example.com' }
+
+    assert_response :unprocessable_entity
+    assert_match 'domínio de envio', response.parsed_body['error']
+  end
+
+  test 'send_test sends the current content with the TESTE prefix' do
+    client = build_client
+    client.update!(ses_verification_status: 'verified')
+    sign_in build_user(client: client)
+    calls = []
+    sender = Object.new
+    sender.define_singleton_method(:call) do |**args|
+      calls << args
+      true
+    end
+
+    Ses::SendEmailService.stub(:new, sender) do
+      post send_test_email_templates_path, params: { email_template: valid_params, test_email: 'ana@example.com' }
+    end
+
+    assert_response :success
+    assert_equal 'ana@example.com', calls.first[:to]
+    assert_equal '[TESTE] Oi!', calls.first[:subject]
+  end
 end

@@ -38,10 +38,6 @@
         <button type="button" class="crm-btn clients-btn--icon" id="eb-undo" title="Desfazer (Ctrl+Z)" disabled><i class="fa-solid fa-rotate-left"></i></button>
         <button type="button" class="crm-btn clients-btn--icon" id="eb-redo" title="Refazer (Ctrl+Shift+Z)" disabled><i class="fa-solid fa-rotate-right"></i></button>
       </div>
-      <label class="eb-active-toggle" title="Só e-mails ativos são disparados">
-        <%= form.check_box :active, class: 'cform-toggle__input' %>
-        <span>Ativo</span>
-      </label>
       <%= form.button class: 'crm-btn crm-btn--primary', data: { disable_with: 'Salvando...' } do %>
         <i class="fa-solid fa-floppy-disk"></i> Salvar e-mail
       <% end %>
@@ -51,19 +47,22 @@
   <div class="eb" id="email-builder">
     <aside class="eb-panel crm-card">
       <nav class="eb-tabs" role="tablist">
-        <button type="button" class="eb-tabs__tab active" data-tab="content"><i class="fa-solid fa-layer-group"></i> Conteúdo</button>
+        <button type="button" class="eb-tabs__tab active" data-tab="blocks"><i class="fa-solid fa-cubes"></i> Blocos</button>
+        <button type="button" class="eb-tabs__tab" data-tab="structure"><i class="fa-solid fa-layer-group"></i> Estrutura</button>
         <button type="button" class="eb-tabs__tab" data-tab="style"><i class="fa-solid fa-palette"></i> Estilo</button>
-        <button type="button" class="eb-tabs__tab" data-tab="settings"><i class="fa-solid fa-sliders"></i> Envio</button>
       </nav>
 
-      <%# Conteúdo: paleta de blocos + estrutura (gerados pelo email_templates.js) %>
-      <section class="eb-pane active" data-pane="content">
-        <div class="eb-section-title">Arraste ou clique para adicionar</div>
+      <%# Blocos: paleta e seções prontas (gerados pelo email_templates.js) %>
+      <section class="eb-pane active" data-pane="blocks">
+        <div class="eb-section-title">Arraste para o e-mail ou clique para adicionar</div>
         <div class="eb-palette" id="eb-palette"></div>
 
         <div class="eb-section-title">Seções prontas</div>
         <div class="eb-sections" id="eb-sections"></div>
+      </section>
 
+      <%# Estrutura: lista de blocos do e-mail, na ordem %>
+      <section class="eb-pane" data-pane="structure">
         <div class="eb-section-title eb-section-title--row">
           <span>Estrutura do e-mail</span>
           <span class="eb-muted" id="eb-count"></span>
@@ -71,14 +70,14 @@
         <ol class="eb-layers" id="eb-layers"></ol>
         <div class="eb-footer-lock">
           <i class="fa-solid fa-lock"></i>
-          Rodapé com <strong>"Não quero mais receber estes e-mails"</strong> — sempre incluído
+          <span>Rodapé com <strong>"Não quero mais receber estes e-mails"</strong> — sempre incluído</span>
         </div>
       </section>
 
       <%# Inspector do bloco selecionado %>
       <section class="eb-pane eb-inspector" data-pane="inspector">
         <div class="eb-inspector__header">
-          <button type="button" class="eb-link-btn" id="eb-inspector-back"><i class="fa-solid fa-arrow-left"></i> Blocos</button>
+          <button type="button" class="eb-link-btn" id="eb-inspector-back"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
           <div class="eb-inspector__actions">
             <button type="button" class="crm-btn clients-btn--icon" data-action="up" title="Subir (Alt+↑)"><i class="fa-solid fa-arrow-up"></i></button>
             <button type="button" class="crm-btn clients-btn--icon" data-action="down" title="Descer (Alt+↓)"><i class="fa-solid fa-arrow-down"></i></button>
@@ -101,46 +100,6 @@
         </div>
         <div id="eb-design"></div>
       </section>
-
-      <section class="eb-pane" data-pane="settings">
-        <div class="eb-field">
-          <%= form.label :trigger_kind, 'Quando enviar', class: 'crm-label' %>
-          <%= form.select :trigger_kind,
-              options_for_select(EmailTemplate::TRIGGER_LABELS.invert, form.object.trigger_kind),
-              {}, class: 'crm-input', id: 'email-field-trigger' %>
-          <span class="cpform-field__hint" id="email-trigger-pending-hint">O disparo automático será configurado numa próxima etapa — por enquanto isso só marca a finalidade do e-mail.</span>
-        </div>
-
-        <div class="eb-field email-templates-trigger-config" data-trigger="cart_recovery">
-          <%= form.label :trigger_delay_hours, 'Enviar quantas horas após o carrinho ser abandonado', class: 'crm-label' %>
-          <%= form.text_field :trigger_delay_hours, class: 'crm-input', value: email_template.trigger_delay_hours %>
-        </div>
-
-        <div class="eb-field email-templates-trigger-config" data-trigger="inactive_customer">
-          <%= form.label :trigger_inactive_days, 'Enviar após quantos dias sem comprar', class: 'crm-label' %>
-          <%= form.text_field :trigger_inactive_days, class: 'crm-input', value: email_template.trigger_inactive_days %>
-        </div>
-
-        <div class="eb-field email-templates-trigger-config" data-trigger="post_purchase">
-          <%= form.label :trigger_days_after_purchase, 'Enviar quantos dias após a compra', class: 'crm-label' %>
-          <%= form.text_field :trigger_days_after_purchase, class: 'crm-input', value: email_template.trigger_days_after_purchase %>
-        </div>
-
-        <div class="eb-field email-templates-trigger-config" data-trigger="back_in_stock">
-          <span class="cpform-field__hint">
-            Enviado quando o produto que o cliente pediu volta ao estoque. Use o bloco <strong>Produto</strong> para mostrar
-            foto, nome e variação; botões sem link próprio levam para a página do produto.
-          </span>
-        </div>
-
-        <div class="eb-tip">
-          <i class="fa-solid fa-shield-heart"></i>
-          <div>
-            Quem estiver na <%= link_to 'lista de recusa', email_suppressions_path %> nunca recebe este e-mail,
-            mesmo com o gatilho ativo.
-          </div>
-        </div>
-      </section>
     </aside>
 
     <section class="eb-stage crm-card">
@@ -149,7 +108,20 @@
           <button type="button" class="eb-device__btn active" data-device="desktop" title="Computador"><i class="fa-solid fa-desktop"></i></button>
           <button type="button" class="eb-device__btn" data-device="mobile" title="Celular"><i class="fa-solid fa-mobile-screen"></i></button>
         </div>
+        <div class="eb-device eb-zoom" role="group" aria-label="Zoom">
+          <button type="button" class="eb-device__btn" data-zoom="-1" title="Diminuir zoom"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+          <span class="eb-zoom__value" id="eb-zoom-value">50%</span>
+          <button type="button" class="eb-device__btn" data-zoom="1" title="Aumentar zoom"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+        </div>
         <span class="eb-muted eb-stage__hint"><i class="fa-solid fa-hand-pointer"></i> Clique em qualquer parte do e-mail para editar</span>
+        <div class="eb-test">
+          <%= tag.input type: 'email', id: 'eb-test-email', class: 'crm-input eb-test__input', placeholder: 'E-mail para receber o teste',
+                        autocomplete: 'off', maxlength: 254 %>
+          <button type="button" class="crm-btn crm-btn--secondary" id="eb-test-send"
+                  data-url="<%= send_test_email_templates_path(id: email_template.id) %>">
+            <i class="fa-solid fa-paper-plane"></i> Enviar teste
+          </button>
+        </div>
         <span class="eb-stage__status" id="eb-status"></span>
       </div>
 
@@ -165,7 +137,19 @@
 
       <div class="eb-stage__viewport" id="eb-viewport">
         <div class="eb-stage__device" id="eb-device-frame">
+          <div class="eb-phone__top">
+            <div class="eb-phone__status">
+              <span class="eb-phone__time">9:41</span>
+              <span class="eb-phone__island"></span>
+              <span class="eb-phone__signal"><i class="fa-solid fa-signal"></i> <i class="fa-solid fa-wifi"></i> <i class="fa-solid fa-battery-full"></i></span>
+            </div>
+            <div class="eb-phone__mailbar">
+              <span><i class="fa-solid fa-chevron-left"></i> Caixa de entrada</span>
+              <span class="eb-phone__arrows"><i class="fa-solid fa-chevron-up"></i> <i class="fa-solid fa-chevron-down"></i></span>
+            </div>
+          </div>
           <iframe class="eb-stage__frame" id="email-preview-frame" title="Preview do e-mail" sandbox="allow-same-origin"></iframe>
+          <div class="eb-phone__home"></div>
         </div>
       </div>
     </section>

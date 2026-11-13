@@ -129,7 +129,12 @@
 
               <td class="text-right">
                 <% if total > 0 %>
-                  <strong class="orders-table__total"><%= order_money(total) %></strong>
+                  <span class="orders-table__paid">
+                    <strong class="orders-table__total"><%= order_money(total) %></strong>
+                    <% if order.discount_code.present? %>
+                      <i class="fa-solid fa-ticket orders-table__coupon" title="Cupom: <%= order.discount_code %>"></i>
+                    <% end %>
+                  </span>
                 <% else %>
                   <span class="crm-tag crm-tag--neutral">—</span>
                 <% end %>
@@ -156,6 +161,7 @@
                   data-total="<%= total > 0 ? order_money(total) : '—' %>"
                   data-items-total="<%= order_money(order.total) %>"
                   data-discount="<%= order_discount_label(order) %>"
+                  data-coupon="<%= order_coupon_label(order) %>"
                   data-shipping="<%= order_shipping_label(order) %>"
                   data-items="<%= (items || []).map { |i|
                     {
@@ -245,6 +251,7 @@
       <div class="order-modal__summary">
         <div class="order-modal__summary-row"><span>Itens</span><span id="order-modal-items-total"></span></div>
         <div class="order-modal__summary-row"><span>Desconto</span><span id="order-modal-discount"></span></div>
+        <div class="order-modal__summary-row"><span>Cupom</span><span id="order-modal-coupon"></span></div>
         <div class="order-modal__summary-row"><span>Frete</span><span id="order-modal-shipping"></span></div>
         <div class="order-modal__summary-row order-modal__summary-row--total"><span>Total pago</span><span id="order-modal-paid"></span></div>
       </div>
@@ -267,6 +274,7 @@
       document.getElementById('order-modal-paid').textContent    = btn.dataset.total;
       document.getElementById('order-modal-items-total').textContent = btn.dataset.itemsTotal;
       document.getElementById('order-modal-discount').textContent = btn.dataset.discount;
+      document.getElementById('order-modal-coupon').textContent = btn.dataset.coupon;
       document.getElementById('order-modal-shipping').textContent = btn.dataset.shipping;
       document.getElementById('order-modal-customer').textContent = btn.dataset.customerName;
       document.getElementById('order-modal-email').textContent   = btn.dataset.customerEmail;

@@ -76,6 +76,7 @@ class BackInStockController < ApplicationController
 
   def load_email_template
     @email_template = @setting&.email_template
+    @email_templates = @client.email_templates.order(:name)
   end
 
   def paginated_groups(alerts)
@@ -97,6 +98,6 @@ class BackInStockController < ApplicationController
   end
 
   def setting_params
-    params.require(:back_in_stock_setting).permit(:active, :only_marked_products, :button_text, :modal_title, :accent_color)
+    params.require(:back_in_stock_setting).permit(:active, :only_marked_products, :email_template_id, :button_text, :modal_title, :accent_color)
   end
 end

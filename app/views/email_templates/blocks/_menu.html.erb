@@ -1,0 +1,12 @@
+<% items = Array(block['items']).select { |item| item['label'].present? } %>
+<% menu_color = message.color(block['color'], message.design['text_color']) %>
+<% if items.any? %>
+  <div style="text-align: <%= block['align'] %>; line-height: 1.4;">
+    <% items.each do |item| %>
+      <a href="<%= message.link(item['link']) || '#' %>" target="_blank"
+         style="display: inline-block; padding: 6px 14px; font-family: <%= message.font_family %>; font-size: <%= message.menu_size(block) %>px; letter-spacing: 0.06em; color: <%= menu_color %>; text-decoration: none;<%= ' text-transform: uppercase;' if block['uppercase'] %>"><%= message.interpolate(item['label']) %></a>
+    <% end %>
+  </div>
+<% elsif message.preview? %>
+  <span class="email-placeholder">Menu — adicione os links</span>
+<% end %>

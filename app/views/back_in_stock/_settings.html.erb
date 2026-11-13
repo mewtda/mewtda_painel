@@ -57,16 +57,21 @@
       <div class="scr-card">
         <h2 class="scr-card__title"><i class="fa-solid fa-envelope"></i> E-mail do aviso</h2>
         <p class="scr-card__hint">Quando a variação volta ao estoque, cada pessoa recebe este e-mail com a foto e o link do produto.</p>
+        <div class="scr-field">
+          <%= form.label :email_template_id, 'Modelo do aviso' %>
+          <%= form.collection_select :email_template_id, email_templates, :id, :name,
+                                     { include_blank: 'Escolha um modelo' }, class: 'crm-input' %>
+        </div>
         <% domain_verified = setting.client.ses_domain_verified? %>
         <ul class="bis-checklist">
           <li class="<%= email_template ? 'is-ok' : 'is-pending' %>">
             <i class="fa-solid <%= email_template ? 'fa-circle-check' : 'fa-circle-exclamation' %>"></i>
             <span>
-              <strong><%= email_template ? email_template.name : 'Nenhum e-mail ativo' %></strong>
+              <strong><%= email_template ? email_template.name : 'Nenhum modelo escolhido' %></strong>
               <% if email_template %>
                 <%= link_to 'Editar e-mail', edit_email_template_path(email_template) %>
               <% else %>
-                <%= link_to 'Criar e-mail de aviso', new_email_template_path(preset: :back_in_stock) %>
+                <%= link_to 'Criar modelo de aviso', new_email_template_path(preset: :back_in_stock) %>
               <% end %>
             </span>
           </li>

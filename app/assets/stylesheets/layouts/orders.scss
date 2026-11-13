@@ -452,3 +452,16 @@
   color: var(--fg-alt);
   font-size: 0.85rem;
 }
+
+.orders-table__paid {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.orders-table__coupon {
+  color: var(--primary);
+  font-size: 0.75rem;
+  opacity: 0.75;
+}

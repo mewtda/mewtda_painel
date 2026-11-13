@@ -5,7 +5,6 @@
   const tabs = root.querySelectorAll("[data-tab]");
   const panels = root.querySelectorAll("[data-panel]");
   const copyButton = root.querySelector("[data-copy]");
-  const confirmForms = root.querySelectorAll("form[data-confirm]");
   const sortSelect = root.querySelector("form[data-autosubmit] select");
   const chartElement = root.querySelector("[data-summary-chart]");
   let chartRendered = false;
@@ -54,13 +53,8 @@
     setTimeout(() => (label.textContent = "Copiar script"), 2000);
   };
 
-  const confirmSubmit = (event) => {
-    if (!confirm(event.currentTarget.dataset.confirm)) event.preventDefault();
-  };
-
   tabs.forEach((tab) => tab.addEventListener("click", () => showTab(tab.dataset.tab)));
   copyButton.addEventListener("click", copySnippet);
-  confirmForms.forEach((form) => form.addEventListener("submit", confirmSubmit));
   sortSelect?.addEventListener("change", () => sortSelect.form.requestSubmit());
 
   showTab(location.hash.slice(1));

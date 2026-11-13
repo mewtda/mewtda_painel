@@ -97,6 +97,6 @@ class BackInStockController < ApplicationController
   end
 
   def setting_params
-    params.require(:back_in_stock_setting).permit(:active, :button_text, :modal_title, :accent_color)
+    params.require(:back_in_stock_setting).permit(:active, :only_marked_products, :button_text, :modal_title, :accent_color)
   end
 end

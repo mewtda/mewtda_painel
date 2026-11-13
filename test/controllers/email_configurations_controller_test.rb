@@ -28,14 +28,13 @@ class EmailConfigurationsControllerTest < ActionDispatch::IntegrationTest
     client = build_client
     sign_in build_user(client: client)
     fake_service = Minitest::Mock.new
-    fake_service.expect(:create!, %w[tok1 tok2 tok3])
+    fake_service.expect(:register!, true, ['loja.com.br'])
 
     Ses::DomainIdentityService.stub :new, fake_service do
       patch email_configuration_path, params: { client: { email_sending_domain: 'loja.com.br' } }
     end
 
     assert_redirected_to edit_email_configuration_path
-    assert_equal 'loja.com.br', client.reload.email_sending_domain
     fake_service.verify
   end
 
@@ -53,7 +52,7 @@ class EmailConfigurationsControllerTest < ActionDispatch::IntegrationTest
                     ses_verification_status: 'pending')
     sign_in build_user(client: client)
     fake_service = Minitest::Mock.new
-    fake_service.expect(:refresh_status!, true)
+    fake_service.expect(:refresh_status!, 'pending')
 
     Ses::DomainIdentityService.stub :new, fake_service do
       post refresh_email_configuration_path

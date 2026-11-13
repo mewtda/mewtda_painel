@@ -6,6 +6,9 @@ class OrdersController < ApplicationController
     @orders = @orders_scope.includes(:customer, order_items: :product)
                            .order(shopify_creation_date: :desc)
                            .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
+    active_orders = @orders_scope.not_cancelled
+    @filtered_count = active_orders.count
+    @filtered_total = active_orders.sum(:total_price)
   end
 
   def details
@@ -18,7 +21,7 @@ class OrdersController < ApplicationController
         number: order.shopify_order_number,
         shopify_id: order.shopify_order_id,
         date: order.shopify_creation_date&.strftime('%d/%m/%Y às %H:%M'),
-        total: items.sum { |i| i.price.to_f * i.quantity.to_i }.round(2),
+        total: order.paid_total.to_f.round(2),
         tags: order.tags,
         kinds: order.kinds
       },
@@ -54,7 +57,7 @@ class OrdersController < ApplicationController
     worksheet = workbook[0]
     worksheet.sheet_name = 'Pedidos'
 
-    headers = ['ID', 'Nº Pedido', 'ID Shopify', 'Cliente', 'Telefone', 'Itens', 'Total (R$)', 'Data']
+    headers = ['ID', 'Nº Pedido', 'ID Shopify', 'Cliente', 'Telefone', 'Itens', 'Total pago (R$)', 'Data', 'Frete (R$)', 'Desconto (R$)']
     headers.each_with_index { |h, i| worksheet.add_cell(0, i, h) }
 
     row = 1
@@ -63,7 +66,6 @@ class OrdersController < ApplicationController
       full_name = customer ? [[customer.first_name, customer.last_name].compact.join(' ').presence,
                               customer.name].compact.first.to_s : ''
       items     = o.order_items
-      total     = items.sum { |i| i.price.to_f * i.quantity.to_i }
 
       worksheet.add_cell(row, 0, o.id)
       worksheet.add_cell(row, 1, o.shopify_order_number.to_s)
@@ -71,8 +73,10 @@ class OrdersController < ApplicationController
       worksheet.add_cell(row, 3, full_name)
       worksheet.add_cell(row, 4, customer&.phone.to_s)
       worksheet.add_cell(row, 5, items.size)
-      worksheet.add_cell(row, 6, total.round(2))
+      worksheet.add_cell(row, 6, o.paid_total.to_f.round(2))
       worksheet.add_cell(row, 7, o.shopify_creation_date&.strftime('%d/%m/%Y %H:%M').to_s)
+      worksheet.add_cell(row, 8, o.total_shipping_price.to_f.round(2))
+      worksheet.add_cell(row, 9, o.total_discounts.to_f.round(2))
       row += 1
     end
 

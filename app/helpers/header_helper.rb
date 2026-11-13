@@ -18,7 +18,7 @@ module HeaderHelper
       { label: 'Produtos', url: products_path, icon: 'fa-solid fa-bag-shopping' },
       { label: 'De volta ao estoque', url: back_in_stock_path, icon: 'fa-solid fa-bell' },
       { label: 'Campanhas', url: campaigns_path, icon: 'fa-solid fa-bullseye' },
-      { label: 'E-mail Marketing', url: email_templates_path, icon: 'fa-solid fa-envelope-open-text' },
+      { label: 'Modelos de e-mail', url: email_templates_path, icon: 'fa-solid fa-envelope-open-text' },
       { label: 'Afiliados', url: affiliates_path, icon: 'fa-solid fa-user-group' },
       { label: 'Automações', url: crm_path, icon: 'fa-solid fa-robot' },
       { label: 'Automações personalizadas', url: custom_automations_path, icon: 'fa-solid fa-wand-magic-sparkles' }

@@ -9,7 +9,7 @@ class EmailSuppressionsController < ApplicationController
   before_action :require_client!
 
   def index
-    scope = @client.email_suppressions.search(params[:q])
+    scope = @client.email_suppressions.includes(:email_template).search(params[:q])
     @total = @client.email_suppressions.count
     @page = [params[:page].to_i, 1].max
     @email_suppressions = scope.order(created_at: :desc).offset((@page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a

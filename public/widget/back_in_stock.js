@@ -1,6 +1,7 @@
 (() => {
   const script = document.currentScript;
   const token = script?.dataset.token;
+  const productEnabled = script?.dataset.aviseMe === "true";
   const handle = location.pathname.match(/\/products\/([^/?#]+)/)?.[1];
   if (!token || !handle) return;
 
@@ -256,6 +257,9 @@
     fetchJson(`${API}/widget/back_in_stock/config?token=${encodeURIComponent(token)}`),
     fetchJson(`/products/${handle}.js`),
   ])
-    .then(([config, product]) => product.variants.some((variant) => !variant.available) && start(config, product))
+    .then(([config, product]) => {
+      if (config.only_marked_products && !productEnabled) return;
+      if (product.variants.some((variant) => !variant.available)) start(config, product);
+    })
     .catch(() => {});
 })();

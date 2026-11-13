@@ -22,6 +22,15 @@
   filter: brightness(0.92);
 }
 
+.crm-btn--danger {
+  background: #d92d20;
+  color: #fff;
+}
+
+.crm-btn--danger:hover {
+  filter: brightness(0.92);
+}
+
 .crm-btn--secondary {
   background: transparent;
   border-color: var(--outline);

@@ -34,7 +34,7 @@ module BackInStock
         product: { title: snapshot['title'], variant: snapshot['variant'], image: snapshot['image'], url: alert.product_url },
         default_url: alert.product_url,
         logo_url: attachment_url(alert.client.logo),
-        unsubscribe_url: EmailSuppression.unsubscribe_url(alert.client, alert.email)
+        unsubscribe_url: EmailSuppression.unsubscribe_url(alert.client, alert.email, template:)
       )
     end
 

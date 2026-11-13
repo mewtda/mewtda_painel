@@ -422,3 +422,33 @@
   font-weight: 700;
   color: var(--fg);
 }
+
+.order-modal__summary {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--outline);
+  font-size: 0.875rem;
+  color: var(--fg-alt);
+}
+
+.order-modal__summary-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.order-modal__summary-row--total {
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--outline);
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.orders-entries {
+  margin: 0;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--outline);
+  color: var(--fg-alt);
+  font-size: 0.85rem;
+}

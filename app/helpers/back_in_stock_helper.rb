@@ -3,7 +3,7 @@ module BackInStockHelper
   SORT_LABELS = { 'demand' => 'Mais pedidos', 'value' => 'Maior valor', 'trending' => 'Em alta' }.freeze
 
   def back_in_stock_snippet(setting)
-    %(<script src="#{setting.script_url}" data-token="#{setting.public_token}" defer></script>)
+    %(<script src="#{setting.script_url}" data-token="#{setting.public_token}" data-avise-me="{{ product.metafields.mewtda.avise_me.value | default: false }}" defer></script>)
   end
 
   def site_url_settings_path(client)

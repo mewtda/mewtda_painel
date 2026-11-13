@@ -33,6 +33,10 @@ class Order < ApplicationRecord
     order_items.sum { |i| i.price.to_f * i.quantity.to_i }
   end
 
+  def paid_total
+    total_price || total
+  end
+
   def customer_name
     customer&.full_name.presence || 'Sem cliente'
   end

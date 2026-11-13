@@ -1,7 +1,5 @@
 <% title 'Pedidos' %>
 
-<%= render 'shared/loja_tabs' %>
-
 <div class="orders-wrapper">
 
   <%= form_tag(orders_path, method: 'get') do %>
@@ -47,6 +45,19 @@
     </div>
   <% end %>
 
+  <div class="cx-kpis">
+    <div class="cx-kpi">
+      <span>Pedidos</span>
+      <strong><%= number_with_delimiter(@filtered_count, delimiter: '.') %></strong>
+      <small>no filtro, sem cancelados</small>
+    </div>
+    <div class="cx-kpi">
+      <span>Total pago</span>
+      <strong><%= order_money(@filtered_total) %></strong>
+      <small>com frete, sem cancelados</small>
+    </div>
+  </div>
+
   <div class="orders-table-wrap">
     <table class="crm-table">
       <thead>
@@ -55,7 +66,7 @@
           <th>Cliente</th>
           <th>Telefone</th>
           <th class="text-center">Itens</th>
-          <th class="text-right">Total</th>
+          <th class="text-right">Total pago</th>
           <th class="text-center">Data</th>
           <th class="text-center">Detalhes</th>
         </tr>
@@ -69,7 +80,7 @@
           <% @orders.each do |order| %>
             <% customer = order.customer %>
             <% items = order.try(:order_items).presence || [] %>
-            <% total = items.sum { |i| i.price.to_f * i.quantity.to_i } %>
+            <% total = order.paid_total.to_f %>
 
             <tr>
 
@@ -118,7 +129,7 @@
 
               <td class="text-right">
                 <% if total > 0 %>
-                  <strong class="orders-table__total">R$ <%= number_with_precision(total, precision: 2, delimiter: '.', separator: ',') %></strong>
+                  <strong class="orders-table__total"><%= order_money(total) %></strong>
                 <% else %>
                   <span class="crm-tag crm-tag--neutral">—</span>
                 <% end %>
@@ -142,7 +153,10 @@
                   data-customer-name="<%= [customer&.first_name, customer&.last_name].compact.join(' ').presence || customer&.name || '—' %>"
                   data-customer-email="<%= customer&.email.presence || '—' %>"
                   data-customer-phone="<%= customer&.phone.presence || '—' %>"
-                  data-total="<%= total > 0 ? 'R$ ' + number_with_precision(total, precision: 2, delimiter: '.', separator: ',') : '—' %>"
+                  data-total="<%= total > 0 ? order_money(total) : '—' %>"
+                  data-items-total="<%= order_money(order.total) %>"
+                  data-discount="<%= order_discount_label(order) %>"
+                  data-shipping="<%= order_shipping_label(order) %>"
                   data-items="<%= (items || []).map { |i|
                     {
                       name:     i.try(:product_name) || i.try(:name) || i.try(:title) || 'Produto',
@@ -169,14 +183,8 @@
           <% end %>
         <% end %>
       </tbody>
-      <tfoot>
-        <tr>
-          <th colspan="7">
-            <%= page_entries_info @orders %>
-          </th>
-        </tr>
-      </tfoot>
     </table>
+    <p class="orders-entries"><%= page_entries_info @orders %></p>
   </div>
 
   <%= will_paginate @orders, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
@@ -214,7 +222,7 @@
           <span class="order-modal__meta-value" id="order-modal-date"></span>
         </div>
         <div class="order-modal__meta-group">
-          <span class="order-modal__meta-label">Total</span>
+          <span class="order-modal__meta-label">Total pago</span>
           <span class="order-modal__meta-value order-modal__meta-total" id="order-modal-total"></span>
         </div>
         <div class="order-modal__meta-group">
@@ -234,6 +242,13 @@
       <div class="order-modal__items-title">Itens do Pedido</div>
       <div id="order-modal-items" class="order-modal__items"></div>
 
+      <div class="order-modal__summary">
+        <div class="order-modal__summary-row"><span>Itens</span><span id="order-modal-items-total"></span></div>
+        <div class="order-modal__summary-row"><span>Desconto</span><span id="order-modal-discount"></span></div>
+        <div class="order-modal__summary-row"><span>Frete</span><span id="order-modal-shipping"></span></div>
+        <div class="order-modal__summary-row order-modal__summary-row--total"><span>Total pago</span><span id="order-modal-paid"></span></div>
+      </div>
+
     </div>
 
   </div>
@@ -249,6 +264,10 @@
       document.getElementById('order-modal-title').textContent   = btn.dataset.orderNumber || '#' + orderId;
       document.getElementById('order-modal-date').textContent    = btn.dataset.created;
       document.getElementById('order-modal-total').textContent   = btn.dataset.total;
+      document.getElementById('order-modal-paid').textContent    = btn.dataset.total;
+      document.getElementById('order-modal-items-total').textContent = btn.dataset.itemsTotal;
+      document.getElementById('order-modal-discount').textContent = btn.dataset.discount;
+      document.getElementById('order-modal-shipping').textContent = btn.dataset.shipping;
       document.getElementById('order-modal-customer').textContent = btn.dataset.customerName;
       document.getElementById('order-modal-email').textContent   = btn.dataset.customerEmail;
       document.getElementById('order-modal-phone').textContent   = btn.dataset.customerPhone;

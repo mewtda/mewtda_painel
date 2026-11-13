@@ -11,7 +11,7 @@ module Widget
     before_action :require_allowed_origin!, only: :create_alert
 
     def show_config
-      render json: @setting.slice(:button_text, :modal_title, :accent_color)
+      render json: @setting.slice(:button_text, :modal_title, :accent_color, :only_marked_products)
     end
 
     def create_alert

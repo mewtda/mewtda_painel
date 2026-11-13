@@ -1,5 +1,5 @@
 <% title 'Conversas do WhatsApp' %>
 <% content_for :head do %><%= stylesheet_link_tag 'whatsapp_support', media: 'all' %><% end %>
 
-<%= render 'whatsapp/conversations/inbox', connections: @connections, campaign: @campaign, client: @client,
+<%= render 'whatsapp/conversations/inbox', connections: @connections, automation: @automation, client: @client,
                                           empty_state: @empty_state, empty_message: @empty_message %>

@@ -18,7 +18,7 @@ class CustomerNotificationJob < ApplicationJob
 
     Whatsapp::Outbound.deliver(
       client: order.client,
-      campaign: order.client.campaigns.find_by(kind: :cashback),
+      automation: order.client.automations.find_by(kind: :cashback),
       phone: phone,
       body: message
     )

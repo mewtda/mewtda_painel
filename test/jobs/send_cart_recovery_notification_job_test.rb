@@ -3,7 +3,7 @@ require 'test_helper'
 class SendCartRecoveryNotificationJobTest < ActiveJob::TestCase
   def setup
     @client = Client.create!(name: 'Loja', email: "l-#{SecureRandom.hex(4)}@example.com")
-    @campaign = @client.campaigns.create!(
+    @automation = @client.automations.create!(
       name: 'Recuperação', kind: 'cart_recovery', message: 'Oi {nome}', resend_message: 'Volta',
       start_date: Date.current - 1.day, end_date: Date.current + 1.year, send_delay_minutes: 60
     )
@@ -13,7 +13,7 @@ class SendCartRecoveryNotificationJobTest < ActiveJob::TestCase
 
   def link(name)
     conn = @client.whatsapp_connections.create!(name: name, state: 'connected')
-    Whatsapp::CampaignConnection.create!(campaign: @campaign, connection: conn)
+    Whatsapp::AutomationConnection.create!(automation: @automation, connection: conn)
     conn
   end
 
@@ -34,7 +34,7 @@ class SendCartRecoveryNotificationJobTest < ActiveJob::TestCase
     a = link('A')
     b = link('B')
     # rodízio apontaria A (nunca usada); a 1ª saiu por B
-    @campaign.whatsapp_campaign_connections.find_by(connection: b).update!(last_assigned_at: 1.hour.ago)
+    @automation.whatsapp_automation_connections.find_by(connection: b).update!(last_assigned_at: 1.hour.ago)
     @checkout.update!(first_notified_at: 1.day.ago, whatsapp_provider: 'evolution', whatsapp_connection_id: b.id)
 
     SendCartRecoveryNotificationJob.perform_now(@checkout.id, 'Volta', nil, 'second')
@@ -77,7 +77,7 @@ class SendCartRecoveryNotificationJobTest < ActiveJob::TestCase
     assert_equal 'Volta', @checkout.reload.second_message_sent
   end
 
-  test 'second message is skipped when the first connection left the campaign' do
+  test 'second message is skipped when the first connection left the automation' do
     link('A')
     other = @client.whatsapp_connections.create!(name: 'Fora', state: 'connected')
     @checkout.update!(first_notified_at: 1.day.ago, whatsapp_provider: 'evolution', whatsapp_connection_id: other.id)
@@ -140,6 +140,6 @@ class SendCartRecoveryNotificationJobTest < ActiveJob::TestCase
   test 'channel_available? is false when the first message channel is gone' do
     link('A')
     @checkout.update!(first_notified_at: 1.day.ago, whatsapp_provider: 'zapi')
-    assert_not SendCartRecoveryNotificationJob.channel_available?(@checkout, @client, @campaign)
+    assert_not SendCartRecoveryNotificationJob.channel_available?(@checkout, @client, @automation)
   end
 end

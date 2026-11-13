@@ -42,7 +42,7 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test 'edit_tracking initializes a not-yet-persisted campaign with tracking defaults' do
+  test 'edit_tracking initializes a not-yet-persisted automation with tracking defaults' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
     user = build_user(client: client)
     sign_in user
@@ -50,16 +50,16 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     get edit_tracking_automation_path
 
     assert_response :success
-    assert_equal 0, client.campaigns.count
+    assert_equal 0, client.automations.count
   end
 
-  test 'update_tracking creates the shipping_tracking campaign' do
+  test 'update_tracking creates the shipping_tracking automation' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
     user = build_user(client: client)
     sign_in user
 
     patch tracking_automation_path, params: {
-      campaign: {
+      automation: {
         name: 'Rastreio', message: 'Seu pedido {pedido} saiu, rastreio: {rastreio}',
         start_date: Date.current, end_date: Date.current + 1.year,
         active: '1', max_sends: 3, interval_days: 4
@@ -67,12 +67,12 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to automations_path
-    campaign = client.campaigns.find_by(kind: 'shipping_tracking')
-    assert campaign.present?
-    assert campaign.active?
+    automation = client.automations.find_by(kind: 'shipping_tracking')
+    assert automation.present?
+    assert automation.active?
   end
 
-  test 'edit_cashback initializes a not-yet-persisted campaign with cashback defaults' do
+  test 'edit_cashback initializes a not-yet-persisted automation with cashback defaults' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
     user = build_user(client: client)
     sign_in user
@@ -80,16 +80,16 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     get edit_cashback_automation_path
 
     assert_response :success
-    assert_equal 0, client.campaigns.count
+    assert_equal 0, client.automations.count
   end
 
-  test 'update_cashback creates the cashback campaign' do
+  test 'update_cashback creates the cashback automation' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
     user = build_user(client: client)
     sign_in user
 
     patch cashback_automation_path, params: {
-      campaign: {
+      automation: {
         name: 'Cashback', message: 'Oi {nome}, use {cupom}!',
         start_date: Date.current, end_date: Date.current + 1.year,
         active: '1', days_after_purchase: 7
@@ -97,13 +97,13 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to automations_path
-    campaign = client.campaigns.find_by(kind: 'cashback')
-    assert campaign.present?
-    assert campaign.active?
-    assert_equal 7, campaign.days_after_purchase
+    automation = client.automations.find_by(kind: 'cashback')
+    assert automation.present?
+    assert automation.active?
+    assert_equal 7, automation.days_after_purchase
   end
 
-  test 'edit_cart_recovery initializes a not-yet-persisted campaign with defaults' do
+  test 'edit_cart_recovery initializes a not-yet-persisted automation with defaults' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
     user = build_user(client: client)
     sign_in user
@@ -111,16 +111,16 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     get edit_cart_recovery_automation_path
 
     assert_response :success
-    assert_equal 0, client.campaigns.count
+    assert_equal 0, client.automations.count
   end
 
-  test 'update_cart_recovery creates the cart_recovery campaign with resend config' do
+  test 'update_cart_recovery creates the cart_recovery automation with resend config' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
     user = build_user(client: client)
     sign_in user
 
     patch cart_recovery_automation_path, params: {
-      campaign: {
+      automation: {
         name: 'Recuperação de Carrinho', message: 'Oi {nome}, finalize sua compra! {link}',
         start_date: Date.current, end_date: Date.current + 1.year,
         active: '1', send_delay_minutes: 60,
@@ -132,12 +132,12 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to edit_cart_recovery_automation_path(anchor: 'mensagens')
-    campaign = client.campaigns.find_by(kind: 'cart_recovery')
-    assert campaign.present?
-    assert campaign.active?
-    assert_equal 60, campaign.send_delay_minutes
-    assert campaign.resend_enabled?
-    assert_equal 'VOLTA15', campaign.resend_coupon_code
+    automation = client.automations.find_by(kind: 'cart_recovery')
+    assert automation.present?
+    assert automation.active?
+    assert_equal 60, automation.send_delay_minutes
+    assert automation.resend_enabled?
+    assert_equal 'VOLTA15', automation.resend_coupon_code
   end
 
   test 'cart_recovery_data lists only abandoned checkouts with a phone number' do
@@ -162,12 +162,12 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
   test 'resend_cart_recovery enqueues SendCartRecoveryNotificationJob for an already-notified checkout' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
-    campaign = client.campaigns.create!(
+    automation = client.automations.create!(
       name: 'Recuperação', kind: 'cart_recovery', message: 'Oi {nome}',
       start_date: Date.current, end_date: Date.current + 1.year, send_delay_minutes: 60
     )
     number = client.whatsapp_connections.create!(name: 'Loja', state: 'connected')
-    Whatsapp::CampaignConnection.create!(campaign: campaign, connection: number)
+    Whatsapp::AutomationConnection.create!(automation: automation, connection: number)
     checkout = client.abandoned_checkouts.create!(
       shopify_checkout_id: SecureRandom.hex(6), phone: '+5511999999999',
       checkout_created_at: Time.current, first_notified_at: Time.current,
@@ -187,8 +187,8 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     Client.create!(name: 'Loja Evo', email: "evo-#{SecureRandom.hex(4)}@example.com", whatsapp_provider: 'evolution')
   end
 
-  def saved_cart_campaign(client)
-    client.campaigns.create!(
+  def saved_cart_automation(client)
+    client.automations.create!(
       name: 'Recuperação', kind: 'cart_recovery', message: 'Oi',
       start_date: Date.current - 1.day, end_date: Date.current + 1.year, send_delay_minutes: 60
     )
@@ -196,7 +196,7 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
   test 'update_numbers links only numbers of the same client' do
     client = evolution_client
-    campaign = saved_cart_campaign(client)
+    automation = saved_cart_automation(client)
     mine = client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
     other_client = evolution_client
     foreign = other_client.whatsapp_connections.create!(name: 'Alheio', state: 'connected')
@@ -205,19 +205,19 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     patch automation_numbers_path(kind: 'cart-recovery'), params: { connection_ids: [mine.id, foreign.id] }
 
     assert_redirected_to edit_cart_recovery_automation_path(anchor: 'numeros')
-    assert_equal [mine.id], campaign.reload.whatsapp_connections.pluck(:id)
+    assert_equal [mine.id], automation.reload.whatsapp_connections.pluck(:id)
   end
 
   test 'update_numbers removes numbers that were unchecked' do
     client = evolution_client
-    campaign = saved_cart_campaign(client)
+    automation = saved_cart_automation(client)
     mine = client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
-    Whatsapp::CampaignConnection.create!(campaign: campaign, connection: mine)
+    Whatsapp::AutomationConnection.create!(automation: automation, connection: mine)
     sign_in build_user(client: client)
 
     patch automation_numbers_path(kind: 'cart-recovery')
 
-    assert_empty campaign.reload.whatsapp_connections
+    assert_empty automation.reload.whatsapp_connections
   end
 
   test 'update_numbers asks to save the automation first when it is not persisted' do
@@ -229,12 +229,12 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to edit_tracking_automation_path
     assert_equal 'Salve a automação antes de importar números.', flash[:alert]
-    assert_equal 0, Whatsapp::CampaignConnection.count
+    assert_equal 0, Whatsapp::AutomationConnection.count
   end
 
   test 'cart recovery edit page shows metrics and the numbers partial for evolution clients' do
     client = evolution_client
-    saved_cart_campaign(client)
+    saved_cart_automation(client)
     client.abandoned_checkouts.create!(shopify_checkout_id: 'a', total_price: 150, checkout_created_at: 1.day.ago)
     sign_in build_user(client: client)
 
@@ -273,7 +273,7 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
   test 'status row shows the WhatsApp connection' do
     client = evolution_client
-    saved_cart_campaign(client)
+    saved_cart_automation(client)
     client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
     sign_in build_user(client: client)
 
@@ -296,22 +296,22 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
   test 'numbers partial links to the automation conversations once a number is linked' do
     client = evolution_client
-    campaign = saved_cart_campaign(client)
+    automation = saved_cart_automation(client)
     sign_in build_user(client: client)
 
     get edit_cart_recovery_automation_path
     assert_not_includes response.body, 'Conversas desta automação'
 
-    Whatsapp::CampaignConnection.create!(campaign: campaign,
+    Whatsapp::AutomationConnection.create!(automation: automation,
                                          connection: client.whatsapp_connections.create!(name: 'Meu'))
     get edit_cart_recovery_automation_path
     assert_select 'a[href=?]', '#conversas', text: /Conversas desta automação/
-    assert_select '#conversas #wa-inbox[data-campaign-id=?]', campaign.id.to_s
+    assert_select '#conversas #wa-inbox[data-automation-id=?]', automation.id.to_s
   end
 
   test 'resend_cart_recovery avisa quando o canal da 1ª mensagem não está disponível' do
     client = evolution_client
-    saved_cart_campaign(client)
+    saved_cart_automation(client)
     checkout = client.abandoned_checkouts.create!(
       shopify_checkout_id: SecureRandom.hex(6), phone: '+5511999999999',
       checkout_created_at: Time.current, first_notified_at: Time.current, whatsapp_provider: 'zapi'
@@ -328,7 +328,7 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
 
   test 'cart recovery page uses tabs in the pode-trocar layout' do
     client = evolution_client
-    saved_cart_campaign(client)
+    saved_cart_automation(client)
     sign_in build_user(client: client)
 
     get edit_cart_recovery_automation_path
@@ -338,6 +338,6 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
       assert_select ".scr-tab[data-tab=?]", tab
       assert_select ".scr-panel[data-panel=?]", tab
     end
-    assert_select '.scr-switch input[type=checkbox][name=?]', 'campaign[active]'
+    assert_select '.scr-switch input[type=checkbox][name=?]', 'automation[active]'
   end
 end

@@ -73,29 +73,29 @@ class Whatsapp::ConversationsControllerTest < ActionDispatch::IntegrationTest
     assert_empty response.parsed_body['conversations']
   end
 
-  test 'index com campaign_id traz só conversas dos números da automação' do
-    campaign = @a.campaigns.create!(name: 'Recuperação', kind: 'cart_recovery', message: 'Oi', resend_message: 'Volta',
+  test 'index com automation_id traz só conversas dos números da automação' do
+    automation = @a.automations.create!(name: 'Recuperação', kind: 'cart_recovery', message: 'Oi', resend_message: 'Volta',
                                     start_date: Date.current - 1.day, end_date: Date.current + 1.year,
                                     send_delay_minutes: 60)
-    Whatsapp::CampaignConnection.create!(campaign: campaign, connection: @a2)
+    Whatsapp::AutomationConnection.create!(automation: automation, connection: @a2)
     sign_in @admin
     select_client(@a)
 
-    get '/crm/whatsapp/conversations.json', params: { campaign_id: campaign.id }
+    get '/crm/whatsapp/conversations.json', params: { automation_id: automation.id }
 
     assert_response :success
     assert_equal [@conv_a2.id], response.parsed_body['conversations'].map { |c| c['id'] }
     assert_equal [@a2.id], response.parsed_body['connections'].map { |c| c['id'] }
   end
 
-  test 'campaign_id de outro cliente é 404' do
-    campaign = @b.campaigns.create!(name: 'Recuperação', kind: 'cart_recovery', message: 'Oi', resend_message: 'Volta',
+  test 'automation_id de outro cliente é 404' do
+    automation = @b.automations.create!(name: 'Recuperação', kind: 'cart_recovery', message: 'Oi', resend_message: 'Volta',
                                     start_date: Date.current - 1.day, end_date: Date.current + 1.year,
                                     send_delay_minutes: 60)
     sign_in @admin
     select_client(@a)
 
-    get '/crm/whatsapp/conversations.json', params: { campaign_id: campaign.id }
+    get '/crm/whatsapp/conversations.json', params: { automation_id: automation.id }
     assert_response :not_found
   end
 
@@ -196,18 +196,18 @@ class Whatsapp::ConversationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test 'tela com campaign_id mostra só as abas dos números da automação' do
-    campaign = @a.campaigns.create!(name: 'Recuperação', kind: 'cart_recovery', message: 'Oi', resend_message: 'Volta',
+  test 'tela com automation_id mostra só as abas dos números da automação' do
+    automation = @a.automations.create!(name: 'Recuperação', kind: 'cart_recovery', message: 'Oi', resend_message: 'Volta',
                                     start_date: Date.current - 1.day, end_date: Date.current + 1.year,
                                     send_delay_minutes: 60)
-    Whatsapp::CampaignConnection.create!(campaign: campaign, connection: @a2)
+    Whatsapp::AutomationConnection.create!(automation: automation, connection: @a2)
     sign_in @admin
     select_client(@a)
 
-    get '/crm/whatsapp/conversations', params: { campaign_id: campaign.id }
+    get '/crm/whatsapp/conversations', params: { automation_id: automation.id }
 
     assert_response :success
-    assert_select '#wa-inbox[data-campaign-id=?]', campaign.id.to_s
+    assert_select '#wa-inbox[data-automation-id=?]', automation.id.to_s
     assert_select '.wa-number-tab', count: 1
     assert_select '.wa-number-tab[data-id=?]', @a2.id.to_s
   end

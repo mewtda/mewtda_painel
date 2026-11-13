@@ -36,24 +36,24 @@
           até o limite configurado.
         </p>
         <div class="automations-card__tags">
-          <% if @tracking_campaign.nil? %>
+          <% if @tracking_automation.nil? %>
             <span class="crm-tag crm-tag--neutral">Não configurada</span>
-          <% elsif @tracking_campaign.active? %>
+          <% elsif @tracking_automation.active? %>
             <span class="crm-tag crm-tag--success">Ativa</span>
           <% else %>
             <span class="crm-tag crm-tag--danger">Inativa</span>
           <% end %>
-          <% if @tracking_campaign %>
-            <span class="crm-tag crm-tag--info"><%= @tracking_campaign.sent_count %> enviadas</span>
+          <% if @tracking_automation %>
+            <span class="crm-tag crm-tag--info"><%= @tracking_automation.sent_count %> enviadas</span>
           <% end %>
         </div>
       </div>
       <div class="automations-card__cta-row">
         <%= link_to edit_tracking_automation_path, class: 'crm-btn crm-btn--primary automations-card__cta' do %>
-          <%= @tracking_campaign.nil? ? 'Configurar' : 'Editar' %>
+          <%= @tracking_automation.nil? ? 'Configurar' : 'Editar' %>
         <% end %>
-        <% if @tracking_campaign %>
-          <%= link_to campaign_path(@tracking_campaign), class: 'crm-btn crm-btn--secondary automations-card__cta' do %>
+        <% if @tracking_automation %>
+          <%= link_to automation_actions_path(@tracking_automation), class: 'crm-btn crm-btn--secondary automations-card__cta' do %>
             Ver Dados
           <% end %>
         <% end %>
@@ -71,24 +71,24 @@
           voltar e comprar de novo.
         </p>
         <div class="automations-card__tags">
-          <% if @cashback_campaign.nil? %>
+          <% if @cashback_automation.nil? %>
             <span class="crm-tag crm-tag--neutral">Não configurada</span>
-          <% elsif @cashback_campaign.active? %>
+          <% elsif @cashback_automation.active? %>
             <span class="crm-tag crm-tag--success">Ativa</span>
           <% else %>
             <span class="crm-tag crm-tag--danger">Inativa</span>
           <% end %>
-          <% if @cashback_campaign %>
-            <span class="crm-tag crm-tag--info"><%= @cashback_campaign.sent_count %> enviadas</span>
+          <% if @cashback_automation %>
+            <span class="crm-tag crm-tag--info"><%= @cashback_automation.sent_count %> enviadas</span>
           <% end %>
         </div>
       </div>
       <div class="automations-card__cta-row">
         <%= link_to edit_cashback_automation_path, class: 'crm-btn crm-btn--primary automations-card__cta' do %>
-          <%= @cashback_campaign.nil? ? 'Configurar' : 'Editar' %>
+          <%= @cashback_automation.nil? ? 'Configurar' : 'Editar' %>
         <% end %>
-        <% if @cashback_campaign %>
-          <%= link_to campaign_path(@cashback_campaign), class: 'crm-btn crm-btn--secondary automations-card__cta' do %>
+        <% if @cashback_automation %>
+          <%= link_to automation_actions_path(@cashback_automation), class: 'crm-btn crm-btn--secondary automations-card__cta' do %>
             Ver Dados
           <% end %>
         <% end %>
@@ -106,9 +106,9 @@
           com opção de reenvio e cupom.
         </p>
         <div class="automations-card__tags">
-          <% if @cart_recovery_campaign.nil? %>
+          <% if @cart_recovery_automation.nil? %>
             <span class="crm-tag crm-tag--neutral">Não configurada</span>
-          <% elsif @cart_recovery_campaign.active? %>
+          <% elsif @cart_recovery_automation.active? %>
             <span class="crm-tag crm-tag--success">Ativa</span>
           <% else %>
             <span class="crm-tag crm-tag--danger">Inativa</span>
@@ -118,7 +118,7 @@
       </div>
       <div class="automations-card__cta-row">
         <%= link_to edit_cart_recovery_automation_path, class: 'crm-btn crm-btn--primary automations-card__cta' do %>
-          <%= @cart_recovery_campaign.nil? ? 'Configurar' : 'Editar' %>
+          <%= @cart_recovery_automation.nil? ? 'Configurar' : 'Editar' %>
         <% end %>
         <%= link_to cart_recovery_data_automation_path, class: 'crm-btn crm-btn--secondary automations-card__cta' do %>
           Ver Dados

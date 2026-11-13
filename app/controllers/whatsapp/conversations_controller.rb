@@ -9,7 +9,7 @@ module Whatsapp
     SQL
 
     before_action :set_client
-    before_action :set_campaign, only: :index
+    before_action :set_automation, only: :index
 
     def index
       @connections = scoped_connections.order(:name).to_a
@@ -63,13 +63,13 @@ module Whatsapp
     private
 
     # Filtro "conversas desta automação": números da automação, ainda dentro dos visíveis ao usuário.
-    def set_campaign
-      @campaign = @client.campaigns.find(params[:campaign_id]) if @client && params[:campaign_id].present?
+    def set_automation
+      @automation = @client.automations.find(params[:automation_id]) if @client && params[:automation_id].present?
     end
 
     def scoped_connections
       scope = attendance_connections
-      scope = scope.where(id: @campaign.whatsapp_connections.select(:id)) if @campaign
+      scope = scope.where(id: @automation.whatsapp_connections.select(:id)) if @automation
       scope
     end
 

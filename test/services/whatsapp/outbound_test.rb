@@ -5,20 +5,20 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
 
   def setup
     @client = Client.create!(name: 'Loja', email: "l-#{SecureRandom.hex(4)}@example.com")
-    @campaign = @client.campaigns.create!(name: 'Cashback', kind: :cashback, message: 'oi', days_after_purchase: 1,
+    @automation = @client.automations.create!(name: 'Cashback', kind: :cashback, message: 'oi', days_after_purchase: 1,
                                           start_date: Date.current, end_date: Date.current + 30)
   end
 
   def evolution!
     @conn = @client.whatsapp_connections.create!(name: 'A', state: 'connected')
-    Whatsapp::CampaignConnection.create!(campaign: @campaign, connection: @conn)
+    Whatsapp::AutomationConnection.create!(automation: @automation, connection: @conn)
   end
 
   test 'cria mensagem na fila do número da automação' do
     evolution!
     assert_difference 'Whatsapp::Message.count', 1 do
       assert_enqueued_with(job: Whatsapp::SendJob) do
-        result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
+        result = Whatsapp::Outbound.deliver(client: @client, automation: @automation, phone: '11999990000', body: 'oi')
         assert result.ok
         assert_equal 'evolution', result.provider
       end
@@ -30,8 +30,8 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
 
   test 'duas entregas seguidas no mesmo número respeitam o intervalo' do
     evolution!
-    r1 = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'a')
-    r2 = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11988887777', body: 'b')
+    r1 = Whatsapp::Outbound.deliver(client: @client, automation: @automation, phone: '11999990000', body: 'a')
+    r2 = Whatsapp::Outbound.deliver(client: @client, automation: @automation, phone: '11988887777', body: 'b')
     assert_operator r2.message.send_after, :>=, r1.message.send_after + 8.seconds
   end
 
@@ -39,7 +39,7 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
     evolution!
     @conn.update!(state: 'disconnected')
     assert_no_difference 'Whatsapp::Message.count' do
-      result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
+      result = Whatsapp::Outbound.deliver(client: @client, automation: @automation, phone: '11999990000', body: 'oi')
       assert_not result.ok
       assert_equal 'sem número responsável conectado', result.error
     end
@@ -47,7 +47,7 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
 
   test 'sem automação não envia' do
     evolution!
-    result = Whatsapp::Outbound.deliver(client: @client, campaign: nil, phone: '11999990000', body: 'oi')
+    result = Whatsapp::Outbound.deliver(client: @client, automation: nil, phone: '11999990000', body: 'oi')
     assert_not result.ok
   end
 
@@ -61,7 +61,7 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
       original.call(*args, **kw)
     end
     begin
-      result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
+      result = Whatsapp::Outbound.deliver(client: @client, automation: @automation, phone: '11999990000', body: 'oi')
     ensure
       Whatsapp::SendJob.define_singleton_method(:set, original)
     end
@@ -74,7 +74,7 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
     evolution!
     result = nil
     ActiveRecord::Base.transaction do
-      result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: '11999990000', body: 'oi')
+      result = Whatsapp::Outbound.deliver(client: @client, automation: @automation, phone: '11999990000', body: 'oi')
       assert result.ok
       assert_no_enqueued_jobs(only: Whatsapp::SendJob)
     end
@@ -85,7 +85,7 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
     evolution!
     other = Client.create!(name: 'Outra', email: "o-#{SecureRandom.hex(4)}@example.com")
     assert_no_difference 'Whatsapp::Message.count' do
-      result = Whatsapp::Outbound.deliver(client: other, campaign: @campaign, phone: '11999990000', body: 'oi')
+      result = Whatsapp::Outbound.deliver(client: other, automation: @automation, phone: '11999990000', body: 'oi')
       assert_not result.ok
       assert_equal 'automação de outro cliente', result.error
     end
@@ -93,7 +93,7 @@ class Whatsapp::OutboundTest < ActiveSupport::TestCase
 
   test 'telefone inválido retorna falha em vez de levantar' do
     evolution!
-    result = Whatsapp::Outbound.deliver(client: @client, campaign: @campaign, phone: 'abc', body: 'oi')
+    result = Whatsapp::Outbound.deliver(client: @client, automation: @automation, phone: 'abc', body: 'oi')
     assert_not result.ok
     assert_equal 'telefone inválido', result.error
   end

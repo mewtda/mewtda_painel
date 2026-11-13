@@ -1,12 +1,12 @@
 module Whatsapp
   # Escolhe o número responsável por enviar uma mensagem da automação.
   module Router
-    def self.pick(campaign:, phone:, prefer: nil, strict: false)
-      return unless campaign
+    def self.pick(automation:, phone:, prefer: nil, strict: false)
+      return unless automation
 
-      campaign.with_lock do
-        links = campaign.whatsapp_campaign_connections.includes(:connection).to_a
-                     .select { |l| l.connection.client_id == campaign.client_id && l.connection.connected? }
+      automation.with_lock do
+        links = automation.whatsapp_automation_connections.includes(:connection).to_a
+                     .select { |l| l.connection.client_id == automation.client_id && l.connection.connected? }
         next if links.empty?
 
         if strict # só o número preferido, nunca outro

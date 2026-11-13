@@ -3,7 +3,7 @@
 <%
   brl = ->(value) { number_to_currency(value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') }
   status_label = { running: 'Em execução', pending: 'Aguardando início', finished: 'Finalizada', inactive: 'Inativa' }
-  numbers_count = @campaign.persisted? ? @campaign.whatsapp_connections.count : 0
+  numbers_count = @automation.persisted? ? @automation.whatsapp_connections.count : 0
   tabs = [
     ['geral', 'Geral', 'fa-sliders'],
     ['mensagens', 'Mensagens', 'fa-comment-dots'],
@@ -27,10 +27,10 @@
     <div>
       <h1>
         <i class="fa-solid fa-cart-shopping" style="color: var(--primary)"></i> Recuperação de carrinho
-        <% if @campaign.persisted? %>
-          <span class="scr-chip <%= @campaign.status == :running ? 'scr-chip--on' : '' %>"><%= status_label[@campaign.status] %></span>
+        <% if @automation.persisted? %>
+          <span class="scr-chip <%= @automation.status == :running ? 'scr-chip--on' : '' %>"><%= status_label[@automation.status] %></span>
         <% end %>
-        <% if @campaign.test_phone.present? %>
+        <% if @automation.test_phone.present? %>
           <span class="scr-chip scr-chip--warn"><i class="fa-solid fa-flask"></i> Modo teste</span>
         <% end %>
       </h1>
@@ -54,11 +54,11 @@
     </div>
   <% end %>
 
-  <% if @campaign.errors.any? %>
+  <% if @automation.errors.any? %>
     <div class="scr-banner scr-banner--danger">
       <i class="fa-solid fa-circle-exclamation"></i>
       <div><strong>Corrija os erros abaixo:</strong>
-        <p><%= @campaign.errors.full_messages.to_sentence %></p></div>
+        <p><%= @automation.errors.full_messages.to_sentence %></p></div>
     </div>
   <% end %>
 
@@ -71,7 +71,7 @@
     <% end %>
   </nav>
 
-  <%= form_with model: @campaign, url: cart_recovery_automation_path, method: :patch, html: { autocomplete: 'off' } do |form| %>
+  <%= form_with model: @automation, url: cart_recovery_automation_path, method: :patch, html: { autocomplete: 'off' } do |form| %>
     <%= hidden_field_tag :tab, params[:tab], data: { screen_tab_input: true } %>
 
     <section class="scr-panel" data-panel="geral" hidden>
@@ -96,7 +96,7 @@
             </div>
           </div>
 
-          <div class="scr-card <%= 'scr-card--primary' if @campaign.test_phone.present? %>">
+          <div class="scr-card <%= 'scr-card--primary' if @automation.test_phone.present? %>">
             <h2 class="scr-card__title"><i class="fa-solid fa-flask"></i> Modo teste</h2>
             <p class="scr-card__hint">Preenchido, a automação só envia para checkouts com este telefone. Deixe vazio para enviar a todos.</p>
             <div class="scr-field">
@@ -110,12 +110,12 @@
           <div class="scr-card">
             <h2 class="scr-card__title"><i class="fa-solid fa-circle-info"></i> Situação</h2>
             <dl class="scr-status">
-              <div><dt>Status</dt><dd><%= @campaign.persisted? ? status_label[@campaign.status] : 'Ainda não salva' %></dd></div>
+              <div><dt>Status</dt><dd><%= @automation.persisted? ? status_label[@automation.status] : 'Ainda não salva' %></dd></div>
               <div><dt>WhatsApp</dt><dd><%= @client.whatsapp_ready? ? 'Conectado' : 'Nenhum número conectado' %></dd></div>
               <div><dt>Números da automação</dt><dd><%= numbers_count %></dd></div>
               <div><dt>Checkouts com telefone</dt><dd><%= @client.abandoned_checkouts.with_phone.count %></dd></div>
-              <% if @campaign.persisted? %>
-                <div><dt>Criada em</dt><dd><%= @campaign.created_at.strftime('%d/%m/%Y %H:%M') %></dd></div>
+              <% if @automation.persisted? %>
+                <div><dt>Criada em</dt><dd><%= @automation.created_at.strftime('%d/%m/%Y %H:%M') %></dd></div>
               <% end %>
             </dl>
           </div>
@@ -189,13 +189,13 @@
 
   <section class="scr-panel" data-panel="numeros" hidden>
     <div class="scr-card">
-      <%= render 'automations/whatsapp_numbers', campaign: @campaign, client: @client, kind: 'cart-recovery' %>
+      <%= render 'automations/whatsapp_numbers', automation: @automation, client: @client, kind: 'cart-recovery' %>
     </div>
   </section>
 
   <section class="scr-panel" data-panel="conversas" id="conversas" hidden>
     <% if @conversation_connections %>
-      <%= render 'whatsapp/conversations/inbox', connections: @conversation_connections, campaign: @campaign,
+      <%= render 'whatsapp/conversations/inbox', connections: @conversation_connections, automation: @automation,
                                                 client: @client, empty_state: false, empty_message: nil,
                                                 show_header: false %>
     <% else %>
@@ -250,8 +250,8 @@
 
     var samples = { '{nome}': 'Maria Silva', '{cupom}': 'VOLTA10', '{link}': 'https://loja.exemplo.com/checkouts/abc123' };
     initWhatsappPreviewMulti([
-      { id: 'campaign_message', samples: samples },
-      { id: 'campaign_resend_message', samples: samples }
+      { id: 'automation_message', samples: samples },
+      { id: 'automation_resend_message', samples: samples }
     ]);
   });
 </script>

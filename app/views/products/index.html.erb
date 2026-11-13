@@ -3,41 +3,36 @@
 <div class="products-wrapper">
 
   <%# Filtros %>
-  <%= form_tag(products_path, method: 'get') do %>
+  <%= form_tag(products_path, method: 'get', data: { live_regions: 'products-actions,products-table-wrap,products-pagination' }) do %>
     <div class="products-filters">
       <div class="products-filters__field">
         <label class="crm-label">Buscar</label>
-        <%= text_field_tag :search, params[:search], class: 'crm-input', placeholder: 'Nome do produto ou SKU...' %>
+        <%= text_field_tag :search, params[:search], class: 'crm-input', placeholder: 'Nome do produto ou SKU...',
+                           autofocus: params[:search].present?, data: { autosubmit_typing: true } %>
       </div>
 
       <div class="products-filters__field">
         <label class="crm-label">Fornecedor</label>
         <%= select_tag :vendor,
               options_for_select([['Todos', '']] + @vendors.map { |v| [v, v] }, params[:vendor]),
-              class: 'crm-input' %>
+              class: 'crm-input', data: { autosubmit: true } %>
       </div>
 
       <div class="products-filters__field">
         <label class="crm-label">Variação 1</label>
         <%= select_tag :option1,
               options_for_select([['Todas', '']] + @option1s.map { |o| [o, o] }, params[:option1]),
-              class: 'crm-input' %>
+              class: 'crm-input', data: { autosubmit: true } %>
       </div>
 
       <div class="products-filters__field">
         <label class="crm-label">Variação 2</label>
         <%= select_tag :option2,
               options_for_select([['Todas', '']] + @option2s.map { |o| [o, o] }, params[:option2]),
-              class: 'crm-input' %>
+              class: 'crm-input', data: { autosubmit: true } %>
       </div>
 
-      <div class="products-filters__actions">
-        <%= button_tag class: 'crm-btn crm-btn--primary', name: '' do %>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
-          Filtrar
-        <% end %>
+      <div class="products-filters__actions" id="products-actions">
         <%= link_to export_xlsx_products_path(params.permit(:search, :vendor, :option1, :option2)),
             class: 'crm-btn products-btn--export' do %>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -56,7 +51,7 @@
   <% end %>
 
   <%# Tabela %>
-  <div class="products-table-wrap">
+  <div class="products-table-wrap" id="products-table-wrap" data-live-spinner>
     <table class="crm-table">
       <thead>
         <tr>
@@ -141,6 +136,8 @@
     </table>
   </div>
 
-  <%= will_paginate @products, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
+  <div id="products-pagination">
+    <%= will_paginate @products, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
+  </div>
 
 </div>

@@ -1,4 +1,4 @@
-// Área de clientes: seleção em massa e painel lateral de detalhes.
+// Clientes: seleção em massa e painel lateral de detalhes.
 (() => {
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
@@ -11,26 +11,28 @@
   };
 
   // ---------------------------------------------------- seleção em massa --
-  const bulk = $("#cx-bulk-form");
-  const checkAll = $("#cx-check-all");
-  const allFiltered = $("#cx-all-filtered");
+  const allFiltered = () => $("#cx-all-filtered");
   const updateBulk = () => {
+    const bulk = $("#cx-bulk-form");
     if (!bulk) return;
     const checked = $$(".cx-row-check:checked").length;
-    const all = allFiltered.value === "1";
+    const all = allFiltered().value === "1";
     bulk.hidden = !checked && !all;
     $("#cx-bulk-count").textContent = all ? "Todos os clientes do filtro selecionados" : `${checked} selecionado(s)`;
   };
-  checkAll?.addEventListener("change", () => {
-    $$(".cx-row-check").forEach((c) => { c.checked = checkAll.checked; });
-    allFiltered.value = "0";
-    updateBulk();
-  });
   document.addEventListener("change", (e) => {
-    if (e.target.matches(".cx-row-check")) { allFiltered.value = "0"; updateBulk(); }
+    if (e.target.matches("#cx-check-all")) {
+      $$(".cx-row-check").forEach((c) => { c.checked = e.target.checked; });
+      allFiltered().value = "0";
+      updateBulk();
+    } else if (e.target.matches(".cx-row-check")) {
+      allFiltered().value = "0";
+      updateBulk();
+    }
   });
-  $("#cx-select-all-filtered")?.addEventListener("click", () => {
-    allFiltered.value = "1";
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#cx-select-all-filtered")) return;
+    allFiltered().value = "1";
     $$(".cx-row-check").forEach((c) => { c.checked = true; });
     updateBulk();
   });

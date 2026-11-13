@@ -2,6 +2,7 @@ class BackInStockSetting < ApplicationRecord
   WIDGET_HOST = 'https://www.mewtda.com.br'.freeze
 
   belongs_to :client
+  belongs_to :email_template, optional: true
 
   has_secure_token :public_token
 
@@ -9,13 +10,10 @@ class BackInStockSetting < ApplicationRecord
 
   validates :button_text, :modal_title, presence: true, length: { maximum: 80 }
   validates :accent_color, format: { with: /\A#[0-9a-fA-F]{6}\z/ }
+  validate :email_template_belongs_to_client
 
   def script_url
     "#{WIDGET_HOST}/widget/back_in_stock.js"
-  end
-
-  def email_template
-    client.email_templates.back_in_stock.where(active: true).order(updated_at: :desc).first
   end
 
   def allowed_hosts
@@ -27,6 +25,12 @@ class BackInStockSetting < ApplicationRecord
   end
 
   private
+
+  def email_template_belongs_to_client
+    return if email_template_id.blank? || client.email_templates.exists?(email_template_id)
+
+    errors.add(:email_template_id, 'não pertence a esta loja')
+  end
 
   def host_of(url)
     URI.parse(url.match?(%r{\Ahttps?://}) ? url : "https://#{url}").host.to_s.delete_prefix('www.')

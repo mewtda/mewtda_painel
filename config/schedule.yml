@@ -20,7 +20,7 @@ abandoned_checkouts_sync:
 
 cart_recovery_processing:
   cron: "*/5 * * * *"
-  class: "ProcessCartRecoveryCampaignsJob"
+  class: "ProcessCartRecoveryAutomationsJob"
   queue: default
 
 back_in_stock_restock_check:
@@ -36,4 +36,9 @@ customers_marketing_sync:
 customer_profiles_refresh:
   cron: "30 4 * * * America/Sao_Paulo"
   class: "Customers::RefreshProfilesJob"
+  queue: default
+
+campaigns_tick:
+  cron: "* * * * *"
+  class: "Campaigns::TickJob"
   queue: default

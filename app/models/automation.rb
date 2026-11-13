@@ -1,11 +1,11 @@
-class Campaign < ApplicationRecord
+class Automation < ApplicationRecord
   extend FriendlyId
   friendly_id :name, use: :slugged
 
   belongs_to :client
-  has_many :campaign_actions, dependent: :destroy
-  has_many :whatsapp_campaign_connections, class_name: 'Whatsapp::CampaignConnection', dependent: :destroy
-  has_many :whatsapp_connections, through: :whatsapp_campaign_connections, source: :connection
+  has_many :automation_actions, dependent: :destroy
+  has_many :whatsapp_automation_connections, class_name: 'Whatsapp::AutomationConnection', dependent: :destroy
+  has_many :whatsapp_connections, through: :whatsapp_automation_connections, source: :connection
 
   enum kind: {
     cashback: 0,
@@ -84,10 +84,10 @@ class Campaign < ApplicationRecord
     cashback_expiration? ? 'dias antes da expiração' : 'dias após a compra'
   end
 
-  def actions_count = campaign_actions.count
-  def sent_count    = campaign_actions.sent.count
-  def pending_count = campaign_actions.pending.count
-  def failed_count  = campaign_actions.failed.count
+  def actions_count = automation_actions.count
+  def sent_count    = automation_actions.sent.count
+  def pending_count = automation_actions.pending.count
+  def failed_count  = automation_actions.failed.count
 
   def filtered_customers
     return Customer.none unless marketing_notification?

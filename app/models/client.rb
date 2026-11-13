@@ -1,6 +1,6 @@
 class Client < ApplicationRecord
   has_many :users, dependent: :nullify
-  has_many :campaigns, dependent: :destroy
+  has_many :automations, dependent: :destroy
   has_many :ad_costs, dependent: :destroy
   has_many :refunds, dependent: :destroy
   has_many :goals, dependent: :destroy
@@ -10,6 +10,7 @@ class Client < ApplicationRecord
   has_many :back_in_stock_alerts, dependent: :destroy
   has_many :email_templates, dependent: :destroy
   has_many :email_suppressions, dependent: :destroy
+  has_many :campaigns, dependent: :destroy
   has_many :message_usages, dependent: :delete_all
   has_many :customer_profiles, dependent: :delete_all
   has_many :segments, dependent: :destroy

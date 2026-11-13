@@ -1,4 +1,4 @@
-class ProcessCartRecoveryCampaignsJob < ApplicationJob
+class ProcessCartRecoveryAutomationsJob < ApplicationJob
   queue_as :default
 
   # A 1ª mensagem só vai para checkouts recentes: evita disparar carrinhos
@@ -11,53 +11,53 @@ class ProcessCartRecoveryCampaignsJob < ApplicationJob
     scope.find_each do |client|
       process_client(client)
     rescue StandardError => e
-      Rails.logger.error "[ProcessCartRecoveryCampaigns] Erro no client #{client.id}: #{e.message}"
+      Rails.logger.error "[ProcessCartRecoveryAutomations] Erro no client #{client.id}: #{e.message}"
     end
   end
 
   private
 
   def process_client(client)
-    campaign = client.campaigns.running.find_by(kind: :cart_recovery)
-    return unless campaign
+    automation = client.automations.running.find_by(kind: :cart_recovery)
+    return unless automation
     return unless client.whatsapp_ready?
 
-    process_first_notifications(client, campaign)
-    process_resend_notifications(client, campaign) if campaign.resend_enabled?
+    process_first_notifications(client, automation)
+    process_resend_notifications(client, automation) if automation.resend_enabled?
   end
 
-  def process_first_notifications(client, campaign)
+  def process_first_notifications(client, automation)
     # Na Evolution só entram checkouts criados depois do primeiro número vinculado à automação.
-    evolution_since = campaign.evolution_started_at
+    evolution_since = automation.evolution_started_at
     return if client.whatsapp_evolution? && evolution_since.nil?
 
     client.abandoned_checkouts.pending_first_notification.find_each do |checkout|
-      next unless allowed_by_test_mode?(campaign, checkout)
+      next unless allowed_by_test_mode?(automation, checkout)
       next if checkout.checkout_created_at.blank?
       next if checkout.checkout_created_at < FIRST_MESSAGE_MAX_AGE.ago
       next if client.whatsapp_evolution? && checkout.checkout_created_at < evolution_since
-      next if checkout.checkout_created_at + campaign.send_delay_minutes.minutes > Time.current
+      next if checkout.checkout_created_at + automation.send_delay_minutes.minutes > Time.current
 
-      coupon_code = campaign.include_coupon? ? campaign.coupon_code : nil
-      SendCartRecoveryNotificationJob.perform_later(checkout.id, campaign.message, coupon_code, 'first')
+      coupon_code = automation.include_coupon? ? automation.coupon_code : nil
+      SendCartRecoveryNotificationJob.perform_later(checkout.id, automation.message, coupon_code, 'first')
     end
   end
 
-  def process_resend_notifications(client, campaign)
+  def process_resend_notifications(client, automation)
     client.abandoned_checkouts.pending_second_notification.find_each do |checkout|
-      next unless allowed_by_test_mode?(campaign, checkout)
-      next if checkout.first_notified_at + campaign.resend_delay_hours.hours > Time.current
+      next unless allowed_by_test_mode?(automation, checkout)
+      next if checkout.first_notified_at + automation.resend_delay_hours.hours > Time.current
 
-      coupon_code = campaign.resend_include_coupon? ? campaign.resend_coupon_code : nil
-      SendCartRecoveryNotificationJob.perform_later(checkout.id, campaign.resend_message, coupon_code, 'second')
+      coupon_code = automation.resend_include_coupon? ? automation.resend_coupon_code : nil
+      SendCartRecoveryNotificationJob.perform_later(checkout.id, automation.resend_message, coupon_code, 'second')
     end
   end
 
   # Modo teste: com um número de teste preenchido, só esse telefone recebe.
-  def allowed_by_test_mode?(campaign, checkout)
-    return true if campaign.test_phone.blank?
+  def allowed_by_test_mode?(automation, checkout)
+    return true if automation.test_phone.blank?
 
-    test = Whatsapp::Phone.normalize(campaign.test_phone)
+    test = Whatsapp::Phone.normalize(automation.test_phone)
     test.present? && Whatsapp::Phone.normalize(checkout.phone) == test
   end
 end

@@ -1,0 +1,93 @@
+<% title 'Campanhas' %>
+
+<% status_tags = { 'draft' => 'neutral', 'scheduled' => 'info', 'sending' => 'warning', 'paused' => 'warning',
+                   'sent' => 'success', 'cancelled' => 'danger' } %>
+
+<div class="clients-wrapper cx-page">
+  <div class="clients-table-wrap">
+    <div class="clients-table-header">
+      <span class="clients-table-header__title"><i class="fa-solid fa-bullhorn"></i> Campanhas</span>
+      <div class="sg-header-actions">
+        <%= form_with url: campaigns_path, method: :get, class: 'ec-filters', data: { live_regions: 'ec-table' } do %>
+          <%= select_tag :canal, options_for_select([['Todos os canais', '']] + Campaign::CHANNELS.invert.to_a, params[:canal]),
+                         class: 'crm-input cx-select', data: { autosubmit: true, custom_select: true } %>
+          <div class="cx-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <%= search_field_tag :q, params[:q], class: 'crm-input', placeholder: 'Buscar campanha',
+                                 autofocus: params[:q].present?, data: { autosubmit_typing: true } %>
+          </div>
+        <% end %>
+        <%= button_to campaigns_path, method: :post, class: 'crm-btn crm-btn--primary' do %>
+          <i class="fa-solid fa-plus"></i> Criar campanha
+        <% end %>
+      </div>
+    </div>
+
+    <div id="ec-table" data-live-spinner>
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Canal de envio</th>
+          <th>Status</th>
+          <th>Para quem</th>
+          <th>Envio</th>
+          <th>Criada por</th>
+          <th class="text-center">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @campaigns.each do |campaign| %>
+          <tr>
+            <td>
+              <%= link_to campaign.display_name, (campaign.draft? ? edit_campaign_path(campaign) : '#'), class: 'cx-link' %>
+              <% if campaign.email_template %><small class="cx-muted ec-sub"><%= campaign.email_template.name %></small><% end %>
+            </td>
+            <td><span class="crm-tag crm-tag--info"><i class="fa-solid fa-envelope"></i> <%= campaign.channel_label %></span></td>
+            <td><span class="crm-tag crm-tag--<%= status_tags.fetch(campaign.status) %>"><%= campaign.status_label %></span></td>
+            <td class="cx-muted"><%= campaign.segment&.name || '—' %></td>
+            <td class="cx-muted">
+              <%= campaign.timing_summary %>
+              <% if campaign.progress_label %><small class="ec-sub"><%= campaign.progress_label %></small><% end %>
+              <% if campaign.status_note %><small class="ec-sub"><%= campaign.status_note %></small><% end %>
+            </td>
+            <td class="cx-nowrap">
+              <%= campaign.created_by&.name || '—' %>
+              <small class="cx-muted ec-sub"><%= l(campaign.created_at, format: '%d/%m/%Y às %H:%M') %></small>
+            </td>
+            <td class="text-center">
+              <div class="clients-table__actions">
+                <% if campaign.draft? %>
+                  <%= link_to edit_campaign_path(campaign), class: 'crm-btn clients-btn--icon', title: 'Continuar editando' do %>
+                    <i class="fa-solid fa-pen"></i>
+                  <% end %>
+                <% end %>
+                <% if campaign.cancelable? %>
+                  <%= button_to cancel_campaign_path(campaign), method: :post, class: 'crm-btn clients-btn--icon clients-btn--danger', title: 'Cancelar campanha',
+                      form: { data: { confirm: "Cancelar a campanha \"#{campaign.display_name}\"? Quem já recebeu não é afetado e o restante não será enviado.",
+                                      confirm_label: 'Cancelar campanha', confirm_cancel_label: 'Voltar' } } do %>
+                    <i class="fa-solid fa-ban"></i>
+                  <% end %>
+                <% end %>
+                <% if campaign.status.in?(%w[draft cancelled]) %>
+                  <%= button_to campaign_path(campaign), method: :delete, class: 'crm-btn clients-btn--icon clients-btn--danger', title: 'Excluir',
+                      form: { data: { confirm: "Excluir a campanha \"#{campaign.display_name}\"?", confirm_label: 'Excluir' } } do %>
+                    <i class="fa-solid fa-trash-can"></i>
+                  <% end %>
+                <% end %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+        <% if @campaigns.empty? %>
+          <tr>
+            <td colspan="7" class="clients-table__empty">
+              Você ainda não criou nenhuma campanha. Clique em <strong>Criar campanha</strong> para começar.
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>

@@ -13,7 +13,7 @@
       </div>
       <%= form_with url: invoice_account_path, method: :get, class: 'invoice-card__picker' do %>
         <%= select_tag :mes, options_for_select(@months.map { |m| [l(m, format: '%B/%Y').capitalize, m.strftime('%Y-%m')] }, @invoice.month.strftime('%Y-%m')),
-                       class: 'crm-input users-form-page__select', data: { autosubmit: true } %>
+                       class: 'crm-input', data: { autosubmit: true, custom_select: true } %>
       <% end %>
     </div>
 

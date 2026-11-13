@@ -1,4 +1,4 @@
-<% title @campaign.name %>
+<% title @automation.name %>
 
 <div class="campaign-show-wrapper">
 
@@ -11,12 +11,12 @@
         </svg>
       <% end %>
       <div>
-        <h1 class="campaign-show-header__title"><%= @campaign.name %></h1>
+        <h1 class="campaign-show-header__title"><%= @automation.name %></h1>
         <p class="campaign-show-header__subtitle">Cliente: <%= current_client.name %></p>
       </div>
     </div>
     <div class="campaign-show-header__right">
-      <% edit_path = case @campaign.kind
+      <% edit_path = case @automation.kind
                      when 'shipping_tracking' then edit_tracking_automation_path
                      when 'cashback' then edit_cashback_automation_path
                      end %>
@@ -32,7 +32,7 @@
   </div>
 
   <%# Alerta WhatsApp %>
-  <% unless @campaign.whatsapp_ready? %>
+  <% unless @automation.whatsapp_ready? %>
     <div class="campaign-show-alert campaign-show-alert--danger">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
@@ -53,7 +53,7 @@
         </svg>
       </div>
       <div class="campaign-show-stat__content">
-        <span class="campaign-show-stat__value"><%= @campaign.actions_count %></span>
+        <span class="campaign-show-stat__value"><%= @automation.actions_count %></span>
         <span class="campaign-show-stat__label">Total</span>
       </div>
     </div>
@@ -64,7 +64,7 @@
         </svg>
       </div>
       <div class="campaign-show-stat__content">
-        <span class="campaign-show-stat__value"><%= @campaign.sent_count %></span>
+        <span class="campaign-show-stat__value"><%= @automation.sent_count %></span>
         <span class="campaign-show-stat__label">Enviados</span>
       </div>
     </div>
@@ -75,7 +75,7 @@
         </svg>
       </div>
       <div class="campaign-show-stat__content">
-        <span class="campaign-show-stat__value"><%= @campaign.pending_count %></span>
+        <span class="campaign-show-stat__value"><%= @automation.pending_count %></span>
         <span class="campaign-show-stat__label">Pendentes</span>
       </div>
     </div>
@@ -86,7 +86,7 @@
         </svg>
       </div>
       <div class="campaign-show-stat__content">
-        <span class="campaign-show-stat__value"><%= @campaign.failed_count %></span>
+        <span class="campaign-show-stat__value"><%= @automation.failed_count %></span>
         <span class="campaign-show-stat__label">Falharam</span>
       </div>
     </div>
@@ -97,19 +97,19 @@
     <div class="campaign-show-info__grid">
       <div class="campaign-show-info__item">
         <span class="campaign-show-info__label">Tipo</span>
-        <span class="campaign-show-info__value"><%= @campaign.kind.humanize %></span>
+        <span class="campaign-show-info__value"><%= @automation.kind.humanize %></span>
       </div>
       <div class="campaign-show-info__item">
         <span class="campaign-show-info__label">Dias após compra</span>
-        <span class="campaign-show-info__value"><%= @campaign.days_after_purchase %> dias</span>
+        <span class="campaign-show-info__value"><%= @automation.days_after_purchase %> dias</span>
       </div>
       <div class="campaign-show-info__item">
         <span class="campaign-show-info__label">Período</span>
-        <span class="campaign-show-info__value"><%= @campaign.start_date.strftime('%d/%m/%Y') %> até <%= @campaign.end_date.strftime('%d/%m/%Y') %></span>
+        <span class="campaign-show-info__value"><%= @automation.start_date.strftime('%d/%m/%Y') %> até <%= @automation.end_date.strftime('%d/%m/%Y') %></span>
       </div>
       <div class="campaign-show-info__item">
         <span class="campaign-show-info__label">Status</span>
-        <% case @campaign.status %>
+        <% case @automation.status %>
         <% when :running %>
           <span class="campaign-show-info__badge campaign-show-info__badge--running">Em execução</span>
         <% when :pending %>
@@ -123,12 +123,12 @@
     </div>
     <div class="campaign-show-info__message">
       <span class="campaign-show-info__label">Mensagem</span>
-      <div class="campaign-show-info__message-box"><%= @campaign.message %></div>
+      <div class="campaign-show-info__message-box"><%= @automation.message %></div>
     </div>
   </div>
 
   <%# Filtros das Ações %>
-  <%= form_tag(campaign_path(@campaign), method: 'get') do %>
+  <%= form_tag(automation_actions_path(@automation), method: 'get') do %>
     <div class="campaign-show-filters">
       <div class="campaign-show-filters__field">
         <label>Buscar cliente</label>
@@ -147,7 +147,7 @@
           </svg>
           Filtrar
         <% end %>
-        <%= link_to campaign_path(@campaign), class: 'campaign-show-btn campaign-show-btn--secondary' do %>
+        <%= link_to automation_actions_path(@automation), class: 'campaign-show-btn campaign-show-btn--secondary' do %>
           Limpar
         <% end %>
       </div>
@@ -163,7 +163,7 @@
         </svg>
         Notificações
       </span>
-      <span class="campaign-show-table-header__count"><%= @campaign_actions.total_entries rescue @campaign_actions.count %> registros</span>
+      <span class="campaign-show-table-header__count"><%= @automation_actions.total_entries rescue @automation_actions.count %> registros</span>
     </div>
 
     <table class="campaign-show-table">
@@ -179,7 +179,7 @@
         </tr>
       </thead>
       <tbody>
-        <% @campaign_actions.each do |action| %>
+        <% @automation_actions.each do |action| %>
           <tr>
             <td>
               <div class="campaign-show-table__customer">
@@ -258,7 +258,7 @@
               <% end %>
             </td>
             <td class="text-center">
-              <%= button_to resend_campaign_action_path(campaign_id: @campaign.to_param, action_id: action.to_param), method: :post,
+              <%= button_to resend_automation_action_path(automation_id: @automation.to_param, id: action.to_param), method: :post,
                     class: 'campaign-show-table__message-btn', form: { data: { turbo: false } },
                     data: { confirm: 'Reenviar esta mensagem agora?', disable_with: 'Enviando...' } do %>
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -269,7 +269,7 @@
             </td>
           </tr>
         <% end %>
-        <% if @campaign_actions.empty? %>
+        <% if @automation_actions.empty? %>
           <tr>
             <td colspan="7" class="campaign-show-table__empty-row">
               <div class="campaign-show-table__empty-content">
@@ -282,16 +282,16 @@
           </tr>
         <% end %>
       </tbody>
-      <% if @campaign_actions.any? %>
+      <% if @automation_actions.any? %>
         <tfoot>
           <tr>
-            <td colspan="7"><%= page_entries_info @campaign_actions rescue '' %></td>
+            <td colspan="7"><%= page_entries_info @automation_actions rescue '' %></td>
           </tr>
         </tfoot>
       <% end %>
     </table>
 
-    <%= will_paginate @campaign_actions, list_classes: %w[campaign-show-pagination] rescue nil %>
+    <%= will_paginate @automation_actions, list_classes: %w[campaign-show-pagination] rescue nil %>
   </div>
 
 </div>

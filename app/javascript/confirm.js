@@ -46,6 +46,6 @@
     if (!form.dataset?.confirm) return;
 
     event.preventDefault();
-    if (await ask({ message: form.dataset.confirm, confirmLabel: form.dataset.confirmLabel })) form.submit();
+    if (await ask({ message: form.dataset.confirm, confirmLabel: form.dataset.confirmLabel, cancelLabel: form.dataset.confirmCancelLabel })) form.submit();
   });
 })();

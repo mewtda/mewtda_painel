@@ -1,10 +1,10 @@
-class SendCampaignNotificationJob < ApplicationJob
+class SendAutomationNotificationJob < ApplicationJob
   queue_as :default
 
-  def perform(campaign_action_id, extra = {})
+  def perform(automation_action_id, extra = {})
     extra = extra.symbolize_keys
-    action = CampaignAction.find(campaign_action_id)
-    campaign = action.campaign
+    action = AutomationAction.find(automation_action_id)
+    automation = action.automation
     customer = action.customer
     order = action.order
 
@@ -14,9 +14,9 @@ class SendCampaignNotificationJob < ApplicationJob
       return
     end
 
-    message = build_message(campaign: campaign, customer: customer, order: order, extra: extra)
+    message = build_message(automation: automation, customer: customer, order: order, extra: extra)
 
-    result = Whatsapp::Outbound.deliver(client: campaign.client, campaign: campaign, phone: phone, body: message)
+    result = Whatsapp::Outbound.deliver(client: automation.client, automation: automation, phone: phone, body: message)
 
     if result.ok
       action.mark_as_sent!(message)
@@ -27,10 +27,10 @@ class SendCampaignNotificationJob < ApplicationJob
 
   private
 
-  def build_message(campaign:, customer:, order:, extra:)
+  def build_message(automation:, customer:, order:, extra:)
     name = [customer.first_name, customer.last_name].compact.join(' ').presence || customer.name.presence || 'cliente'
 
-    campaign.message.to_s
+    automation.message.to_s
             .gsub('{nome}', name)
             .gsub('{pedido}', order&.shopify_order_number.to_s)
             .gsub('{cupom}', extra[:code].to_s)

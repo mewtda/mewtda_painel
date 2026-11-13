@@ -1,17 +1,17 @@
 module Whatsapp
   # Número responsável por uma automação; as mensagens da automação alternam entre eles.
-  class CampaignConnection < ApplicationRecord
-    self.table_name = 'whatsapp_campaign_connections'
+  class AutomationConnection < ApplicationRecord
+    self.table_name = 'whatsapp_automation_connections'
 
-    belongs_to :campaign
+    belongs_to :automation
     belongs_to :connection, class_name: 'Whatsapp::Connection'
-    validates :connection_id, uniqueness: { scope: :campaign_id }
+    validates :connection_id, uniqueness: { scope: :automation_id }
     validate do
-      errors.add(:connection, 'número de outro cliente') if campaign && connection && connection.client_id != campaign.client_id
+      errors.add(:connection, 'número de outro cliente') if automation && connection && connection.client_id != automation.client_id
     end
 
     after_create do
-      campaign.update_column(:evolution_started_at, Time.current) if campaign.evolution_started_at.nil?
+      automation.update_column(:evolution_started_at, Time.current) if automation.evolution_started_at.nil?
     end
   end
 end

@@ -15,11 +15,16 @@ class EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
     Client.create!(name: 'Loja Teste', email: "loja-#{SecureRandom.hex(4)}@example.com")
   end
 
+  def valid_blocks
+    [{ type: 'heading', text: 'Bem-vindo(a)!' }, { type: 'text', text: 'Texto' }, { type: 'button', text: 'Ver produtos' }]
+  end
+
   def valid_params
-    {
-      name: 'Boas-vindas', subject: 'Oi!', heading: 'Bem-vindo(a)!',
-      body: 'Texto', button_text: 'Ver produtos'
-    }
+    { name: 'Boas-vindas', subject: 'Oi!', blocks_json: valid_blocks.to_json }
+  end
+
+  def png_upload
+    Rack::Test::UploadedFile.new(StringIO.new("\x89PNG\r\n\x1a\nfake"), 'image/png', true, original_filename: 'foto.png')
   end
 
   test 'index lists only the current client templates' do
@@ -86,26 +91,70 @@ class EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 'Novo nome', template.reload.name
   end
 
-  test 'update removes the image when remove_image is checked' do
-    client = build_client
-    template = EmailTemplate.create!(valid_params.merge(client: client))
-    template.image.attach(io: StringIO.new('fake'), filename: 'banner.png', content_type: 'image/png')
-    sign_in build_user(client: client)
+  test 'create stores blocks in the submitted order' do
+    sign_in build_user(client: build_client)
 
-    patch email_template_path(template), params: { email_template: { remove_image: '1' } }
+    post email_templates_path, params: { email_template: valid_params }
 
-    assert_not template.reload.image.attached?
+    assert_equal %w[heading text button], EmailTemplate.last.blocks.map { |b| b['type'] }
   end
 
-  test 'update removes the bottom image when remove_image_bottom is checked' do
+  test 'create without blocks re-renders the form' do
+    sign_in build_user(client: build_client)
+
+    assert_no_difference 'EmailTemplate.count' do
+      post email_templates_path, params: { email_template: valid_params.merge(blocks_json: '[]') }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match 'Adicione pelo menos um bloco', response.body
+  end
+
+  test 'preview renders the blocks with variables and selectable block ids' do
+    sign_in build_user(client: build_client)
+    blocks = [{ id: 'abc', type: 'heading', text: 'Oi {nome}' }, { type: 'text', text: '**forte** <script>x</script>' }]
+
+    post preview_email_templates_path, params: { email_template: valid_params.merge(blocks_json: blocks.to_json) }
+
+    html = response.parsed_body['html']
+    assert_match 'Oi Maria', html
+    assert_match 'data-block-id="abc"', html
+    assert_match '<strong>forte</strong>', html
+    assert_no_match '<script>x', html
+    assert_match 'Não quero mais receber estes e-mails', html
+  end
+
+  test 'upload_image stores an image and returns its signed id' do
+    sign_in build_user(client: build_client)
+
+    assert_difference 'ActiveStorage::Blob.count', 1 do
+      post upload_image_email_templates_path, params: { file: png_upload }
+    end
+
+    assert_response :success
+    assert ActiveStorage::Blob.find_signed(response.parsed_body['signed_id'])
+  end
+
+  test 'upload_image rejects files that are not images' do
+    sign_in build_user(client: build_client)
+    file = Rack::Test::UploadedFile.new(StringIO.new('<svg/>'), 'image/svg+xml', original_filename: 'x.svg')
+
+    assert_no_difference 'ActiveStorage::Blob.count' do
+      post upload_image_email_templates_path, params: { file: file }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test 'saving a template attaches the uploaded block images to it' do
     client = build_client
-    template = EmailTemplate.create!(valid_params.merge(client: client))
-    template.image_bottom.attach(io: StringIO.new('fake'), filename: 'banner.png', content_type: 'image/png')
     sign_in build_user(client: client)
+    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new('img'), filename: 'a.png', content_type: 'image/png')
+    blocks = [{ type: 'image', image_id: blob.signed_id }]
 
-    patch email_template_path(template), params: { email_template: { remove_image_bottom: '1' } }
+    post email_templates_path, params: { email_template: valid_params.merge(blocks_json: blocks.to_json) }
 
-    assert_not template.reload.image_bottom.attached?
+    assert_includes EmailTemplate.last.block_images.blobs, blob
   end
 
   test 'destroy removes the template' do

@@ -1,0 +1,18 @@
+<% title 'Meus limites' %>
+
+<%= render 'account/tabs' %>
+
+<% if @client %>
+  <div class="limits-grid">
+    <%= render 'account/meter', usage: @usage, channel: 'whatsapp', title: 'Mensagens de WhatsApp',
+               icon: 'fa-brands fa-whatsapp', note: 'Enviadas pela plataforma (atendimento, automações e IA).' %>
+    <%= render 'account/meter', usage: @usage, channel: 'email', title: 'E-mails',
+               icon: 'fa-solid fa-envelope', note: 'E-mails enviados pelas suas automações e campanhas.' %>
+  </div>
+  <p class="limits-footnote">
+    <i class="fa-solid fa-circle-info"></i>
+    Os limites são diários e reiniciam à meia-noite. Precisa de mais? Fale com a gente.
+  </p>
+<% else %>
+  <%= render 'account/no_client' %>
+<% end %>

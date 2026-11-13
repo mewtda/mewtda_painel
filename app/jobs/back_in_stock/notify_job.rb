@@ -10,6 +10,8 @@ module BackInStock
     private
 
     def deliver(alert, snapshot)
+      return alert.unsubscribe! if EmailSuppression.suppressed?(alert.client, alert.email)
+
       template = alert.client.back_in_stock_setting&.email_template
       return unless template
 
@@ -21,19 +23,18 @@ module BackInStock
 
     def send_email(alert, message)
       Ses::SendEmailService.new(alert.client).call(to: alert.email, subject: message.subject,
-                                                   html_body: message.html, text_body: message.text)
+                                                   html_body: message.html, text_body: message.text,
+                                                   unsubscribe_url: message.unsubscribe_url)
     end
 
     def message_for(alert, template, snapshot)
       EmailTemplates::Message.new(
         template,
         variables: { produto: snapshot['title'], variacao: snapshot['variant'], loja: alert.client.name },
-        product: { title: snapshot['title'], variant: snapshot['variant'] },
-        image_url: snapshot['image'],
-        image_bottom_url: attachment_url(template.image_bottom),
+        product: { title: snapshot['title'], variant: snapshot['variant'], image: snapshot['image'], url: alert.product_url },
+        default_url: alert.product_url,
         logo_url: attachment_url(alert.client.logo),
-        button_url: alert.product_url,
-        unsubscribe_url: alert.unsubscribe_url
+        unsubscribe_url: EmailSuppression.unsubscribe_url(alert.client, alert.email)
       )
     end
 

@@ -1,0 +1,3 @@
+<h1 style="margin: 0; font-size: <%= message.heading_size(block) %>px; line-height: 1.25; text-align: <%= block['align'] %>; color: <%= message.text_color(block) %>; font-family: <%= message.font_family %>;">
+  <%= message.interpolate(block['text']) %>
+</h1>

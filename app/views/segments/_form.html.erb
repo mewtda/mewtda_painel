@@ -1,0 +1,64 @@
+<%= form_with model: segment, scope: :segment, url: (segment.persisted? ? segment_path(segment) : segments_path),
+              method: (segment.persisted? ? :patch : :post), id: 'sg-form', class: 'sg-form' do |form| %>
+  <%= form.hidden_field :kind %>
+  <%= hidden_field_tag 'segment[rules_json]', segment.rules.to_json, id: 'sg-rules' %>
+  <script type="application/json" id="sg-schema"><%= raw json_escape(Segments::Rules.schema.merge(
+        segments: current_segments.reject { |s| s.id == segment.id }.map { |s| { id: s.id, name: "#{s.kind_label}: #{s.name}" } }
+      ).to_json) %></script>
+
+  <div class="sg-head">
+    <%= link_to segments_path, class: 'cx-link', title: 'Voltar' do %><i class="fa-solid fa-chevron-left"></i><% end %>
+    <div class="sg-head__name">
+      <%= form.text_field :name, class: 'sg-title-input', placeholder: segment.static? ? 'Nome da lista' : 'Nome do segmento', required: true %>
+      <%= form.text_field :description, class: 'sg-desc-input', placeholder: 'Descrição (opcional)' %>
+    </div>
+    <span class="sg-kind sg-kind--<%= segment.kind %>"><%= segment.kind_label %></span>
+    <%= form.button class: 'crm-btn crm-btn--primary' do %>
+      <i class="fa-solid fa-floppy-disk"></i> <%= segment.static? ? 'Salvar lista' : 'Salvar segmento' %>
+    <% end %>
+  </div>
+
+  <% if segment.errors.any? %>
+    <div class="users-form-page__errors">
+      <div class="users-form-page__errors-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <ul><% segment.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <% if segment.static? %>
+    <div class="crm-card sg-static-hint">
+      <i class="fa-solid fa-list-check"></i>
+      <div>
+        <strong>Lista estática</strong>
+        <p class="cx-muted">
+          Depois de salvar, vá na <%= link_to 'Área de clientes', customers_path %>, marque os clientes (ou use
+          "Selecionar todos do filtro") e clique em <em>Adicionar à lista</em>.
+          <% if segment.persisted? %>Hoje a lista tem <strong><%= segment.segment_memberships.count %></strong> clientes.<% end %>
+        </p>
+      </div>
+    </div>
+  <% else %>
+    <div class="sg-layout" id="sg-builder" data-preview-url="<%= preview_segments_path(id: segment.id) %>">
+      <div class="sg-groups">
+        <div id="sg-groups"></div>
+        <button type="button" class="crm-btn sg-add-group" id="sg-add-group">
+          <i class="fa-solid fa-plus"></i> Adicionar grupo <span class="cx-muted">(OU)</span>
+        </button>
+        <p class="cx-muted sg-legend">
+          Dentro de um grupo o cliente precisa atender <strong>todas</strong> as condições (E). Entre grupos, basta atender <strong>um</strong> deles (OU).
+        </p>
+      </div>
+
+      <aside class="crm-card sg-summary">
+        <h3>Resumo do seu segmento</h3>
+        <div class="sg-summary__count" id="sg-count">0</div>
+        <div>clientes encontrados</div>
+        <div class="cx-muted" id="sg-percent">Representando 0% da sua base</div>
+        <div class="sg-summary__bar"><div id="sg-bar"></div></div>
+        <div class="sg-summary__sample" id="sg-sample"></div>
+        <button type="button" class="crm-btn" id="sg-calc"><i class="fa-solid fa-calculator"></i> Calcular segmento</button>
+      </aside>
+    </div>
+    <%= javascript_include_tag 'segments', defer: true %>
+  <% end %>
+<% end %>

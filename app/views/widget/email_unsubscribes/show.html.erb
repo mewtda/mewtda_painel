@@ -1,0 +1,13 @@
+<% content_for :title, 'Cancelar inscrição' %>
+
+<p class="notice__store"><%= @client.name %></p>
+<% if @already_unsubscribed %>
+  <h1 class="notice__title">Você já está descadastrado</h1>
+  <p class="notice__text"><strong><%= @email %></strong> não recebe mais e-mails da <%= @client.name %>.</p>
+<% else %>
+  <h1 class="notice__title">Não quer mais receber nossos e-mails?</h1>
+  <p class="notice__text">
+    Ao confirmar, <strong><%= @email %></strong> entra na nossa lista de recusa e não recebe mais nenhum e-mail da <%= @client.name %>.
+  </p>
+  <%= button_to 'Confirmar descadastro', widget_email_unsubscribe_path(token: params[:token]), class: 'notice__button' %>
+<% end %>

@@ -1,0 +1,11 @@
+<% links = EmailTemplates::Message::SOCIAL_LABELS.filter_map { |key, label| [label, block[key]] if block[key].present? } %>
+<% social_color = message.color(block['color'], message.design['text_color']) %>
+<% if links.any? %>
+  <div style="text-align: <%= block['align'] %>;">
+    <% links.each do |label, url| %>
+      <a href="<%= url %>" target="_blank" style="display: inline-block; margin: 4px; padding: 8px 14px; border: 1px solid <%= social_color %>; border-radius: 999px; font-size: 13px; font-weight: bold; color: <%= social_color %>; text-decoration: none;"><%= label %></a>
+    <% end %>
+  </div>
+<% elsif message.preview? %>
+  <span class="email-placeholder">Redes sociais — adicione os links</span>
+<% end %>

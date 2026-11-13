@@ -1,0 +1,31 @@
+<% product = message.product %>
+<% if product %>
+  <% href = message.link(product[:url]) %>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #eeeeee; border-radius: 10px; overflow: hidden;">
+    <tr>
+      <% if product[:image].present? %>
+        <td class="email-column" width="40%" valign="top" style="padding: 0;">
+          <img src="<%= product[:image] %>" alt="<%= product[:title] %>" width="216" class="email-side-image"
+               style="display: block; width: 100%; height: 100%; min-height: 200px; object-fit: cover; border: 0;">
+        </td>
+      <% end %>
+      <td class="email-column" valign="middle" style="padding: 20px 22px;">
+        <p style="margin: 0 0 6px; font-size: 17px; font-weight: bold; color: <%= message.design['text_color'] %>;"><%= product[:title] %></p>
+        <% if product[:variant].present? %>
+          <p style="margin: 0 0 16px; font-size: 14px; color: #666666;">Variação: <%= product[:variant] %></p>
+        <% end %>
+        <% if href %>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="border-radius: <%= message.button_radius %>px; background: <%= message.color(block['color']) %>;">
+                <a href="<%= href %>" target="_blank" style="display: inline-block; padding: 12px 26px; font-size: 14px; font-weight: bold; color: #ffffff; text-decoration: none;">
+                  <%= message.interpolate(block['button_text']).presence || 'Comprar agora' %>
+                </a>
+              </td>
+            </tr>
+          </table>
+        <% end %>
+      </td>
+    </tr>
+  </table>
+<% end %>

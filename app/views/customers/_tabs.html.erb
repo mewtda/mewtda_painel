@@ -1,0 +1,11 @@
+<div class="popups-tabs">
+  <%= link_to customers_path, class: "popups-tabs__link #{'active' if controller_name == 'customers' && action_name != 'rfm'}" do %>
+    <i class="fa-solid fa-users"></i> Clientes
+  <% end %>
+  <%= link_to segments_path, class: "popups-tabs__link #{'active' if controller_name == 'segments'}" do %>
+    <i class="fa-solid fa-layer-group"></i> Segmentos e listas
+  <% end %>
+  <%= link_to rfm_customers_path, class: "popups-tabs__link #{'active' if action_name == 'rfm'}" do %>
+    <i class="fa-solid fa-table-cells-large"></i> Matriz RFM
+  <% end %>
+</div>

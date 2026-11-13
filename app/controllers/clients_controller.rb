@@ -84,7 +84,7 @@ class ClientsController < ApplicationController
       :whatsapp_cloud_phone_number_id, :whatsapp_cloud_business_account_id, :whatsapp_cloud_access_token,
       :meta_access_token, :meta_ad_account_id,
       :google_ads_customer_id, :auto_reply_enabled, :openai_api_key, :openai_model, :auto_reply_instructions,
-      :logo
+      :logo, :plan_name, :plan_price, :daily_whatsapp_limit, :daily_email_limit
     )
   end
 end

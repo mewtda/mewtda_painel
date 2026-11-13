@@ -1,0 +1,24 @@
+<% title 'Segmentos sugeridos' %>
+
+<div class="clients-wrapper cx-page">
+  <%= render 'customers/tabs' %>
+
+  <div class="sg-templates-head">
+    <%= link_to segments_path, class: 'cx-link' do %><i class="fa-solid fa-chevron-left"></i> Segmentos<% end %>
+    <h2>Segmentos sugeridos</h2>
+    <%= link_to new_segment_path, class: 'crm-btn crm-btn--primary' do %><i class="fa-solid fa-plus"></i> Criar do zero<% end %>
+  </div>
+
+  <div class="sg-templates">
+    <% @templates.each do |key, template| %>
+      <%= link_to new_segment_path(template: key), class: 'sg-template crm-card' do %>
+        <div class="sg-template__top">
+          <span class="sg-template__icon"><i class="fa-solid <%= template[:icon] %>"></i></span>
+          <strong><%= template[:name] %></strong>
+          <% if template[:popular] %><span class="sg-template__badge">Popular</span><% end %>
+        </div>
+        <p><%= template[:description] %></p>
+      <% end %>
+    <% end %>
+  </div>
+</div>

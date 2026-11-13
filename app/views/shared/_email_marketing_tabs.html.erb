@@ -1,4 +1,5 @@
 <div class="popups-tabs">
   <%= link_to 'Templates', email_templates_path, class: "popups-tabs__link #{'active' if request.path.start_with?(email_templates_path)}" %>
+  <%= link_to 'Lista de recusa', email_suppressions_path, class: "popups-tabs__link #{'active' if request.path.start_with?(email_suppressions_path)}" %>
   <%= link_to 'Configuração', edit_email_configuration_path, class: "popups-tabs__link #{'active' if current_page?(edit_email_configuration_path)}" %>
 </div>

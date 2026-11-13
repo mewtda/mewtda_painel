@@ -1,4 +1,7 @@
 module Widget
+  # Links de descadastro enviados antes da lista de recusa existir. Hoje o
+  # rodapé usa EmailUnsubscribesController; aqui o efeito é o mesmo: o e-mail
+  # entra na lista de recusa e todos os avisos pendentes dele são cancelados.
   class BackInStockUnsubscribesController < ApplicationController
     skip_before_action :authenticate_user!, :redirect_affiliate_to_events!
 
@@ -9,7 +12,7 @@ module Widget
     def show; end
 
     def create
-      @alert.unsubscribe!
+      EmailSuppression.unsubscribe!(@alert.client, @alert.email)
       render :done
     end
 

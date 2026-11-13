@@ -1,0 +1,81 @@
+<% title 'Segmentos' %>
+
+<div class="clients-wrapper cx-page">
+  <%= render 'customers/tabs' %>
+
+  <div class="clients-table-wrap">
+    <div class="clients-table-header">
+      <span class="clients-table-header__title"><i class="fa-solid fa-layer-group"></i> Segmentos e listas</span>
+      <div class="sg-header-actions">
+        <%= form_with url: segments_path, method: :get, class: 'cx-search' do %>
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <%= search_field_tag :q, params[:q], class: 'crm-input', placeholder: 'Buscar' %>
+        <% end %>
+        <details class="sg-create">
+          <summary class="crm-btn crm-btn--primary"><i class="fa-solid fa-plus"></i> Criar segmento</summary>
+          <div class="sg-create__menu">
+            <%= link_to templates_segments_path do %>
+              <strong>Criar segmento</strong><small>Grupo dinâmico, atualizado pelas regras que você definir</small>
+            <% end %>
+            <%= link_to new_segment_path(kind: 'static') do %>
+              <strong>Criar lista</strong><small>Lista estática: você escolhe os clientes na Área de clientes</small>
+            <% end %>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Descrição</th>
+          <th>Tipo</th>
+          <th>Total de clientes</th>
+          <th>Última edição</th>
+          <th class="text-center">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @segments.each do |segment| %>
+          <tr>
+            <td><%= link_to segment.name, customers_path(segment_id: segment.id), class: 'cx-link' %></td>
+            <td class="cx-muted"><%= segment.description.presence || '—' %></td>
+            <td><span class="sg-kind sg-kind--<%= segment.kind %>"><%= segment.kind_label %></span></td>
+            <td class="cx-nowrap">
+              <% if segment.customers_count %>
+                <strong><%= number_with_delimiter(segment.customers_count, delimiter: '.') %></strong> clientes
+                <small class="cx-muted"><%= @base_total.zero? ? 0 : number_with_precision(segment.customers_count * 100.0 / @base_total, precision: 1, separator: ',') %>%</small>
+              <% else %>—<% end %>
+              <%= button_to recount_segment_path(segment), class: 'cx-icon-btn', title: 'Recalcular', form_class: 'cx-inline' do %>
+                <i class="fa-solid fa-rotate"></i>
+              <% end %>
+            </td>
+            <td class="cx-nowrap"><%= l(segment.updated_at.to_date, format: '%d/%m/%Y') %></td>
+            <td class="text-center">
+              <div class="clients-table__actions">
+                <%= link_to customers_path(segment_id: segment.id), class: 'crm-btn clients-btn--icon', title: 'Ver clientes' do %>
+                  <i class="fa-solid fa-users"></i>
+                <% end %>
+                <%= link_to edit_segment_path(segment), class: 'crm-btn clients-btn--icon', title: 'Editar' do %>
+                  <i class="fa-solid fa-pen"></i>
+                <% end %>
+                <%= button_to segment_path(segment), method: :delete, class: 'crm-btn clients-btn--icon clients-btn--danger', title: 'Excluir',
+                    form: { onsubmit: "return confirm('Excluir #{j segment.name}?');" } do %>
+                  <i class="fa-solid fa-trash-can"></i>
+                <% end %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+        <% if @segments.empty? %>
+          <tr>
+            <td colspan="6" class="clients-table__empty">
+              Nenhum segmento ainda. <%= link_to 'Comece por um dos sugeridos', templates_segments_path %>.
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

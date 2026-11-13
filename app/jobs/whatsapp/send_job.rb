@@ -13,6 +13,11 @@ module Whatsapp
           message.update!(state: 'failed', error_code: 'number_unavailable_or_access_revoked')
           return
         end
+        # Limite diário de mensagens do cliente (definido pelo admin no cadastro do cliente).
+        if Billing::Usage.new(connection.client).limit_reached?('whatsapp')
+          message.update!(state: 'failed', error_code: 'daily_limit_reached')
+          return
+        end
         message.update!(state: 'sending', attempted_at: Time.current, error_code: nil)
       end
       # Durable sending marker survives a timeout, worker kill or transaction rollback.

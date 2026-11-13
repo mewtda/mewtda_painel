@@ -16,8 +16,11 @@ module Segments
     BOOL_OPS = { 'yes' => 'Sim', 'no' => 'Não' }.freeze
     SEGMENT_OPS = { 'in' => 'Faz parte', 'not_in' => 'Não faz parte' }.freeze
 
+    MARKETING_STATES = { 'subscribed' => 'Inscrito', 'not_subscribed' => 'Não inscrito', 'pending' => 'Pendente',
+                         'unsubscribed' => 'Cancelou a inscrição', 'unknown' => 'Sem informação' }.freeze
+
     OPS = { number: NUMBER_OPS, money: NUMBER_OPS, date: DATE_OPS, text: TEXT_OPS, rfm: LIST_OPS, bool: BOOL_OPS,
-            segment: SEGMENT_OPS }.freeze
+            segment: SEGMENT_OPS, marketing: LIST_OPS }.freeze
 
     P = 'customer_profiles'.freeze
 
@@ -47,6 +50,7 @@ module Segments
       'has_phone' => { group: 'Dados do cliente', label: 'Tem telefone', type: :bool, sql: "#{P}.phone IS NOT NULL" },
       # Marketing
       'popup' => { group: 'Marketing', label: 'Se cadastrou no pop-up', type: :bool, exists: :popup },
+      'email_marketing' => { group: 'Marketing', label: 'Marketing por e-mail', type: :marketing, column: "#{P}.email_marketing_state" },
       'suppressed' => { group: 'Marketing', label: 'Está na lista de recusa de e-mail', type: :bool, exists: :suppressed },
       # Listas/Segmentos
       'segment' => { group: 'Listas/Segmentos', label: 'Faz parte do segmento/lista', type: :segment }
@@ -80,7 +84,7 @@ module Segments
       return unless field && OPS.fetch(field[:type]).key?(cond['op'].to_s)
 
       value = cond['value']
-      value = Array(value).map(&:to_s).first(20) if field[:type] == :rfm
+      value = Array(value).map(&:to_s).first(20) if field[:type].in?(%i[rfm marketing])
       { 'field' => cond['field'].to_s, 'op' => cond['op'].to_s,
         'value' => value.is_a?(Array) ? value : value.to_s.strip.first(200),
         'value2' => cond['value2'].to_s.strip.first(200) }
@@ -91,7 +95,8 @@ module Segments
       {
         fields: FIELDS.map { |key, f| { key:, group: f[:group], label: f[:label], type: f[:type] } },
         ops: OPS.transform_values { |ops| ops.map { |k, l| { key: k, label: l } } },
-        rfm: CustomerProfile::RFM_SEGMENTS.map { |k, v| { key: k, label: v[:label] } }
+        rfm: CustomerProfile::RFM_SEGMENTS.map { |k, v| { key: k, label: v[:label] } },
+        marketing: MARKETING_STATES.map { |k, label| { key: k, label: } }
       }
     end
 
@@ -145,6 +150,7 @@ module Segments
       when :date then date_sql(column, cond)
       when :text then text_sql(column, cond)
       when :rfm then rfm_sql(column, cond)
+      when :marketing then marketing_sql(column, cond)
       end
     end
 
@@ -202,6 +208,18 @@ module Segments
 
       sql = "#{column} IN (#{bind(values)})"
       cond['op'] == 'not_in' ? "(#{column} IS NULL OR NOT #{sql})" : sql
+    end
+
+    def marketing_sql(column, cond)
+      values = Array(cond['value']) & MARKETING_STATES.keys
+      return if values.empty?
+
+      known = values - ['unknown']
+      parts = []
+      parts << "#{column} IN (#{bind(known)})" if known.any?
+      parts << "#{column} IS NULL" if values.include?('unknown')
+      matching = "(#{parts.join(' OR ')})"
+      cond['op'] == 'not_in' ? "NOT COALESCE(#{matching}, FALSE)" : matching
     end
 
     ORDERS_OF_CUSTOMER = "SELECT 1 FROM orders o WHERE o.client_id = #{P}.client_id " \

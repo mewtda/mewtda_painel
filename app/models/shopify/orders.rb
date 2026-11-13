@@ -298,6 +298,13 @@ class Shopify::Orders
       customer
     end
 
+    def marketing_state(data)
+      consent = data['email_marketing_consent']
+      return consent['state'].to_s.downcase if consent.is_a?(Hash) && consent['state'].present?
+
+      data['accepts_marketing'] ? 'subscribed' : 'not_subscribed' if data.key?('accepts_marketing')
+    end
+
     def assign_full_customer_data(customer, shopify_customer)
       data = shopify_customer.respond_to?(:as_json) ? shopify_customer.as_json : shopify_customer
 
@@ -313,6 +320,7 @@ class Shopify::Orders
         orders_count: data['orders_count'],
         total_spent: data['total_spent'],
         verified_email: data['verified_email'],
+        email_marketing_state: marketing_state(data),
         tax_exempt: data['tax_exempt'],
         shopify_created_at: data['created_at'],
         shopify_updated_at: data['updated_at']

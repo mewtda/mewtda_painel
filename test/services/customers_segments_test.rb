@@ -137,4 +137,72 @@ class CustomersSegmentsTest < ActiveSupport::TestCase
       assert_nothing_raised { segment.profiles.count }
     end
   end
+
+  def person(first_name, email: nil, phone: nil, marketing: nil)
+    Customer.create!(first_name:, email:, phone:, email_marketing_state: marketing, shopify_customer_id: SecureRandom.hex(6))
+  end
+
+  test 'registrations with the same e-mail become one profile on the oldest customer' do
+    old = person('Bruna', email: 'Bruna@Example.com')
+    recent = person('Bruna', email: 'bruna@example.com')
+    order(old, total: 100, at: 30.days.ago)
+    order(recent, total: 200, at: 2.days.ago)
+
+    assert_equal 1, refresh
+    profile = @client.customer_profiles.sole
+    assert_equal old.id, profile.customer_id
+    assert_equal [old.id, recent.id].sort, profile.merged_customer_ids.sort
+    assert_equal 2, profile.orders_count
+    assert_equal 300, profile.total_spent
+  end
+
+  test 'without e-mail it merges by phone only when the first name also matches' do
+    a = person('Carla', phone: '+55 11 97085-4645')
+    b = person('Carla', phone: '(11) 970854645')
+    c = person('Marina', phone: '11970854645')
+    [a, b, c].each { |customer| order(customer, total: 100, at: 5.days.ago) }
+
+    assert_equal 2, refresh
+    assert_equal [1, 2], @client.customer_profiles.pluck(:orders_count).sort
+  end
+
+  test 'keeps the most restrictive marketing state among merged registrations' do
+    person_a = person('Dani', email: 'dani@example.com', marketing: 'subscribed')
+    person_b = person('Dani', email: 'dani@example.com', marketing: 'unsubscribed')
+    order(person_a, total: 10, at: 3.days.ago)
+    order(person_b, total: 10, at: 2.days.ago)
+    refresh
+
+    assert_equal 'unsubscribed', @client.customer_profiles.sole.email_marketing_state
+  end
+
+  test 'marketing rule filters by state and treats missing as unknown' do
+    subscribed = person('Eva', email: 'eva@example.com', marketing: 'subscribed')
+    other = person('Gil', email: 'gil@example.com', marketing: 'not_subscribed')
+    unknown = person('Hugo', email: 'hugo@example.com')
+    [subscribed, other, unknown].each { |customer| order(customer, total: 10, at: 3.days.ago) }
+    refresh
+
+    in_rule = rules('field' => 'email_marketing', 'op' => 'in', 'value' => %w[subscribed])
+    assert_equal ['eva@example.com'], matching(in_rule)
+    unknown_rule = rules('field' => 'email_marketing', 'op' => 'in', 'value' => %w[unknown])
+    assert_equal ['hugo@example.com'], matching(unknown_rule)
+    not_rule = rules('field' => 'email_marketing', 'op' => 'not_in', 'value' => %w[subscribed])
+    assert_equal %w[gil@example.com hugo@example.com], matching(not_rule)
+  end
+
+  test 'duplicating copies the rules of a segment and the members of a list' do
+    dynamic = @client.segments.create!(name: 'Fieis', kind: 'dynamic', rules: rules('field' => 'orders_count', 'op' => 'gte', 'value' => '3'))
+    ana = person('Ana', email: 'ana@example.com')
+    list = @client.segments.create!(name: 'VIPs', kind: 'static')
+    SegmentMembership.create!(segment: list, customer: ana)
+
+    copy = dynamic.duplicate!
+    list_copy = list.duplicate!
+
+    assert_equal 'Cópia de Fieis', copy.name
+    assert_equal dynamic.rules, copy.rules
+    assert_equal [ana.id], list_copy.segment_memberships.pluck(:customer_id)
+    assert_not_equal list.id, list_copy.id
+  end
 end

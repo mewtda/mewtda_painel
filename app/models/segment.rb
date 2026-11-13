@@ -27,7 +27,11 @@ class Segment < ApplicationRecord
   # Perfis (CustomerProfile) da loja que estão no segmento.
   def profiles(depth: 0, exclude_ids: [id].compact)
     if static?
-      CustomerProfile.where(client_id:, customer_id: segment_memberships.select(:customer_id))
+      ids = segment_memberships.pluck(:customer_id)
+      CustomerProfile.where(client_id:).where(
+        'customer_profiles.customer_id IN (:ids) OR customer_profiles.merged_customer_ids && ARRAY[:ids]::bigint[]',
+        ids: ids.presence || [0]
+      )
     else
       Segments::Rules.new(client, rules, depth:, exclude_ids:).scope
     end
@@ -37,8 +41,22 @@ class Segment < ApplicationRecord
     profiles(depth:, exclude_ids:).select(:customer_id).to_sql
   end
 
+  def duplicate!
+    copy = client.segments.create!(name: "Cópia de #{name}".first(120), description:, kind:, rules:)
+    if static?
+      now = Time.current
+      rows = segment_memberships.pluck(:customer_id).map do |customer_id|
+        { segment_id: copy.id, customer_id:, created_at: now, updated_at: now }
+      end
+      SegmentMembership.insert_all(rows) if rows.any?
+    end
+    copy.tap(&:recount!)
+  end
+
   def recount!
-    update_columns(customers_count: profiles.count, counted_at: Time.current)
+    scope = profiles
+    update_columns(customers_count: scope.count, subscribed_count: scope.where(email_marketing_state: 'subscribed').count,
+                   counted_at: Time.current)
   end
 
   private

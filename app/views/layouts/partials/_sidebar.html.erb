@@ -82,17 +82,26 @@
         </details>
       <% end %>
 
-      <% clientes_active = request.path.start_with?(customers_path) || request.path.start_with?(segments_path) %>
-      <details class="crm-sidebar__submenu" <%= 'open' if clientes_active %>>
+      <% loja_active = request.path.start_with?(orders_path) || request.path.start_with?(products_path) ||
+                        request.path.start_with?(customers_path) || request.path.start_with?(segments_path) %>
+      <details class="crm-sidebar__submenu" <%= 'open' if loja_active %>>
         <summary class="crm-sidebar__link crm-sidebar__link--parent">
-          <i class="fa-solid fa-users crm-fa"></i>
-          Clientes
+          <i class="fa-solid fa-store crm-fa"></i>
+          Loja
           <i class="fa-solid fa-chevron-down crm-sidebar__submenu-chevron"></i>
         </summary>
         <div class="crm-sidebar__submenu-body">
+          <%= link_to orders_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(orders_path)}" do %>
+            <i class="fa-solid fa-box crm-fa"></i>
+            Pedidos
+          <% end %>
           <%= link_to customers_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path == customers_path}" do %>
             <i class="fa-solid fa-address-book crm-fa"></i>
-            Área de clientes
+            Clientes
+          <% end %>
+          <%= link_to products_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(products_path)}" do %>
+            <i class="fa-solid fa-bag-shopping crm-fa"></i>
+            Produtos
           <% end %>
           <%= link_to segments_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(segments_path)}" do %>
             <i class="fa-solid fa-layer-group crm-fa"></i>
@@ -105,8 +114,7 @@
         </div>
       </details>
 
-      <% operacoes_active = request.path.start_with?(orders_path) ||
-                             request.path.start_with?(products_path) || request.path.start_with?(back_in_stock_path) %>
+      <% operacoes_active = request.path.start_with?(back_in_stock_path) %>
       <details class="crm-sidebar__submenu" <%= 'open' if operacoes_active %>>
         <summary class="crm-sidebar__link crm-sidebar__link--parent">
           <i class="fa-solid fa-boxes-stacked crm-fa"></i>
@@ -114,11 +122,6 @@
           <i class="fa-solid fa-chevron-down crm-sidebar__submenu-chevron"></i>
         </summary>
         <div class="crm-sidebar__submenu-body">
-          <% loja_active = request.path.start_with?(orders_path) || request.path.start_with?(products_path) %>
-          <%= link_to orders_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if loja_active}" do %>
-            <i class="fa-solid fa-store crm-fa"></i>
-            Loja
-          <% end %>
           <%= link_to back_in_stock_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(back_in_stock_path)}" do %>
             <i class="fa-solid fa-bell crm-fa"></i>
             De volta ao estoque
@@ -176,7 +179,7 @@
 
           <%= link_to email_templates_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(email_templates_path) || request.path.start_with?(email_suppressions_path) || request.path.start_with?('/crm/email_configuration')}" do %>
             <i class="fa-solid fa-envelope-open-text crm-fa"></i>
-            E-mail
+            Modelos de e-mail
           <% end %>
 
           <%= link_to affiliates_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(affiliates_path)}" do %>

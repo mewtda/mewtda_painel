@@ -208,7 +208,7 @@ class EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
       true
     end
 
-    Ses::SendEmailService.stub(:new, sender) do
+    Ses::SendEmailService.stub(:new, ->(_client) { sender }) do
       post send_test_email_templates_path, params: { email_template: valid_params, test_email: 'ana@example.com' }
     end
 

@@ -37,7 +37,7 @@ class EmailSuppressionTest < ActiveSupport::TestCase
     client = build_client
     token = EmailSuppression.unsubscribe_token(client, 'Ana@example.com')
 
-    assert_equal [client, 'ana@example.com'], EmailSuppression.resolve_token(token)
+    assert_equal [client, 'ana@example.com', nil], EmailSuppression.resolve_token(token)
     assert_nil EmailSuppression.resolve_token("#{token}x")
     assert_nil EmailSuppression.resolve_token(nil)
     assert_no_match %r{[/+=]}, token

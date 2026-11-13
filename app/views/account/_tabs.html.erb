@@ -1,0 +1,11 @@
+<div class="popups-tabs account-tabs">
+  <%= link_to edit_account_path, class: "popups-tabs__link #{'active' if action_name.in?(%w[edit update])}" do %>
+    <i class="fa-solid fa-user"></i> Minha conta
+  <% end %>
+  <%= link_to limits_account_path, class: "popups-tabs__link #{'active' if action_name == 'limits'}" do %>
+    <i class="fa-solid fa-gauge-high"></i> Meus limites
+  <% end %>
+  <%= link_to invoice_account_path, class: "popups-tabs__link #{'active' if action_name == 'invoice'}" do %>
+    <i class="fa-solid fa-file-invoice-dollar"></i> Fatura
+  <% end %>
+</div>

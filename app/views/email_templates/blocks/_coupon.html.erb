@@ -1,0 +1,9 @@
+<% coupon_color = message.color(block['color']) %>
+<div style="text-align: center;">
+  <% if block['label'].present? %>
+    <p style="margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: <%= message.design['text_color'] %>; opacity: 0.7;"><%= message.interpolate(block['label']) %></p>
+  <% end %>
+  <div style="display: inline-block; padding: 12px 22px; border: 2px dashed <%= coupon_color %>; border-radius: 8px; font-size: 20px; font-weight: bold; letter-spacing: 0.12em; color: <%= coupon_color %>;">
+    <%= message.interpolate(block['code']).presence || 'CUPOM' %>
+  </div>
+</div>

@@ -1,21 +1,23 @@
 <% title 'Novo e-mail' %>
 
 <div class="email-templates-gallery">
-  <p class="email-templates-gallery__label">Comece a partir de um template pronto (você pode editar tudo depois):</p>
+  <p class="email-templates-gallery__label">Comece de um modelo pronto ou do zero — depois é só arrastar, trocar e reorganizar os blocos:</p>
   <div class="email-templates-gallery__grid">
-    <%= link_to new_email_template_path, class: "email-templates-gallery__card #{'active' unless params[:preset]}" do %>
-      <span class="email-templates-gallery__card-icon">＋</span>
-      <span class="email-templates-gallery__card-name">Em branco</span>
-    <% end %>
-    <% EmailTemplate::PRESETS.each do |key, preset| %>
-      <%= link_to new_email_template_path(preset: key), class: "email-templates-gallery__card #{'active' if params[:preset] == key.to_s}" do %>
-        <span class="email-templates-gallery__card-icon email-templates-gallery__card-icon--<%= preset[:layout] %>"></span>
+    <% gallery = { nil => { name: 'Em branco', blocks: EmailTemplate::BLANK[:blocks] } }.merge(EmailTemplate::PRESETS) %>
+    <% gallery.each do |key, preset| %>
+      <% active = key.nil? ? params[:preset].blank? : params[:preset] == key.to_s %>
+      <%= link_to new_email_template_path(preset: key), class: "email-templates-gallery__card #{'active' if active}" do %>
+        <span class="eb-thumb" aria-hidden="true">
+          <% preset[:blocks].each do |block| %>
+            <span class="eb-thumb__block eb-thumb__block--<%= block['type'] %>"></span>
+          <% end %>
+        </span>
         <span class="email-templates-gallery__card-name"><%= preset[:name] %></span>
       <% end %>
     <% end %>
   </div>
 </div>
 
-<div class="users-form-page email-templates-layout">
+<div class="eb-page">
   <%= render 'form', email_template: @email_template %>
 </div>

@@ -1,0 +1,26 @@
+<% items = block['items'].presence || [] %>
+<% if items.any? %>
+  <% width = (100.0 / items.size).round(2) %>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <% items.each do |item| %>
+        <% src = message.image_url(item['image_id']) %>
+        <% href = message.link(item['link']) if item['link'].present? %>
+        <td class="email-column" width="<%= width %>%" valign="top" align="center" style="padding: 6px;">
+          <% if src %>
+            <% img = tag.img(src: src, alt: message.interpolate(item['caption']), width: 180,
+                             style: 'display: block; width: 100%; height: auto; border: 0; border-radius: 8px;') %>
+            <%= href ? link_to(img, href, target: '_blank') : img %>
+          <% elsif message.preview? %>
+            <span class="email-placeholder">🖼️</span>
+          <% end %>
+          <% if item['caption'].present? %>
+            <p style="margin: 8px 0 0; font-size: 14px; font-weight: bold; color: <%= message.design['text_color'] %>;">
+              <% if href %><a href="<%= href %>" target="_blank" style="color: inherit; text-decoration: none;"><%= message.interpolate(item['caption']) %></a><% else %><%= message.interpolate(item['caption']) %><% end %>
+            </p>
+          <% end %>
+        </td>
+      <% end %>
+    </tr>
+  </table>
+<% end %>

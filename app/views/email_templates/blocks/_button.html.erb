@@ -1,0 +1,14 @@
+<% href = message.link(block['link']) %>
+<% base = message.color(block['color']) %>
+<% filled = block['style'] == 'filled' %>
+<% label_color = filled ? message.color(block['text_color'], '#ffffff') : base %>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="<%= block['align'] %>"<% if block['full'] %> width="100%"<% end %>>
+  <tr>
+    <td align="center" style="border-radius: <%= message.button_radius %>px; <%= filled ? "background: #{base};" : "border: 2px solid #{base};" %>">
+      <a href="<%= href || '#' %>" target="_blank"
+         style="display: <%= block['full'] ? 'block' : 'inline-block' %>; padding: 14px 32px; font-size: 15px; font-weight: bold; color: <%= label_color %>; text-decoration: none; border-radius: <%= message.button_radius %>px; font-family: <%= message.font_family %>;">
+        <%= message.interpolate(block['text']).presence || 'Botão' %>
+      </a>
+    </td>
+  </tr>
+</table>

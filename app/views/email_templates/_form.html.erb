@@ -1,11 +1,14 @@
-<div class="users-form-page__card email-templates-layout__form">
+<%= form_for email_template, as: :email_template,
+             url: (email_template.persisted? ? email_template_path(email_template) : email_templates_path),
+             method: (email_template.persisted? ? :patch : :post),
+             html: { autocomplete: 'off', id: 'email-template-form', class: 'eb-form' } do |form| %>
+  <%= hidden_field_tag 'email_template[blocks_json]', '', id: 'email-field-blocks' %>
+  <%= hidden_field_tag 'email_template[design_json]', '', id: 'email-field-design' %>
+  <script type="application/json" id="email-builder-state"><%= raw json_escape(editor_state(email_template).to_json) %></script>
+
   <% if email_template.errors.any? %>
-    <div class="users-form-page__errors">
-      <div class="users-form-page__errors-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-        </svg>
-      </div>
+    <div class="users-form-page__errors eb-errors">
+      <div class="users-form-page__errors-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
       <div>
         <strong>Corrija os erros abaixo:</strong>
         <ul>
@@ -17,115 +20,90 @@
     </div>
   <% end %>
 
-  <%= form_for email_template, as: :email_template,
-               url: (email_template.persisted? ? email_template_path(email_template) : email_templates_path),
-               method: (email_template.persisted? ? :patch : :post),
-               html: { autocomplete: 'off', multipart: true, id: 'email-template-form' } do |form| %>
-    <div class="users-form-page__body">
-
-      <div class="users-form-page__field">
-        <label class="crm-label">Ativo</label>
-        <div class="cform-toggle">
-          <%= form.check_box :active, class: 'cform-toggle__input' %>
-          <span class="cform-toggle__label">E-mail pronto pra ser usado</span>
-        </div>
-      </div>
-
-      <div class="users-form-page__field">
+  <div class="eb-topbar crm-card">
+    <div class="eb-topbar__fields">
+      <div class="eb-topbar__field">
         <%= form.label :name, 'Nome interno', class: 'crm-label' %>
         <%= form.text_field :name, class: 'crm-input', placeholder: 'Ex.: Carrinho abandonado — padrão' %>
       </div>
-
-      <div class="users-form-page__field">
+      <div class="eb-topbar__field eb-topbar__field--wide">
         <%= form.label :subject, 'Assunto', class: 'crm-label' %>
-        <%= form.text_field :subject, class: 'crm-input', id: 'email-field-subject', placeholder: 'O que aparece na caixa de entrada' %>
-      </div>
-
-      <div class="users-form-page__field">
-        <%= form.label :heading, 'Título', class: 'crm-label' %>
-        <%= form.text_field :heading, class: 'crm-input', id: 'email-field-heading' %>
-      </div>
-
-      <div class="users-form-page__field">
-        <%= form.label :body, 'Texto', class: 'crm-label' %>
-        <%= form.text_area :body, class: 'crm-input', rows: 4, id: 'email-field-body' %>
-        <span class="cpform-field__hint email-templates-trigger-config" data-trigger="back_in_stock">
-          Use {produto}, {variacao} e {loja} no assunto, no título e no texto.
-        </span>
-      </div>
-
-      <div class="users-form-page__row">
-        <div class="users-form-page__field">
-          <%= form.label :button_text, 'Texto do botão', class: 'crm-label' %>
-          <%= form.text_field :button_text, class: 'crm-input', id: 'email-field-button-text' %>
-        </div>
-        <div class="users-form-page__field" data-hide-for="back_in_stock">
-          <%= form.label :button_url, 'Link do botão', class: 'crm-label' %>
-          <%= form.text_field :button_url, class: 'crm-input', placeholder: 'https://...' %>
+        <div class="eb-input-with-vars">
+          <%= form.text_field :subject, class: 'crm-input', id: 'email-field-subject', placeholder: 'O que aparece na caixa de entrada' %>
         </div>
       </div>
-
-      <div class="users-form-page__field">
-        <%= form.label :coupon_code, 'Cupom (opcional)', class: 'crm-label' %>
-        <%= form.text_field :coupon_code, class: 'crm-input', id: 'email-field-coupon', placeholder: 'Ex.: VOLTA10' %>
+    </div>
+    <div class="eb-topbar__actions">
+      <div class="eb-history" role="group" aria-label="Histórico">
+        <button type="button" class="crm-btn clients-btn--icon" id="eb-undo" title="Desfazer (Ctrl+Z)" disabled><i class="fa-solid fa-rotate-left"></i></button>
+        <button type="button" class="crm-btn clients-btn--icon" id="eb-redo" title="Refazer (Ctrl+Shift+Z)" disabled><i class="fa-solid fa-rotate-right"></i></button>
       </div>
+      <label class="eb-active-toggle" title="Só e-mails ativos são disparados">
+        <%= form.check_box :active, class: 'cform-toggle__input' %>
+        <span>Ativo</span>
+      </label>
+      <%= form.button class: 'crm-btn crm-btn--primary', data: { disable_with: 'Salvando...' } do %>
+        <i class="fa-solid fa-floppy-disk"></i> Salvar e-mail
+      <% end %>
+    </div>
+  </div>
 
-      <div class="users-form-page__row">
-        <div class="users-form-page__field">
-          <%= form.label :layout, 'Layout', class: 'crm-label' %>
-          <%= form.select :layout,
-              options_for_select([
-                ['Imagem no topo', 'image_top'],
-                ['Imagem à esquerda', 'image_left'],
-                ['Imagem à direita', 'image_right'],
-                ['Banner em cima e embaixo', 'image_top_bottom'],
-                ['Banner sem imagem', 'banner']
-              ], form.object.layout),
-              {}, class: 'crm-input', id: 'email-field-layout' %>
-        </div>
-        <div class="users-form-page__field">
-          <%= form.label :accent_color, 'Cor de destaque', class: 'crm-label' %>
-          <%= form.color_field :accent_color, class: 'crm-input email-templates-color-input', id: 'email-field-color' %>
-        </div>
-      </div>
+  <div class="eb" id="email-builder">
+    <aside class="eb-panel crm-card">
+      <nav class="eb-tabs" role="tablist">
+        <button type="button" class="eb-tabs__tab active" data-tab="content"><i class="fa-solid fa-layer-group"></i> Conteúdo</button>
+        <button type="button" class="eb-tabs__tab" data-tab="style"><i class="fa-solid fa-palette"></i> Estilo</button>
+        <button type="button" class="eb-tabs__tab" data-tab="settings"><i class="fa-solid fa-sliders"></i> Envio</button>
+      </nav>
 
-      <div class="users-form-page__field" data-hide-for="back_in_stock">
-        <%= form.label :image, 'Imagem (topo) — ignorada no layout Banner sem imagem', class: 'crm-label' %>
-        <% if email_template.image.attached? %>
-          <div class="popups-image-preview">
-            <%= image_tag url_for(email_template.image), class: 'popups-image-preview__img' %>
-            <label class="cform-toggle">
-              <%= check_box_tag 'email_template[remove_image]', '1', false, class: 'cform-toggle__input' %>
-              <span class="cform-toggle__label">Remover imagem atual</span>
-            </label>
+      <%# Conteúdo: paleta de blocos + estrutura (gerados pelo email_templates.js) %>
+      <section class="eb-pane active" data-pane="content">
+        <div class="eb-section-title">Arraste ou clique para adicionar</div>
+        <div class="eb-palette" id="eb-palette"></div>
+
+        <div class="eb-section-title">Seções prontas</div>
+        <div class="eb-sections" id="eb-sections"></div>
+
+        <div class="eb-section-title eb-section-title--row">
+          <span>Estrutura do e-mail</span>
+          <span class="eb-muted" id="eb-count"></span>
+        </div>
+        <ol class="eb-layers" id="eb-layers"></ol>
+        <div class="eb-footer-lock">
+          <i class="fa-solid fa-lock"></i>
+          Rodapé com <strong>"Não quero mais receber estes e-mails"</strong> — sempre incluído
+        </div>
+      </section>
+
+      <%# Inspector do bloco selecionado %>
+      <section class="eb-pane eb-inspector" data-pane="inspector">
+        <div class="eb-inspector__header">
+          <button type="button" class="eb-link-btn" id="eb-inspector-back"><i class="fa-solid fa-arrow-left"></i> Blocos</button>
+          <div class="eb-inspector__actions">
+            <button type="button" class="crm-btn clients-btn--icon" data-action="up" title="Subir (Alt+↑)"><i class="fa-solid fa-arrow-up"></i></button>
+            <button type="button" class="crm-btn clients-btn--icon" data-action="down" title="Descer (Alt+↓)"><i class="fa-solid fa-arrow-down"></i></button>
+            <button type="button" class="crm-btn clients-btn--icon" data-action="duplicate" title="Duplicar (Ctrl+D)"><i class="fa-solid fa-copy"></i></button>
+            <button type="button" class="crm-btn clients-btn--icon clients-btn--danger" data-action="remove" title="Excluir (Delete)"><i class="fa-solid fa-trash-can"></i></button>
           </div>
-        <% end %>
-        <%= form.file_field :image, class: 'crm-input', id: 'email-field-image' %>
-      </div>
-
-      <div class="users-form-page__field email-templates-layout-config" data-layout="image_top_bottom">
-        <%= form.label :image_bottom, 'Imagem (rodapé) — só usada no layout Banner em cima e embaixo', class: 'crm-label' %>
-        <% if email_template.image_bottom.attached? %>
-          <div class="popups-image-preview">
-            <%= image_tag url_for(email_template.image_bottom), class: 'popups-image-preview__img' %>
-            <label class="cform-toggle">
-              <%= check_box_tag 'email_template[remove_image_bottom]', '1', false, class: 'cform-toggle__input' %>
-              <span class="cform-toggle__label">Remover imagem atual</span>
-            </label>
-          </div>
-        <% end %>
-        <%= form.file_field :image_bottom, class: 'crm-input', id: 'email-field-image-bottom' %>
-      </div>
-
-      <div class="users-form-page__section">
-        <div class="users-form-page__section-header">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077l1.41-.513m14.095-5.13l1.41-.513M5.106 17.785l1.15-.964m11.49-9.642l1.149-.964M7.501 19.795l.75-1.3m7.5-12.99l.75-1.3m-6.063 16.658l.26-1.477m2.605-14.772l.26-1.477m0 17.726l-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.795l-.75-1.3M7.5 4.205L12 12m6.894 5.785l-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864l-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495" />
-          </svg>
-          Configuração de envio (finalidade)
         </div>
+        <div class="eb-inspector__title" id="eb-inspector-title"></div>
+        <div class="eb-inspector__body" id="eb-inspector-body"></div>
+      </section>
 
-        <div class="users-form-page__field">
+      <%# Estilo global (campos gerados pelo JS) + cor de destaque (coluna própria) %>
+      <section class="eb-pane" data-pane="style">
+        <div class="eb-field">
+          <%= form.label :accent_color, 'Cor da marca (botões, cupons e links)', class: 'crm-label' %>
+          <div class="eb-color">
+            <%= form.color_field :accent_color, class: 'eb-color__swatch', id: 'email-field-color' %>
+            <span class="eb-color__value" data-color-value-for="email-field-color"></span>
+          </div>
+        </div>
+        <div id="eb-design"></div>
+      </section>
+
+      <section class="eb-pane" data-pane="settings">
+        <div class="eb-field">
           <%= form.label :trigger_kind, 'Quando enviar', class: 'crm-label' %>
           <%= form.select :trigger_kind,
               options_for_select(EmailTemplate::TRIGGER_LABELS.invert, form.object.trigger_kind),
@@ -133,56 +111,65 @@
           <span class="cpform-field__hint" id="email-trigger-pending-hint">O disparo automático será configurado numa próxima etapa — por enquanto isso só marca a finalidade do e-mail.</span>
         </div>
 
-        <div class="users-form-page__field email-templates-trigger-config" data-trigger="cart_recovery">
+        <div class="eb-field email-templates-trigger-config" data-trigger="cart_recovery">
           <%= form.label :trigger_delay_hours, 'Enviar quantas horas após o carrinho ser abandonado', class: 'crm-label' %>
           <%= form.text_field :trigger_delay_hours, class: 'crm-input', value: email_template.trigger_delay_hours %>
         </div>
 
-        <div class="users-form-page__field email-templates-trigger-config" data-trigger="inactive_customer">
+        <div class="eb-field email-templates-trigger-config" data-trigger="inactive_customer">
           <%= form.label :trigger_inactive_days, 'Enviar após quantos dias sem comprar', class: 'crm-label' %>
           <%= form.text_field :trigger_inactive_days, class: 'crm-input', value: email_template.trigger_inactive_days %>
         </div>
 
-        <div class="users-form-page__field email-templates-trigger-config" data-trigger="back_in_stock">
-          <span class="cpform-field__hint">
-            Enviado quando o produto que o cliente pediu volta ao estoque. A imagem e o botão usam o próprio produto,
-            então o link do botão é ignorado.
-          </span>
-        </div>
-
-        <div class="users-form-page__field email-templates-trigger-config" data-trigger="post_purchase">
+        <div class="eb-field email-templates-trigger-config" data-trigger="post_purchase">
           <%= form.label :trigger_days_after_purchase, 'Enviar quantos dias após a compra', class: 'crm-label' %>
           <%= form.text_field :trigger_days_after_purchase, class: 'crm-input', value: email_template.trigger_days_after_purchase %>
         </div>
+
+        <div class="eb-field email-templates-trigger-config" data-trigger="back_in_stock">
+          <span class="cpform-field__hint">
+            Enviado quando o produto que o cliente pediu volta ao estoque. Use o bloco <strong>Produto</strong> para mostrar
+            foto, nome e variação; botões sem link próprio levam para a página do produto.
+          </span>
+        </div>
+
+        <div class="eb-tip">
+          <i class="fa-solid fa-shield-heart"></i>
+          <div>
+            Quem estiver na <%= link_to 'lista de recusa', email_suppressions_path %> nunca recebe este e-mail,
+            mesmo com o gatilho ativo.
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <section class="eb-stage crm-card">
+      <div class="eb-stage__toolbar">
+        <div class="eb-device" role="group" aria-label="Dispositivo">
+          <button type="button" class="eb-device__btn active" data-device="desktop" title="Computador"><i class="fa-solid fa-desktop"></i></button>
+          <button type="button" class="eb-device__btn" data-device="mobile" title="Celular"><i class="fa-solid fa-mobile-screen"></i></button>
+        </div>
+        <span class="eb-muted eb-stage__hint"><i class="fa-solid fa-hand-pointer"></i> Clique em qualquer parte do e-mail para editar</span>
+        <span class="eb-stage__status" id="eb-status"></span>
       </div>
-    </div>
 
-    <div class="users-form-page__footer">
-      <%= form.button class: 'crm-btn crm-btn--primary', data: { disable_with: 'Salvando...' } do %>
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        Salvar e-mail
-      <% end %>
-    </div>
-  <% end %>
-</div>
+      <div class="eb-inbox" id="email-preview" data-url="<%= preview_email_templates_path(id: email_template.id) %>"
+           data-upload-url="<%= upload_image_email_templates_path %>">
+        <div class="eb-inbox__avatar"><%= current_client.name.to_s.first.upcase %></div>
+        <div class="eb-inbox__lines">
+          <div class="eb-inbox__from"><%= current_client.name %> <span class="eb-muted">· agora</span></div>
+          <div class="eb-inbox__subject" id="email-preview-subject"></div>
+          <div class="eb-inbox__preheader eb-muted" id="email-preview-preheader"></div>
+        </div>
+      </div>
 
-<div class="crm-card email-templates-preview">
-  <div class="email-templates-preview__header">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
-      <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-    Preview
+      <div class="eb-stage__viewport" id="eb-viewport">
+        <div class="eb-stage__device" id="eb-device-frame">
+          <iframe class="eb-stage__frame" id="email-preview-frame" title="Preview do e-mail" sandbox="allow-same-origin"></iframe>
+        </div>
+      </div>
+    </section>
   </div>
-  <div class="email-templates-preview__stage">
-    <div class="email-preview" id="email-preview"
-         data-url="<%= preview_email_templates_path(id: email_template.id) %>">
-      <div class="email-preview__subject"><strong>Assunto:</strong> <span id="email-preview-subject"></span></div>
-      <iframe class="email-preview__frame" id="email-preview-frame" title="Preview do e-mail" sandbox="allow-same-origin"></iframe>
-    </div>
-  </div>
-</div>
+<% end %>
 
 <%= javascript_include_tag 'email_templates', defer: true %>

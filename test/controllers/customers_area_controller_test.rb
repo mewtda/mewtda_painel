@@ -33,6 +33,18 @@ class CustomersAreaControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, @client.customer_profiles.count
   end
 
+  test 'segments page computes profiles on first visit and recounts existing segments' do
+    segment = @client.segments.create!(name: 'Recorrentes', kind: 'dynamic',
+                                       rules: { 'groups' => [{ 'conditions' => [{ 'field' => 'orders_count', 'op' => 'gte', 'value' => '2' }] }] })
+    assert_equal 0, @client.customer_profiles.count
+
+    get segments_path
+
+    assert_response :success
+    assert_equal 2, @client.customer_profiles.count
+    assert_equal 1, segment.reload.customers_count
+  end
+
   test 'index filters by search, RFM and segment' do
     get customers_path(q: 'ana')
     assert_match 'Ana', response.body

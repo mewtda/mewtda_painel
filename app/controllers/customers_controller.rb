@@ -2,9 +2,9 @@
 # perfil RFM (customer_profiles), filtros por segmento/RFM e matriz RFM.
 class CustomersController < ApplicationController
   include ClientScoped
+  include EnsuresCustomerProfiles
 
   PER_PAGE = 50
-  STALE_AFTER = 1.hour
   SORTS = {
     'name' => 'customer_profiles.name',
     'last_order_at' => 'customer_profiles.last_order_at',
@@ -109,17 +109,6 @@ class CustomersController < ApplicationController
 
   def require_client!
     redirect_to crm_path, alert: 'Nenhum cliente selecionado.' unless @client
-  end
-
-  # Primeira visita calcula na hora; depois, se estiver velho, recalcula em segundo plano.
-  def ensure_profiles
-    last = @client.customer_profiles.maximum(:refreshed_at)
-    if last.nil?
-      Customers::RefreshProfiles.new(@client).call if Order.where(client_id: @client.id).exists?
-    elsif last < STALE_AFTER.ago
-      Customers::RefreshProfilesJob.perform_later(@client.id)
-    end
-    @refreshed_at = @client.customer_profiles.maximum(:refreshed_at)
   end
 
   def set_filtered_scope

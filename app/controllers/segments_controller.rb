@@ -1,9 +1,11 @@
 class SegmentsController < ApplicationController
   include ClientScoped
+  include EnsuresCustomerProfiles
 
   before_action :authenticate_user!
   before_action :set_client
   before_action :require_client!
+  before_action :ensure_profiles, only: %i[index templates new edit]
   before_action :set_segment, only: %i[edit update destroy recount]
 
   def index

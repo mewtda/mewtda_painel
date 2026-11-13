@@ -10,9 +10,7 @@ class EmailTemplateTest < ActiveSupport::TestCase
       client: build_client,
       name: 'Boas-vindas padrão',
       subject: 'Seja bem-vindo(a)!',
-      heading: 'Bem-vindo(a)!',
-      body: 'Que bom ter você com a gente.',
-      button_text: 'Ver produtos'
+      blocks: [{ 'type' => 'heading', 'text' => 'Bem-vindo(a)!' }, { 'type' => 'button', 'text' => 'Ver produtos' }]
     }.merge(overrides)
   end
 
@@ -21,15 +19,62 @@ class EmailTemplateTest < ActiveSupport::TestCase
     assert template.valid?, template.errors.full_messages.to_s
   end
 
-  test 'requires name, subject, heading, body and button_text' do
+  test 'requires name, subject and at least one block' do
     template = EmailTemplate.new(client: build_client)
 
     assert_not template.valid?
     assert_includes template.errors.attribute_names, :name
     assert_includes template.errors.attribute_names, :subject
-    assert_includes template.errors.attribute_names, :heading
-    assert_includes template.errors.attribute_names, :body
-    assert_includes template.errors.attribute_names, :button_text
+    assert_includes template.errors[:base], 'Adicione pelo menos um bloco ao e-mail.'
+  end
+
+  test 'blocks are sanitized: unknown types, unsafe links and invalid colors are dropped' do
+    template = EmailTemplate.new(valid_attributes(blocks_json: [
+      { type: 'script', text: 'x' },
+      { type: 'button', text: 'Comprar', link: 'javascript:alert(1)', color: 'red', align: 'sideways', extra: 'nope' },
+      { type: 'image', link: 'https://loja.com/p', width: '75' }
+    ].to_json))
+
+    assert_equal %w[button image], template.blocks.map { |b| b['type'] }
+    button = template.blocks.first
+    assert_equal '', button['link']
+    assert_equal '', button['color']
+    assert_equal 'center', button['align']
+    assert_not button.key?('extra')
+    assert button['id'].present?
+    assert_equal 'https://loja.com/p', template.blocks.last['link']
+    assert_equal '75', template.blocks.last['width']
+  end
+
+  test 'invalid blocks JSON results in no blocks' do
+    template = EmailTemplate.new(valid_attributes(blocks_json: '{not json'))
+    assert_equal [], template.blocks
+    assert_not template.valid?
+  end
+
+  test 'design falls back to defaults for unknown values' do
+    template = EmailTemplate.new(valid_attributes(design_json: { font: 'comic', bg: '#000000', preheader: 'Oi' }.to_json))
+
+    assert_equal 'arial', template.design['font']
+    assert_equal '#000000', template.design['bg']
+    assert_equal 'Oi', template.design['preheader']
+    assert_equal '#ffffff', template.design['content_bg']
+  end
+
+  test 'legacy templates without blocks are converted from heading/body/layout' do
+    template = EmailTemplate.new(valid_attributes(blocks: [], heading: 'Olá', body: 'Texto', button_text: 'Ir',
+                                                  button_url: 'https://loja.com', coupon_code: 'X10', layout: 'banner'))
+
+    assert template.valid?, template.errors.full_messages.to_s
+    assert_equal %w[logo heading text coupon button], template.content_blocks.map { |b| b['type'] }
+    assert_equal 'https://loja.com', template.content_blocks.last['link']
+  end
+
+  test 'legacy back in stock templates get a product block' do
+    template = EmailTemplate.new(valid_attributes(blocks: [], heading: 'Voltou', body: 'Texto', button_text: 'Comprar',
+                                                  trigger_kind: :back_in_stock, layout: 'image_left'))
+
+    assert_equal %w[logo heading text product], template.content_blocks.map { |b| b['type'] }
   end
 
   test 'defaults to manual trigger_kind and image_top layout' do
@@ -88,7 +133,7 @@ class EmailTemplateTest < ActiveSupport::TestCase
   test 'preset returns prefilled attributes for a known key' do
     preset = EmailTemplate.preset(:cart_recovery)
 
-    assert_equal 'image_left', preset[:layout]
+    assert_equal 'image_text', preset[:blocks].second['type']
     assert_equal 'cart_recovery', preset[:trigger_kind]
     assert_equal 2, preset[:trigger_config]['delay_hours']
     assert preset[:subject].present?
@@ -110,5 +155,13 @@ class EmailTemplateTest < ActiveSupport::TestCase
     client.destroy
 
     assert_not EmailTemplate.exists?(template.id)
+  end
+
+  test 'every preset builds a valid template' do
+    EmailTemplate::PRESETS.each do |key, preset|
+      template = EmailTemplate.new(preset.merge(client: build_client))
+      assert template.valid?, "#{key}: #{template.errors.full_messages}"
+      assert_equal preset[:blocks].size, template.blocks.size
+    end
   end
 end

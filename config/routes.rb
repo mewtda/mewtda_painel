@@ -29,6 +29,8 @@ Rails.application.routes.draw do
     post 'back_in_stock/alerts', to: 'back_in_stock#create_alert'
     get  'back_in_stock/descadastrar/:token', to: 'back_in_stock_unsubscribes#show', as: :back_in_stock_unsubscribe
     post 'back_in_stock/descadastrar/:token', to: 'back_in_stock_unsubscribes#create'
+    get  'descadastrar/:token', to: 'email_unsubscribes#show', as: :email_unsubscribe
+    post 'descadastrar/:token', to: 'email_unsubscribes#create'
   end
 
   scope '/crm' do
@@ -146,13 +148,20 @@ Rails.application.routes.draw do
     end
 
     resources :email_templates, except: [:show] do
-      post :preview, on: :collection
+      collection do
+        post :preview
+        post :upload_image
+      end
     end
+    resources :email_suppressions, path: 'lista-de-recusa', only: %i[index create destroy]
     resource :email_configuration, only: %i[edit update]
     post 'email_configuration/refresh', to: 'email_configurations#refresh_status', as: :refresh_email_configuration
 
     resource :settings, path: 'configuracoes', controller: 'settings', only: [:edit, :update]
-    resource :account, path: 'minha-conta', controller: 'account', only: [:edit, :update]
+    resource :account, path: 'minha-conta', controller: 'account', only: [:edit, :update] do
+      get :limits, path: 'limites'
+      get :invoice, path: 'fatura'
+    end
 
     resources :orders, only: [:index] do
       collection do

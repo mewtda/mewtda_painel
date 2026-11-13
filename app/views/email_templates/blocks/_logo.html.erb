@@ -1,0 +1,8 @@
+<div style="text-align: <%= block['align'] %>; font-size: 20px; font-weight: bold; letter-spacing: 0.02em; color: <%= message.design['text_color'] %>;">
+  <% if message.logo_url.present? %>
+    <img src="<%= message.logo_url %>" alt="<%= message.store_name %>" height="<%= message.logo_height(block) %>"
+         style="display: inline-block; height: <%= message.logo_height(block) %>px; width: auto; max-width: 100%; border: 0;">
+  <% else %>
+    <%= message.store_name.presence || 'Sua loja' %>
+  <% end %>
+</div>

@@ -1,0 +1,73 @@
+<% title 'Lista de recusa' %>
+
+<div class="clients-wrapper">
+  <%= render 'shared/email_marketing_tabs' %>
+
+  <div class="suppressions-intro crm-card">
+    <div class="suppressions-intro__icon"><i class="fa-solid fa-ban"></i></div>
+    <div>
+      <strong><%= pluralize(@total, 'e-mail bloqueado', plural: 'e-mails bloqueados') %></strong>
+      <p>
+        Quem clica em <em>"Não quero mais receber estes e-mails"</em> entra aqui automaticamente e não recebe mais
+        nenhum e-mail da <%= @client.name %> — nem avisos de estoque. Você também pode adicionar ou remover endereços manualmente.
+      </p>
+    </div>
+  </div>
+
+  <div class="clients-table-wrap">
+    <div class="clients-table-header suppressions-toolbar">
+      <%= form_with url: email_suppressions_path, method: :get, class: 'suppressions-toolbar__search' do %>
+        <%= search_field_tag :q, params[:q], class: 'crm-input', placeholder: 'Buscar e-mail…' %>
+      <% end %>
+      <%= form_with scope: :email_suppression, url: email_suppressions_path, class: 'suppressions-toolbar__add' do |form| %>
+        <%= form.email_field :email, class: 'crm-input', placeholder: 'email@cliente.com', required: true %>
+        <%= form.button class: 'crm-btn clients-btn--success' do %>
+          <i class="fa-solid fa-plus"></i> Bloquear e-mail
+        <% end %>
+      <% end %>
+    </div>
+
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>E-mail</th>
+          <th>Origem</th>
+          <th>Desde</th>
+          <th class="text-center">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @email_suppressions.each do |suppression| %>
+          <tr>
+            <td><%= suppression.email %></td>
+            <td>
+              <span class="crm-tag <%= suppression.source == 'manual' ? 'crm-tag--neutral' : 'crm-tag--warning' %>"><%= suppression.source_label %></span>
+            </td>
+            <td><%= l(suppression.created_at, format: '%d/%m/%Y %H:%M') %></td>
+            <td class="text-center">
+              <%= button_to email_suppression_path(suppression, q: params[:q]), method: :delete,
+                  class: 'crm-btn clients-btn--icon', title: 'Remover da lista (voltar a enviar)',
+                  form: { onsubmit: "return confirm('Remover #{j suppression.email} da lista de recusa? Ele(a) volta a receber e-mails.');" } do %>
+                <i class="fa-solid fa-rotate-left"></i>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+        <% if @email_suppressions.empty? %>
+          <tr>
+            <td colspan="4" class="clients-table__empty">
+              <%= params[:q].present? ? 'Nenhum e-mail encontrado.' : 'Ninguém pediu pra sair da lista ainda. 🎉' %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <% if @page > 1 || @next_page %>
+      <div class="suppressions-pager">
+        <%= link_to '← Anteriores', email_suppressions_path(q: params[:q], page: @page - 1), class: 'crm-btn' if @page > 1 %>
+        <%= link_to 'Próximos →', email_suppressions_path(q: params[:q], page: @page + 1), class: 'crm-btn' if @next_page %>
+      </div>
+    <% end %>
+  </div>
+</div>

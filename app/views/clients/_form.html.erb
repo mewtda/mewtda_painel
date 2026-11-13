@@ -41,6 +41,7 @@
       <% meta_configured = client.meta_access_token.present? && client.meta_ad_account_id.present? %>
       <% google_configured = client.google_ads_connected_at.present? %>
       <% show_users_tab = current_user.admin? && client.persisted? && client.users.any? %>
+      <% show_plan_tab = current_user.admin? && local_assigns[:form_url].nil? %>
 
       <%# Abas: cada integração na sua tela, em vez de tudo empilhado %>
       <div class="cform-tabs" role="tablist" data-cform-tabs>
@@ -68,6 +69,12 @@
           <span>Google Ads</span>
           <span class="cform-tab__dot <%= google_configured ? 'cform-tab__dot--ok' : '' %>" title="<%= google_configured ? 'Configurado' : 'Pendente' %>"></span>
         </button>
+        <% if show_plan_tab %>
+          <button type="button" class="cform-tab" role="tab" data-tab="plano" aria-selected="false">
+            <span class="cform-logo cform-logo--geral"><i class="fa-solid fa-gauge-high"></i></span>
+            <span>Plano e limites</span>
+          </button>
+        <% end %>
         <% if show_users_tab %>
           <button type="button" class="cform-tab" role="tab" data-tab="usuarios" aria-selected="false">
             <span class="cform-logo cform-logo--geral"><i class="fa-solid fa-users"></i></span>
@@ -77,6 +84,39 @@
       </div>
 
       <div class="cform-card__body">
+      <% if show_plan_tab %>
+        <div class="cform-panel" role="tabpanel" data-panel="plano" hidden>
+          <div class="cform-section">
+            <div class="cform-section__header"><i class="fa-solid fa-file-invoice-dollar"></i> Plano (aparece na Fatura do cliente)</div>
+            <div class="cform-row">
+              <div class="cform-field">
+                <%= form.label :plan_name, 'Nome do plano', class: 'crm-label' %>
+                <%= form.text_field :plan_name, class: 'crm-input', placeholder: 'Ex.: Pro', disabled: read_only %>
+              </div>
+              <div class="cform-field">
+                <%= form.label :plan_price, 'Valor mensal (R$)', class: 'crm-label' %>
+                <%= form.text_field :plan_price, class: 'crm-input', inputmode: 'decimal', placeholder: 'Ex.: 297,00', disabled: read_only,
+                                    value: (number_with_precision(client.plan_price, precision: 2, separator: ',', delimiter: '') if client.plan_price) %>
+              </div>
+            </div>
+          </div>
+          <div class="cform-section">
+            <div class="cform-section__header"><i class="fa-solid fa-gauge-high"></i> Limites diários de envio</div>
+            <div class="cform-row">
+              <div class="cform-field">
+                <%= form.label :daily_whatsapp_limit, 'Mensagens de WhatsApp por dia', class: 'crm-label' %>
+                <%= form.number_field :daily_whatsapp_limit, class: 'crm-input', min: 1, placeholder: 'Sem limite', disabled: read_only %>
+              </div>
+              <div class="cform-field">
+                <%= form.label :daily_email_limit, 'E-mails por dia', class: 'crm-label' %>
+                <%= form.number_field :daily_email_limit, class: 'crm-input', min: 1, placeholder: 'Sem limite', disabled: read_only %>
+              </div>
+            </div>
+            <span class="cform-field__hint">Em branco = sem limite. Ao atingir o limite, os envios do dia param e o cliente vê o aviso em Minha conta › Meus limites.</span>
+          </div>
+        </div>
+      <% end %>
+
 
       <div class="cform-panel" role="tabpanel" data-panel="geral" hidden>
         <div class="cform-section">

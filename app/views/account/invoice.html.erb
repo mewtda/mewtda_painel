@@ -1,0 +1,52 @@
+<% title 'Fatura' %>
+
+<%= render 'account/tabs' %>
+
+<% if @client %>
+  <% brl = ->(value) { number_to_currency(value, unit: 'R$', separator: ',', delimiter: '.', precision: 2) } %>
+  <div class="crm-card invoice-card">
+    <div class="invoice-card__head">
+      <div>
+        <span class="invoice-card__eyebrow">Fatura de</span>
+        <h2 class="invoice-card__month"><%= l(@invoice.month, format: '%B de %Y').capitalize %></h2>
+        <% if @invoice.current? %><span class="crm-tag crm-tag--warning">Em aberto · parcial até hoje</span><% end %>
+      </div>
+      <%= form_with url: invoice_account_path, method: :get, class: 'invoice-card__picker' do %>
+        <%= select_tag :mes, options_for_select(@months.map { |m| [l(m, format: '%B/%Y').capitalize, m.strftime('%Y-%m')] }, @invoice.month.strftime('%Y-%m')),
+                       class: 'crm-input', onchange: 'this.form.requestSubmit()' %>
+      <% end %>
+    </div>
+
+    <table class="invoice-table">
+      <tbody>
+        <tr>
+          <td>
+            <strong>Plano <%= @invoice.plan_name || '—' %></strong>
+            <small>Mensalidade</small>
+          </td>
+          <td class="invoice-table__amount"><%= brl.call(@invoice.plan_price) %></td>
+        </tr>
+        <tr>
+          <td>
+            <strong>E-mails enviados</strong>
+            <small><%= number_with_delimiter(@invoice.emails_sent, delimiter: '.') %> e-mails no mês</small>
+          </td>
+          <td class="invoice-table__amount"><%= brl.call(@invoice.emails_amount) %></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total</td>
+          <td class="invoice-table__amount"><%= brl.call(@invoice.total) %></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <p class="invoice-card__note">
+      <i class="fa-brands fa-whatsapp"></i>
+      As mensagens de WhatsApp são cobradas diretamente pela Meta na sua conta e não entram nesta fatura.
+    </p>
+  </div>
+<% else %>
+  <%= render 'account/no_client' %>
+<% end %>

@@ -1,0 +1,11 @@
+<% src = message.image_url(block['image_id']) %>
+<% href = message.link(block['link']) if block['link'].present? %>
+<% if src %>
+  <div style="text-align: <%= block['align'] %>; line-height: 0;">
+    <% img = tag.img(src: src, alt: message.interpolate(block['alt']), width: (600 * block['width'].to_i / 100),
+                     style: "display: inline-block; width: #{block['width']}%; max-width: 100%; height: auto; border: 0;#{' border-radius: 8px;' if block['rounded']}") %>
+    <%= href ? link_to(img, href, target: '_blank', style: 'text-decoration: none;') : img %>
+  </div>
+<% elsif message.preview? %>
+  <span class="email-placeholder">🖼️ Imagem — clique e envie uma foto</span>
+<% end %>

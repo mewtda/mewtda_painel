@@ -1,0 +1,51 @@
+// Minha conta › Meus limites / Fatura
+.account-tabs { margin-bottom: 1.25rem; }
+.account-tabs .popups-tabs__link i { margin-right: 0.3rem; }
+.account-empty { text-align: center; color: var(--fg-alt); padding: 2.5rem 1rem; }
+.account-empty i { font-size: 1.6rem; margin-bottom: 0.5rem; }
+
+.limits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+.limit-card { display: flex; flex-direction: column; gap: 0.9rem; }
+.limit-card__head { display: flex; gap: 0.75rem; align-items: flex-start; }
+.limit-card__icon {
+  width: 42px; height: 42px; flex: none; border-radius: 12px; display: grid; place-items: center; font-size: 1.2rem;
+  background: var(--primary-tint); color: var(--primary);
+}
+.limit-card--whatsapp .limit-card__icon { background: rgba(37, 211, 102, .12); color: #16a34a; }
+.limit-card__title { margin: 0; font-size: 1rem; font-weight: 700; color: var(--fg); }
+.limit-card__note { margin: 0.15rem 0 0; font-size: 0.8rem; color: var(--fg-alt); }
+.limit-card__today { display: flex; justify-content: space-between; align-items: baseline; }
+.limit-card__label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-alt); }
+.limit-card__value { font-size: 0.95rem; color: var(--fg-alt); }
+.limit-card__value strong { font-size: 1.6rem; color: var(--fg); }
+
+.limit-meter { height: 10px; border-radius: 999px; background: var(--hover); overflow: hidden; }
+.limit-meter__fill { height: 100%; border-radius: inherit; background: var(--primary); transition: width .4s ease; }
+.limit-meter.is-warn .limit-meter__fill { background: #f59e0b; }
+.limit-meter.is-full .limit-meter__fill { background: #dc2626; }
+.limit-card__status { margin: 0; font-size: 0.8rem; color: var(--fg-alt); }
+.limit-card__status.is-warn { color: #b45309; }
+.limit-card__status.is-full { color: #dc2626; font-weight: 600; }
+.limit-card__status.is-ok i { color: #16a34a; }
+
+.limit-chart { position: relative; display: flex; align-items: flex-end; gap: 4px; height: 72px; padding-top: 4px; border-bottom: 1px solid var(--outline); }
+.limit-chart__col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.limit-chart__bar { width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; background: var(--primary); opacity: .35; }
+.limit-chart__bar.is-today { opacity: 1; }
+.limit-chart__col:hover .limit-chart__bar { opacity: .8; }
+.limit-chart__limit { position: absolute; left: 0; right: 0; border-top: 1px dashed #dc2626; opacity: .6; }
+.limit-chart__legend { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--fg-alt); margin-top: -0.4rem; }
+.limits-footnote { margin-top: 1rem; font-size: 0.8rem; color: var(--fg-alt); }
+
+.invoice-card { max-width: 640px; }
+.invoice-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.invoice-card__eyebrow { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-alt); }
+.invoice-card__month { margin: 0.1rem 0 0.4rem; font-size: 1.4rem; color: var(--fg); }
+.invoice-card__picker .crm-input { min-width: 170px; }
+.invoice-table { width: 100%; border-collapse: collapse; }
+.invoice-table td { padding: 0.85rem 0; border-bottom: 1px solid var(--outline); color: var(--fg); vertical-align: top; }
+.invoice-table td small { display: block; color: var(--fg-alt); font-size: 0.78rem; margin-top: 0.15rem; }
+.invoice-table__amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.invoice-table tfoot td { border-bottom: 0; font-size: 1.15rem; font-weight: 700; padding-top: 1rem; }
+.invoice-card__note { margin: 1rem 0 0; font-size: 0.8rem; color: var(--fg-alt); }
+.invoice-card__note i { color: #16a34a; margin-right: 0.3rem; }

@@ -133,7 +133,8 @@
 
       <% marketing_active = request.path.start_with?(affiliates_path) || request.path.start_with?('/crm/popup') ||
                              request.path.start_with?(landing_pages_path) ||
-                             request.path.start_with?(email_templates_path) || request.path.start_with?('/crm/email_configuration') %>
+                             request.path.start_with?(email_templates_path) || request.path.start_with?('/crm/email_configuration') ||
+                             request.path.start_with?(email_suppressions_path) %>
       <details class="crm-sidebar__submenu" <%= 'open' if marketing_active %>>
         <summary class="crm-sidebar__link crm-sidebar__link--parent">
           <i class="fa-solid fa-bullseye crm-fa"></i>
@@ -151,7 +152,7 @@
             Landing Pages
           <% end %>
 
-          <%= link_to email_templates_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(email_templates_path)}" do %>
+          <%= link_to email_templates_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(email_templates_path) || request.path.start_with?(email_suppressions_path) || request.path.start_with?('/crm/email_configuration')}" do %>
             <i class="fa-solid fa-envelope-open-text crm-fa"></i>
             E-mail
           <% end %>

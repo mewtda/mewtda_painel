@@ -9,9 +9,21 @@ class Client < ApplicationRecord
   has_one :back_in_stock_setting, dependent: :destroy
   has_many :back_in_stock_alerts, dependent: :destroy
   has_many :email_templates, dependent: :destroy
+  has_many :email_suppressions, dependent: :destroy
+  has_many :message_usages, dependent: :delete_all
   has_many :landing_pages, dependent: :destroy
   has_many :whatsapp_connections, class_name: 'Whatsapp::Connection', dependent: :restrict_with_exception
   has_one_attached :logo
+
+  validates :plan_price, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :daily_whatsapp_limit, :daily_email_limit,
+            numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+
+  # Aceita preço no formato brasileiro ("1.299,90") vindo do formulário do admin.
+  def plan_price=(value)
+    value = value.delete('.').tr(',', '.') if value.is_a?(String) && value.include?(',')
+    super
+  end
 
   LOGO_CONTENT_TYPES = %w[image/png image/jpeg image/avif].freeze
   LOGO_MAX_SIZE = 2.megabytes

@@ -2,12 +2,16 @@ class Shopify::Orders
   require 'shopify_api'
   extend ApplicationHelper
 
+  API_PAUSE = 0.25
+  API_TRIES = 6
+
   class << self
     def sync_shopify_orders_to_rails(session:, client:, limit: 100, status: 'any', time_range: :all,
                                      created_at_min: nil, created_at_max: nil)
       api_client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
 
       total = 0
+      @customers_synced = {}
 
       created_at_min ||=
         case time_range.to_sym
@@ -42,11 +46,13 @@ class Shopify::Orders
 
       response = api_client.get(
         path: 'orders',
-        query: query_params
+        query: query_params,
+        tries: API_TRIES
       )
 
       loop do
         response.body['orders'].each do |shopify_order|
+          sleep(API_PAUSE)
           create_or_update_order_from_shopify(
             shopify_order,
             session: session,
@@ -68,10 +74,12 @@ class Shopify::Orders
             limit: limit,
             fields: order_fields,
             page_info: response.next_page_info
-          }
+          },
+          tries: API_TRIES
         )
       end
 
+      @customers_synced = nil
       client.update!(orders_synced_at: Time.current)
 
       Rails.logger.info "[Shopify::Orders] Sincronizados #{total} pedidos para client #{client.id} (#{client.name})"
@@ -266,11 +274,13 @@ class Shopify::Orders
       return nil unless customer_stub
 
       shopify_customer_id = customer_stub['id'].to_s
+      return @customers_synced[shopify_customer_id] if @customers_synced&.key?(shopify_customer_id)
 
       api_client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
 
       response = api_client.get(
-        path: "customers/#{shopify_customer_id}.json"
+        path: "customers/#{shopify_customer_id}.json",
+        tries: API_TRIES
       )
 
       shopify_customer = response.body['customer']
@@ -284,6 +294,7 @@ class Shopify::Orders
 
       customer.save! if customer.changed?
 
+      @customers_synced[shopify_customer_id] = customer if @customers_synced
       customer
     end
 

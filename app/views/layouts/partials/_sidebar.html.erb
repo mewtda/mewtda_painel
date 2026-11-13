@@ -83,7 +83,7 @@
       <% end %>
 
       <% loja_active = request.path.start_with?(orders_path) || request.path.start_with?(products_path) ||
-                        request.path.start_with?(customers_path) || request.path.start_with?(segments_path) %>
+                        request.path.start_with?(customers_path) %>
       <details class="crm-sidebar__submenu" <%= 'open' if loja_active %>>
         <summary class="crm-sidebar__link crm-sidebar__link--parent">
           <i class="fa-solid fa-store crm-fa"></i>
@@ -103,13 +103,30 @@
             <i class="fa-solid fa-bag-shopping crm-fa"></i>
             Produtos
           <% end %>
+          <%= link_to rfm_customers_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(rfm_customers_path)}" do %>
+            <i class="fa-solid fa-table-cells-large crm-fa"></i>
+            Matriz RFM
+          <% end %>
+        </div>
+      </details>
+
+      <% modelos_active = request.path.start_with?(email_templates_path) || request.path.start_with?('/crm/email_configuration') ||
+                           request.path.start_with?(email_suppressions_path) %>
+      <% comunicacao_active = request.path.start_with?(segments_path) || modelos_active %>
+      <details class="crm-sidebar__submenu" <%= 'open' if comunicacao_active %>>
+        <summary class="crm-sidebar__link crm-sidebar__link--parent">
+          <i class="fa-solid fa-paper-plane crm-fa"></i>
+          Comunicação
+          <i class="fa-solid fa-chevron-down crm-sidebar__submenu-chevron"></i>
+        </summary>
+        <div class="crm-sidebar__submenu-body">
           <%= link_to segments_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(segments_path)}" do %>
             <i class="fa-solid fa-layer-group crm-fa"></i>
             Segmentos e listas
           <% end %>
-          <%= link_to rfm_customers_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(rfm_customers_path)}" do %>
-            <i class="fa-solid fa-table-cells-large crm-fa"></i>
-            Matriz RFM
+          <%= link_to email_templates_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if modelos_active}" do %>
+            <i class="fa-solid fa-envelope-open-text crm-fa"></i>
+            Modelos de mensagem
           <% end %>
         </div>
       </details>
@@ -154,13 +171,6 @@
       <%= link_to custom_automations_path, class: "crm-sidebar__link #{'active' if request.path.start_with?(custom_automations_path)}" do %>
         <i class="fa-solid fa-wand-magic-sparkles crm-fa"></i>
         Automações personalizadas
-      <% end %>
-
-      <% modelos_active = request.path.start_with?(email_templates_path) || request.path.start_with?('/crm/email_configuration') ||
-                           request.path.start_with?(email_suppressions_path) %>
-      <%= link_to email_templates_path, class: "crm-sidebar__link #{'active' if modelos_active}" do %>
-        <i class="fa-solid fa-envelope-open-text crm-fa"></i>
-        Modelos de mensagem
       <% end %>
 
       <% marketing_active = request.path.start_with?(affiliates_path) || request.path.start_with?('/crm/popup') ||

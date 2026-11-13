@@ -1,6 +1,8 @@
 class Customer < ApplicationRecord
   has_many :orders, dependent: :nullify
   has_many :campaign_actions, dependent: :nullify
+  has_many :customer_profiles, dependent: :delete_all
+  has_many :segment_memberships, dependent: :delete_all
 
   validates :shopify_customer_id, uniqueness: true
 

@@ -1,0 +1,32 @@
+<div class="cx-drawer-overlay" id="cx-drawer-overlay" hidden></div>
+<aside class="cx-drawer" id="cx-drawer" aria-hidden="true" aria-label="Detalhes do cliente">
+  <div class="cx-drawer__head">
+    <div class="customers-avatar cx-drawer__avatar" data-field="initials"></div>
+    <div class="cx-drawer__title">
+      <h2 data-field="name"></h2>
+      <div class="cx-drawer__rfm" data-field="rfm"></div>
+    </div>
+    <button type="button" class="cx-drawer__close" data-close aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="cx-drawer__body">
+    <div class="cx-drawer__loading" data-loading><i class="fa-solid fa-spinner fa-spin"></i> Carregando…</div>
+    <div data-content hidden>
+      <p class="cx-drawer__hint" data-field="rfm_hint"></p>
+      <div class="cx-drawer__stats">
+        <div><span>Total gasto</span><strong data-field="total_spent"></strong></div>
+        <div><span>Compras</span><strong data-field="orders_count"></strong></div>
+        <div><span>Ticket médio</span><strong data-field="avg_ticket"></strong></div>
+        <div><span>Última compra</span><strong data-field="last_order_at"></strong><small data-field="days_since"></small></div>
+      </div>
+      <dl class="cx-drawer__info">
+        <dt>E-mail</dt><dd data-field="email"></dd>
+        <dt>Telefone</dt><dd data-field="phone"></dd>
+        <dt>Cidade</dt><dd data-field="city"></dd>
+        <dt>Primeira compra</dt><dd data-field="first_order_at"></dd>
+        <dt>Listas</dt><dd data-field="lists"></dd>
+      </dl>
+      <h3 class="cx-drawer__section">Pedidos</h3>
+      <div class="cx-drawer__orders" data-orders></div>
+    </div>
+  </div>
+</aside>

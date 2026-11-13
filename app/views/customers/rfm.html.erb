@@ -1,0 +1,71 @@
+<% title 'Matriz RFM' %>
+<% brl = ->(v) { number_to_currency(v, unit: 'R$', separator: ',', delimiter: '.', precision: 2) } %>
+<%# Posição de cada perfil na grade 5x5 (linhas = recência, de cima p/ baixo 5→1; colunas = frequência 1→5). %>
+<% areas = {
+     'cant_lose' => '4 / 5 / 6 / 6', 'at_risk' => '4 / 3 / 6 / 5', 'hibernating' => '4 / 1 / 6 / 3',
+     'about_to_sleep' => '3 / 1 / 4 / 3', 'need_attention' => '3 / 3 / 4 / 4', 'loyal' => '2 / 4 / 4 / 6',
+     'champion' => '1 / 4 / 2 / 6', 'potential_loyal' => '1 / 2 / 3 / 4', 'new' => '1 / 1 / 2 / 2',
+     'promising' => '2 / 1 / 3 / 2'
+   } %>
+
+<div class="clients-wrapper cx-page">
+  <%= render 'customers/tabs' %>
+
+  <div class="rfm-layout">
+    <div class="crm-card rfm-card">
+      <div class="rfm-card__head">
+        <div>
+          <h2 class="rfm-card__title">Matriz RFM</h2>
+          <p class="cx-muted">Recência (há quanto tempo comprou) × Frequência (quantas vezes). Clique num perfil para ver os números.</p>
+        </div>
+        <span class="cx-muted"><%= number_with_delimiter(@total, delimiter: '.') %> clientes</span>
+      </div>
+
+      <div class="rfm-axis">
+        <span class="rfm-axis__y">← menos recente · <strong>Recência</strong> · mais recente →</span>
+        <div class="rfm-grid">
+          <% CustomerProfile::RFM_SEGMENTS.each do |key, info| %>
+            <% count = @counts[key].to_i %>
+            <%= link_to rfm_customers_path(perfil: key), class: "rfm-cell #{'is-selected' if @selected == key}",
+                        style: "grid-area: #{areas[key]}; --rfm: #{info[:color]}", title: info[:hint] do %>
+              <span class="rfm-cell__name"><%= info[:label] %></span>
+              <span class="rfm-cell__count"><%= number_with_delimiter(count, delimiter: '.') %></span>
+              <span class="rfm-cell__pct"><%= @total.zero? ? 0 : number_with_precision(count * 100.0 / @total, precision: 2, separator: ',') %>% da base</span>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+      <div class="rfm-axis__x">menos compras ← <strong>Frequência</strong> → mais compras</div>
+    </div>
+
+    <div class="crm-card rfm-side">
+      <% if @selected %>
+        <% info = CustomerProfile::RFM_SEGMENTS[@selected] %>
+        <% avg_spent, avg_orders, sum_spent, avg_days = @stats[@selected] %>
+        <span class="rfm-tag" style="--rfm: <%= info[:color] %>"><%= info[:label] %></span>
+        <p class="rfm-side__hint"><%= info[:hint] %></p>
+        <div class="rfm-side__stats">
+          <div><span>Clientes</span><strong><%= number_with_delimiter(@counts[@selected].to_i, delimiter: '.') %></strong></div>
+          <div><span>Receita total</span><strong><%= brl.call(sum_spent.to_f) %></strong></div>
+          <div><span>Gasto médio</span><strong><%= brl.call(avg_spent.to_f) %></strong></div>
+          <div><span>Compras em média</span><strong><%= number_with_precision(avg_orders.to_f, precision: 1, separator: ',') %></strong></div>
+          <div><span>Dias desde a última compra</span><strong><%= avg_days.to_f.round %></strong></div>
+        </div>
+        <div class="rfm-side__actions">
+          <%= link_to customers_path('rfm[]' => @selected), class: 'crm-btn crm-btn--primary' do %>
+            <i class="fa-solid fa-users"></i> Ver clientes
+          <% end %>
+          <%= link_to new_segment_path(rfm: @selected), class: 'crm-btn' do %>
+            <i class="fa-solid fa-layer-group"></i> Criar segmento
+          <% end %>
+        </div>
+      <% else %>
+        <div class="rfm-side__empty">
+          <i class="fa-solid fa-users-viewfinder"></i>
+          <strong>Selecione um perfil RFM</strong>
+          <p class="cx-muted">Clique em qualquer bloco da matriz para ver as métricas daquele grupo de clientes.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

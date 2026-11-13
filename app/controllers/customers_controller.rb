@@ -1,126 +1,186 @@
+# Área de clientes: base de compradores da loja com números de compra e
+# perfil RFM (customer_profiles), filtros por segmento/RFM e matriz RFM.
 class CustomersController < ApplicationController
+  include ClientScoped
+
+  PER_PAGE = 50
+  STALE_AFTER = 1.hour
+  SORTS = {
+    'name' => 'customer_profiles.name',
+    'last_order_at' => 'customer_profiles.last_order_at',
+    'orders_count' => 'customer_profiles.orders_count',
+    'avg_ticket' => 'customer_profiles.avg_ticket',
+    'total_spent' => 'customer_profiles.total_spent',
+    'rfm' => 'customer_profiles.r_score'
+  }.freeze
+
   before_action :authenticate_user!
-  before_action :set_filter_scope, only: [:index, :export_xlsx]
+  before_action :set_client
+  before_action :require_client!
+  before_action :ensure_profiles, only: %i[index rfm export_xlsx]
+  before_action :set_filtered_scope, only: %i[index export_xlsx]
 
   def index
-    @customers = @customers_scope.with_orders_count
-                                 .includes(orders: { order_items: :product })
-                                 .order(created_at: :desc)
-                                 .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
-    @popup_submission_emails = popup_submission_emails
+    @summary = summary(@client.customer_profiles)
+    @sort, @direction = sort_params
+    @profiles = @scope.order(Arel.sql("#{SORTS.fetch(@sort)} #{@direction} NULLS LAST, customer_profiles.id"))
+                      .paginate(page: params[:page], per_page: PER_PAGE)
+    @filtered_count = @profiles.total_entries
+    @lists = @client.segments.where(kind: 'static').order(:name)
+    @segments = @client.segments.order(:name)
+    @popup_emails = popup_emails
+  end
+
+  def rfm
+    profiles = @client.customer_profiles
+    @total = profiles.count
+    @counts = profiles.group(:rfm_segment).count
+    @stats = profiles.group(:rfm_segment)
+                     .pluck(:rfm_segment, Arel.sql('AVG(total_spent)'), Arel.sql('AVG(orders_count)'),
+                            Arel.sql('SUM(total_spent)'), Arel.sql('AVG(CURRENT_DATE - last_order_at::date)'))
+                     .to_h { |seg, *values| [seg, values] }
+    @selected = params[:perfil].presence_in(CustomerProfile::RFM_SEGMENTS.keys)
+  end
+
+  def refresh
+    Customers::RefreshProfilesJob.perform_later(@client.id)
+    redirect_back fallback_location: customers_path, notice: 'Atualizando a base de clientes. Leva alguns instantes.'
+  end
+
+  # Ação em massa: adiciona os clientes selecionados (ou todo o filtro) a uma lista.
+  def add_to_list
+    list = target_list
+    return redirect_back(fallback_location: customers_path, alert: 'Escolha ou dê nome a uma lista.') unless list
+
+    ids = params[:all_filtered] == '1' ? filtered_customer_ids : selected_customer_ids
+    now = Time.current
+    rows = ids.map { |id| { segment_id: list.id, customer_id: id, created_at: now, updated_at: now } }
+    SegmentMembership.insert_all(rows, unique_by: %i[segment_id customer_id]) if rows.any?
+    list.recount!
+    redirect_back fallback_location: customers_path,
+                  notice: "#{helpers.pluralize(ids.size, 'cliente adicionado', plural: 'clientes adicionados')} à lista #{list.name}."
   end
 
   def details
-    customer = customers_scope.find(params[:id])
-
-    orders = customer.orders
-                     .where(client_id: current_client_id)
-                     .includes(order_items: :product)
+    profile = @client.customer_profiles.find_by!(customer_id: params[:id])
+    customer = profile.customer
+    orders = customer.orders.where(client_id: @client.id).includes(order_items: :product)
                      .order(shopify_creation_date: :desc)
 
     render json: {
-      shopify_store: Client.find_by(id: current_client_id)&.shopify_admin_handle,
+      shopify_store: @client.shopify_admin_handle,
       customer: {
-        id: customer.id,
-        name: [customer.first_name,
-               customer.last_name].compact.join(' ').presence || customer.name.presence || 'Sem nome',
-        email: customer.email,
-        phone: customer.phone,
-        shopify_id: customer.shopify_customer_id,
-        created_at: customer.created_at.strftime('%d/%m/%Y %H:%M')
+        id: customer.id, name: profile.name || 'Sem nome', email: profile.email, phone: profile.phone,
+        shopify_id: customer.shopify_customer_id, city: [profile.city, profile.state].compact.join(' / ').presence,
+        created_at: customer.created_at.strftime('%d/%m/%Y %H:%M'),
+        rfm: profile.rfm_label, rfm_color: profile.rfm_color,
+        rfm_hint: CustomerProfile::RFM_SEGMENTS.dig(profile.rfm_segment, :hint),
+        orders_count: profile.orders_count, total_spent: profile.total_spent.to_f, avg_ticket: profile.avg_ticket.to_f,
+        first_order_at: profile.first_order_at&.strftime('%d/%m/%Y'), last_order_at: profile.last_order_at&.strftime('%d/%m/%Y'),
+        days_since: profile.days_since_last_order,
+        lists: customer.segment_memberships.joins(:segment).where(segments: { client_id: @client.id }).pluck('segments.name')
       },
-      orders: orders.map do |o|
-        items = o.order_items
-
-        {
-          number: o.shopify_order_number,
-          shopify_id: o.shopify_order_id,
-          date: o.shopify_creation_date&.strftime('%d/%m/%Y %H:%M'),
-          total: items.sum { |i| i.price.to_f * i.quantity.to_i },
-          items_count: items.size,
-          items: items.map do |i|
-            {
-              name: i.product&.shopify_product_name || i.sku,
-              sku: i.sku,
-              qty: i.quantity,
-              price: i.price,
-              image: i.product&.image_url
-            }
-          end
-        }
-      end
+      orders: orders.map { |order| order_json(order) }
     }
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'Cliente não encontrado' }, status: :not_found
   end
 
   def export_xlsx
-    customers = @customers_scope
-                .with_orders_count
-                .order(created_at: :desc)
+    workbook = RubyXL::Workbook.new
+    sheet = workbook[0]
+    sheet.sheet_name = 'Clientes'
+    headers = ['Nome', 'E-mail', 'Telefone', 'Cidade', 'UF', 'Nº de compras', 'Total gasto', 'Ticket médio',
+               'Primeira compra', 'Última compra', 'Perfil RFM']
+    headers.each_with_index { |h, i| sheet.add_cell(0, i, h) }
 
-    workbook  = RubyXL::Workbook.new
-    worksheet = workbook[0]
-    worksheet.sheet_name = 'Clientes'
-
-    headers = ['ID', 'Nome', 'E-mail', 'Telefone', 'ID Shopify', 'Cadastrado em', 'Total de Pedidos']
-    headers.each_with_index { |h, i| worksheet.add_cell(0, i, h) }
-
-    row = 1
-
-    customers.each do |c|
-      full_name = [c.first_name, c.last_name].compact.join(' ').presence || c.name.presence || ''
-
-      worksheet.add_cell(row, 0, c.id)
-      worksheet.add_cell(row, 1, full_name)
-      worksheet.add_cell(row, 2, c.email.to_s)
-      worksheet.add_cell(row, 3, c.phone.to_s)
-      worksheet.add_cell(row, 4, c.shopify_customer_id.to_s)
-      worksheet.add_cell(row, 5, c.created_at.strftime('%d/%m/%Y %H:%M'))
-      worksheet.add_cell(row, 6, c.orders_count.to_i)
-
-      row += 1
+    @scope.order(:name).each.with_index(1) do |p, row|
+      [p.name, p.email, p.phone, p.city, p.state, p.orders_count, p.total_spent.to_f, p.avg_ticket.to_f,
+       p.first_order_at&.strftime('%d/%m/%Y'), p.last_order_at&.strftime('%d/%m/%Y'), p.rfm_label]
+        .each_with_index { |value, col| sheet.add_cell(row, col, value) }
     end
 
-    file_path = Rails.root.join('tmp', "customers_#{SecureRandom.hex(4)}.xlsx")
-    workbook.write(file_path.to_s)
-
-    send_file file_path,
+    send_data workbook.stream.string,
               filename: "clientes_#{Time.current.strftime('%Y%m%d_%H%M')}.xlsx",
-              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              disposition: 'attachment'
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   end
 
   private
 
-  def current_client_id
-    if current_user.admin?
-      session[:selected_client_id] || current_user.client_id
-    else
-      current_user.client_id
+  def require_client!
+    redirect_to crm_path, alert: 'Nenhum cliente selecionado.' unless @client
+  end
+
+  # Primeira visita calcula na hora; depois, se estiver velho, recalcula em segundo plano.
+  def ensure_profiles
+    last = @client.customer_profiles.maximum(:refreshed_at)
+    if last.nil?
+      Customers::RefreshProfiles.new(@client).call if Order.where(client_id: @client.id).exists?
+    elsif last < STALE_AFTER.ago
+      Customers::RefreshProfilesJob.perform_later(@client.id)
     end
+    @refreshed_at = @client.customer_profiles.maximum(:refreshed_at)
   end
 
-  def customers_scope
-    Customer.joins(:orders).where(orders: { client_id: current_client_id }).distinct
+  def set_filtered_scope
+    @segment = @client.segments.find_by(id: params[:segment_id]) if params[:segment_id].present?
+    scope = @segment ? @segment.profiles : @client.customer_profiles
+    scope = scope.search(params[:q])
+    @rfm_filter = Array(params[:rfm]).compact_blank & CustomerProfile::RFM_SEGMENTS.keys
+    scope = scope.where(rfm_segment: @rfm_filter) if @rfm_filter.any?
+    @scope = scope
   end
 
-  # E-mails (normalizados em minúsculas) que já enviaram o formulário do
-  # pop-up de cadastro deste cliente — usado pra marcar na tabela quem
-  # interagiu com o modal.
-  def popup_submission_emails
-    popup = Popup.find_by(client_id: current_client_id)
+  def sort_params
+    sort = params[:sort].presence_in(SORTS.keys) || 'last_order_at'
+    direction = params[:dir] == 'asc' ? 'ASC' : 'DESC'
+    [sort, direction]
+  end
+
+  def summary(profiles)
+    total, repeat, spent, orders = profiles.pick(Arel.sql('COUNT(*)'), Arel.sql('COUNT(*) FILTER (WHERE orders_count > 1)'),
+                                                 Arel.sql('COALESCE(SUM(total_spent), 0)'), Arel.sql('COALESCE(SUM(orders_count), 0)'))
+    total = total.to_i
+    {
+      total:, repeat_rate: total.zero? ? 0 : (repeat.to_f / total * 100).round(1),
+      ltv: total.zero? ? 0 : spent.to_f / total, avg_ticket: orders.to_i.zero? ? 0 : spent.to_f / orders.to_i,
+      active: profiles.where(rfm_segment: CustomerProfile::ACTIVE_SEGMENTS).count
+    }
+  end
+
+  def popup_emails
+    popup = Popup.find_by(client_id: @client.id)
     return Set.new unless popup
 
     popup.popup_submissions.pluck(:email).filter_map { |email| email&.downcase }.to_set
   end
 
-  def set_filter_scope
-    @customers_scope = customers_scope
+  def target_list
+    return @client.segments.find_by(id: params[:list_id], kind: 'static') if params[:new_list_name].blank?
 
-    @customers_scope = @customers_scope.search(params[:search])       if params[:search].present?
-    @customers_scope = @customers_scope.phone_like(params[:phone])    if params[:phone].present?
-    @customers_scope = @customers_scope.inactive_days(params[:inactive_days]) if params[:inactive_days].present?
-    @customers_scope = @customers_scope.with_min_orders(params[:min_orders])  if params[:min_orders].present?
-    @customers_scope = @customers_scope.bought_product(params[:product_name]) if params[:product_name].present?
-    @customers_scope = @customers_scope.maderite if params[:maderite].present?
+    list = @client.segments.create(name: params[:new_list_name].strip, kind: 'static')
+    list if list.persisted?
+  end
+
+  def selected_customer_ids
+    @client.customer_profiles.where(customer_id: Array(params[:customer_ids])).pluck(:customer_id)
+  end
+
+  def filtered_customer_ids
+    set_filtered_scope
+    @scope.pluck(:customer_id)
+  end
+
+  def order_json(order)
+    items = order.order_items
+    {
+      number: order.shopify_order_number, shopify_id: order.shopify_order_id,
+      date: order.shopify_creation_date&.strftime('%d/%m/%Y %H:%M'),
+      total: order.total_price.to_f, items_count: items.size, coupon: order.discount_code.presence,
+      items: items.map do |i|
+        { name: i.product&.shopify_product_name || i.sku, sku: i.sku, qty: i.quantity, price: i.price.to_f,
+          image: i.product&.image_url }
+      end
+    }
   end
 end

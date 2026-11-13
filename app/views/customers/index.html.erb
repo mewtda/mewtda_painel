@@ -1,345 +1,143 @@
 <% title 'Clientes' %>
+<% brl = ->(v) { number_to_currency(v, unit: 'R$', separator: ',', delimiter: '.', precision: 2) } %>
+<% filter_params = params.permit(:q, :segment_id, :sort, :dir, rfm: []).to_h %>
+<% sort_link = lambda do |key, label|
+     active = @sort == key
+     dir = active && @direction == 'DESC' ? 'asc' : 'desc'
+     link_to customers_path(filter_params.merge(sort: key, dir: dir)), class: "cx-sort #{'is-active' if active}" do
+       safe_join([label, tag.i(class: "fa-solid #{active ? (@direction == 'DESC' ? 'fa-arrow-down' : 'fa-arrow-up') : 'fa-sort'}")], ' ')
+     end
+   end %>
 
-<%= render 'shared/loja_tabs' %>
+<div class="clients-wrapper cx-page">
+  <%= render 'customers/tabs' %>
 
-<div class="customers-wrapper">
+  <%# KPIs da base %>
+  <div class="cx-kpis">
+    <div class="cx-kpi"><span>Clientes compradores</span><strong><%= number_with_delimiter(@summary[:total], delimiter: '.') %></strong></div>
+    <div class="cx-kpi"><span>Ativos (RFM)</span><strong><%= number_with_delimiter(@summary[:active], delimiter: '.') %></strong>
+      <small><%= @summary[:total].zero? ? 0 : (@summary[:active] * 100.0 / @summary[:total]).round(1) %>% da base</small></div>
+    <div class="cx-kpi"><span>Recompra</span><strong><%= number_with_precision(@summary[:repeat_rate], precision: 1, separator: ',') %>%</strong>
+      <small>compraram 2+ vezes</small></div>
+    <div class="cx-kpi"><span>Ticket médio</span><strong><%= brl.call(@summary[:avg_ticket]) %></strong></div>
+    <div class="cx-kpi"><span>LTV médio</span><strong><%= brl.call(@summary[:ltv]) %></strong><small>total gasto por cliente</small></div>
+  </div>
 
-  <%# Filtros %>
-  <%= form_tag(customers_path, method: 'get') do %>
-    <div class="customers-filters">
-
-      <div class="customers-filters__row">
-        <div class="customers-filters__field">
-          <label class="crm-label">Buscar</label>
-          <%= text_field_tag :search, params[:search], class: 'crm-input', placeholder: 'Nome ou e-mail...' %>
+  <div class="clients-table-wrap">
+    <%# Barra de filtros %>
+    <%= form_with url: customers_path, method: :get, class: 'cx-toolbar', id: 'cx-filter-form' do %>
+      <div class="cx-toolbar__left">
+        <span class="cx-count">
+          <strong><%= number_with_delimiter(@filtered_count, delimiter: '.') %></strong> clientes
+          <% if @segment %>em <span class="crm-tag crm-tag--warning"><%= @segment.name %></span><% end %>
+        </span>
+        <%= link_to export_xlsx_customers_path(filter_params.except('sort', 'dir')), class: 'cx-link' do %>
+          <i class="fa-solid fa-download"></i> Exportar planilha
+        <% end %>
+      </div>
+      <div class="cx-toolbar__right">
+        <%= select_tag :segment_id, options_for_select([['Toda a base', '']] + @segments.map { |s| ["#{s.kind_label}: #{s.name}", s.id] }, params[:segment_id]),
+                       class: 'crm-input cx-select', onchange: 'this.form.requestSubmit()' %>
+        <div class="cx-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <%= search_field_tag :q, params[:q], class: 'crm-input', placeholder: 'Nome, e-mail ou telefone' %>
         </div>
-        <div class="customers-filters__field">
-          <label class="crm-label">Telefone</label>
-          <%= text_field_tag :phone, params[:phone], class: 'crm-input', placeholder: '+55...' %>
-        </div>
-        <div class="customers-filters__field customers-filters__field--sm">
-          <label class="crm-label">Min. de compras</label>
-          <%= number_field_tag :min_orders, params[:min_orders], class: 'crm-input', placeholder: 'Ex: 3', min: 1 %>
-        </div>
-        <div class="customers-filters__field">
-          <label class="crm-label">Comprou o produto</label>
-          <%= text_field_tag :product_name, params[:product_name], class: 'crm-input', placeholder: 'Nome do produto...' %>
-        </div>
+        <%= hidden_field_tag :sort, params[:sort] %>
+        <%= hidden_field_tag :dir, params[:dir] %>
       </div>
 
-      <div class="customers-filters__row customers-filters__row--bottom">
-        <div class="customers-filters__quick">
-          <span class="customers-filters__quick-label">Filtros rápidos:</span>
-
-          <div class="customers-filters__inactive-wrap">
-            <%= number_field_tag :inactive_days, params[:inactive_days],
-                class: "crm-input customers-filters__input--days #{'is-active' if params[:inactive_days].present?}",
-                placeholder: 'Dias', min: 1, id: 'inactive_days_field' %>
-            <button type="submit" name="inactive_days_submit" value="1"
-                    class="crm-btn customers-btn--quick <%= 'customers-btn--quick-active' if params[:inactive_days].present? %>"
-                    id="inactive_btn">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Sem compras há <span id="inactive_label"><%= params[:inactive_days].present? ? "#{params[:inactive_days]}d" : "? dias" %></span>
-            </button>
-          </div>
-
-          <% if current_user&.client_id == 1 %>
-            <%= link_to customers_path(params.permit(:search, :phone, :min_orders, :product_name, :inactive_days).merge(maderite: params[:maderite].present? ? nil : '1')),
-                class: "crm-btn customers-btn--quick #{'customers-btn--quick-active' if params[:maderite].present?}" do %>
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-              </svg>
-              Coleção Maderite
-            <% end %>
-          <% end %>
-        </div>
-
-        <div class="customers-filters__actions">
-          <%= button_tag class: 'crm-btn crm-btn--primary', name: '' do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
-            Filtrar
-          <% end %>
-          <%= link_to export_xlsx_customers_path(params.permit(:search, :phone, :min_orders, :product_name, :inactive_days, :maderite)),
-              class: 'crm-btn customers-btn--export' do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
-            Exportar XLSX
-          <% end %>
-          <%= link_to customers_path, class: 'crm-btn crm-btn--secondary' do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Limpar
-          <% end %>
-        </div>
+      <div class="cx-rfm-chips">
+        <span class="cx-rfm-chips__label">Perfil RFM:</span>
+        <% CustomerProfile::RFM_SEGMENTS.each do |key, info| %>
+          <label class="cx-chip <%= 'is-on' if @rfm_filter.include?(key) %>" style="--rfm: <%= info[:color] %>" title="<%= info[:hint] %>">
+            <%= check_box_tag 'rfm[]', key, @rfm_filter.include?(key), onchange: 'this.form.requestSubmit()', id: "rfm-#{key}" %>
+            <%= info[:label] %>
+          </label>
+        <% end %>
+        <% if params[:q].present? || params[:segment_id].present? || @rfm_filter.any? %>
+          <%= link_to 'Limpar filtros', customers_path, class: 'cx-link cx-link--muted' %>
+        <% end %>
       </div>
+    <% end %>
 
-    </div>
-  <% end %>
+    <%# Ação em massa: adicionar à lista %>
+    <%= form_with url: add_to_list_customers_path, method: :post, id: 'cx-bulk-form', class: 'cx-bulk', html: { hidden: true } do %>
+      <% filter_params.except('sort', 'dir').each do |key, value| %>
+        <% Array(value).each do |v| %><%= hidden_field_tag(value.is_a?(Array) ? "#{key}[]" : key, v, id: nil) %><% end %>
+      <% end %>
+      <%= hidden_field_tag :all_filtered, '0', id: 'cx-all-filtered' %>
+      <span id="cx-bulk-count"></span>
+      <button type="button" class="cx-link" id="cx-select-all-filtered">Selecionar todos os <%= number_with_delimiter(@filtered_count, delimiter: '.') %> do filtro</button>
+      <span class="cx-bulk__spacer"></span>
+      <%= select_tag :list_id, options_for_select(@lists.map { |l| [l.name, l.id] }), include_blank: 'Escolha uma lista…', class: 'crm-input cx-select' %>
+      <span class="eb-muted">ou</span>
+      <%= text_field_tag :new_list_name, nil, class: 'crm-input', placeholder: 'Nova lista' %>
+      <button class="crm-btn crm-btn--primary"><i class="fa-solid fa-list-check"></i> Adicionar à lista</button>
+    <% end %>
 
-  <%# Tabela %>
-  <div class="customers-table-wrap">
-    <table class="crm-table">
-      <thead>
-        <tr>
-          <th>Cliente</th>
-          <th>E-mail</th>
-          <th>Telefone</th>
-          <th class="text-center">Pedidos</th>
-          <th class="text-center">Pop-up</th>
-          <th class="text-center">Cadastrado em</th>
-          <th class="text-center">Detalhes</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if @customers.empty? %>
+    <div class="cx-table-scroll">
+      <table class="crm-table cx-table">
+        <thead>
           <tr>
-            <td colspan="7" class="customers-table__empty">Nenhum cliente encontrado.</td>
+            <th class="cx-check"><input type="checkbox" id="cx-check-all" aria-label="Selecionar todos da página"></th>
+            <th><%= sort_link.call('name', 'Nome') %></th>
+            <th>Telefone</th>
+            <th><%= sort_link.call('last_order_at', 'Última compra') %></th>
+            <th class="text-center"><%= sort_link.call('orders_count', 'Nº de compras') %></th>
+            <th><%= sort_link.call('avg_ticket', 'Ticket médio') %></th>
+            <th><%= sort_link.call('total_spent', 'Total gasto') %></th>
+            <th><%= sort_link.call('rfm', 'Perfil RFM') %></th>
+            <th>Cidade</th>
+            <th>E-mail</th>
+            <th class="text-center">Pop-up</th>
           </tr>
-        <% else %>
-          <% @customers.each do |customer| %>
-            <% full_name    = [customer.first_name, customer.last_name].compact.join(' ').presence || customer.name.presence || 'Sem nome' %>
-            <% initials     = [customer.first_name&.first, customer.last_name&.first].compact.join('').upcase.presence || '?' %>
-            <% orders_count = customer.try(:orders_count).to_i %>
-            <tr>
-              <td class="customers-table__name">
-                <span class="customers-avatar"><%= initials %></span>
-                <span class="customers-table__fullname"><%= full_name %></span>
+        </thead>
+        <tbody>
+          <% if @profiles.empty? %>
+            <tr><td colspan="11" class="customers-table__empty">Nenhum cliente encontrado.</td></tr>
+          <% end %>
+          <% @profiles.each do |p| %>
+            <tr class="cx-row" data-customer-id="<%= p.customer_id %>">
+              <td class="cx-check"><input type="checkbox" name="customer_ids[]" value="<%= p.customer_id %>" form="cx-bulk-form" class="cx-row-check" aria-label="Selecionar"></td>
+              <td class="cx-name">
+                <span class="customers-avatar"><%= p.name.to_s.split.first(2).map { |w| w[0] }.join.upcase.presence || '?' %></span>
+                <span><%= p.name.presence || 'Sem nome' %></span>
               </td>
-              <td>
-                <% if customer.email.present? %>
-                  <a href="mailto:<%= customer.email %>" class="customers-link"><%= customer.email %></a>
-                <% else %>
-                  <span class="crm-tag crm-tag--neutral">—</span>
-                <% end %>
+              <td class="cx-nowrap"><%= p.phone.presence || '—' %></td>
+              <td class="cx-nowrap">
+                <%= p.last_order_at ? l(p.last_order_at.to_date, format: '%d/%m/%Y') : '—' %>
+                <% if (days = p.days_since_last_order) %><small class="cx-muted">há <%= days %>d</small><% end %>
               </td>
-              <td>
-                <% if customer.phone.present? %>
-                  <a href="tel:<%= customer.phone %>" class="customers-link customers-link--phone">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.338c0-1.36.876-2.572 2.19-2.938l1.217-.338a2.25 2.25 0 012.517 1.031l.956 1.67a2.25 2.25 0 01-.481 2.83l-.534.445c-.188.157-.26.42-.16.644.367.82.974 1.906 1.84 2.773.867.867 1.952 1.474 2.773 1.841.225.1.487.028.644-.16l.445-.534a2.25 2.25 0 012.83-.481l1.67.956a2.25 2.25 0 011.031 2.517l-.338 1.217c-.366 1.314-1.578 2.19-2.938 2.19C8.552 21.75 2.25 15.448 2.25 6.338z" />
-                    </svg>
-                    <%= customer.phone %>
-                  </a>
-                <% else %>
-                  <span class="crm-tag crm-tag--neutral">—</span>
-                <% end %>
-              </td>
+              <td class="text-center"><span class="customers-badge customers-badge--orders"><%= p.orders_count %></span></td>
+              <td class="cx-nowrap"><%= brl.call(p.avg_ticket) %></td>
+              <td class="cx-nowrap"><strong><%= brl.call(p.total_spent) %></strong></td>
+              <td><%= render 'customers/rfm_tag', segment: p.rfm_segment %></td>
+              <td class="cx-nowrap"><%= [p.city, p.state].compact.join(' / ').presence || '—' %></td>
+              <td class="cx-email"><%= p.email.presence || '—' %></td>
               <td class="text-center">
-                <span class="customers-badge customers-badge--orders"><%= orders_count %></span>
-              </td>
-              <td class="text-center">
-                <% if customer.email.present? && @popup_submission_emails.include?(customer.email.downcase) %>
+                <% if p.email.present? && @popup_emails.include?(p.email) %>
                   <span class="crm-tag crm-tag--success">Cadastrado</span>
                 <% else %>
                   <span class="crm-tag crm-tag--neutral">—</span>
                 <% end %>
               </td>
-              <td class="text-center"><%= customer.created_at.strftime('%d/%m/%Y') %></td>
-              <td class="text-center">
-                <button class="crm-btn customers-btn--details"
-                        onclick="openCustomerModal('<%= customer.id %>')">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Ver detalhes
-                </button>
-              </td>
             </tr>
           <% end %>
-        <% end %>
-      </tbody>
-      <tfoot>
-        <tr>
-          <th colspan="7"><%= page_entries_info @customers %></th>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
-
-  <%= will_paginate @customers, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
-
-</div>
-
-<%# Modal — oculto até o fetch completar %>
-<div id="customer-modal-overlay" class="cmodal-overlay" onclick="closeCustomerModal()">
-  <div class="cmodal" onclick="event.stopPropagation()">
-
-    <%# Estado: loading (visível por padrão até os dados chegarem) %>
-    <div id="cmodal-loading" class="cmodal-loading">
-      <div class="cmodal-loading__spinner"></div>
-      <span>Carregando dados do cliente...</span>
+        </tbody>
+      </table>
     </div>
 
-    <%# Estado: conteúdo (oculto até os dados chegarem) %>
-    <div id="cmodal-content" style="display:none; flex-direction:column; overflow:hidden; flex:1;">
-      <div class="cmodal__header">
-        <div class="cmodal__avatar" id="cmodal-avatar"></div>
-        <div>
-          <h2 class="cmodal__name" id="cmodal-name"></h2>
-          <span class="cmodal__shopify-id" id="cmodal-shopify-id"></span>
-        </div>
-        <button class="cmodal__close" onclick="closeCustomerModal()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <div class="cmodal__body">
-        <div class="cmodal__info-grid">
-          <div class="cmodal__info-item">
-            <span class="cmodal__info-label">E-mail</span>
-            <span class="cmodal__info-value" id="cmodal-email"></span>
-          </div>
-          <div class="cmodal__info-item">
-            <span class="cmodal__info-label">Telefone</span>
-            <span class="cmodal__info-value" id="cmodal-phone"></span>
-          </div>
-          <div class="cmodal__info-item">
-            <span class="cmodal__info-label">Cadastrado em</span>
-            <span class="cmodal__info-value" id="cmodal-created"></span>
-          </div>
-          <div class="cmodal__info-item">
-            <span class="cmodal__info-label">Total de pedidos</span>
-            <span class="cmodal__info-value" id="cmodal-orders-count"></span>
-          </div>
-        </div>
-
-        <div class="cmodal__section-title">Pedidos</div>
-        <div id="cmodal-orders-list" class="cmodal__orders"></div>
-      </div>
+    <div class="cx-footer">
+      <span class="cx-muted">
+        <i class="fa-solid fa-rotate"></i>
+        Base atualizada <%= @refreshed_at ? "há #{time_ago_in_words(@refreshed_at)}" : 'ainda não calculada' %>
+      </span>
+      <%= button_to refresh_customers_path, class: 'cx-link', form_class: 'cx-inline' do %>Atualizar agora<% end %>
+      <span class="cx-bulk__spacer"></span>
+      <%= will_paginate @profiles, list_classes: %w[pagination justify-content-center], inner_window: 1, params: filter_params %>
     </div>
-
   </div>
 </div>
 
-<script>
-  (function() {
-    var daysField = document.getElementById('inactive_days_field');
-    var daysLabel = document.getElementById('inactive_label');
-    if (daysField && daysLabel) {
-      daysField.addEventListener('input', function() {
-        daysLabel.textContent = daysField.value.trim() ? daysField.value.trim() + 'd' : '? dias';
-      });
-    }
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') closeCustomerModal();
-    });
-  })();
-
-  function openCustomerModal(customerId) {
-    var overlay  = document.getElementById('customer-modal-overlay');
-    var loading  = document.getElementById('cmodal-loading');
-    var content  = document.getElementById('cmodal-content');
-
-    // Mostra apenas o spinner, esconde conteúdo
-    loading.style.display  = 'flex';
-    content.style.display  = 'none';
-    overlay.classList.add('is-open');
-    document.body.style.overflow = 'hidden';
-
-    fetch('/crm/customers/' + customerId + '/details', {
-      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var customer = data.customer;
-      var orders   = data.orders || [];
-      var shopifyStore = data.shopify_store;
-      var name     = customer.name || 'Sem nome';
-
-      var initials = name.split(' ').slice(0,2).map(function(w){ return w[0] || ''; }).join('').toUpperCase();
-      document.getElementById('cmodal-avatar').textContent       = initials || '?';
-      document.getElementById('cmodal-name').textContent         = name;
-      document.getElementById('cmodal-shopify-id').textContent   = 'ID Shopify: ' + (customer.shopify_id || '—');
-      document.getElementById('cmodal-email').textContent        = customer.email || '—';
-      document.getElementById('cmodal-phone').textContent        = customer.phone || '—';
-      document.getElementById('cmodal-created').textContent      = customer.created_at || '—';
-      document.getElementById('cmodal-orders-count').textContent = orders.length + ' pedido(s)';
-
-      var list = document.getElementById('cmodal-orders-list');
-      list.innerHTML = '';
-
-      if (orders.length === 0) {
-        list.innerHTML = '<p class="cmodal__empty">Nenhum pedido encontrado para este cliente.</p>';
-      } else {
-        orders.forEach(function(order) {
-          var shopifyUrl = 'https://admin.shopify.com/store/' + shopifyStore + '/orders/' + order.shopify_id;
-          var total      = order.total > 0 ? 'R$ ' + parseFloat(order.total).toFixed(2).replace('.', ',') : '—';
-          var items      = order.items || [];
-
-          var card = document.createElement('div');
-          card.className = 'cmodal__order-card';
-
-          var header = document.createElement('div');
-          header.className = 'cmodal__order-header';
-          header.innerHTML =
-            '<a href="' + shopifyUrl + '" target="_blank" class="cmodal__order-number" onclick="event.stopPropagation()">' + (order.number || '—') + '</a>' +
-            '<div class="cmodal__order-meta">' +
-              '<span>' + (order.date || '—') + '</span>' +
-              '<span>' + order.items_count + ' item(s)</span>' +
-              '<span class="cmodal__order-total">' + total + '</span>' +
-            '</div>' +
-            '<svg class="cmodal__order-toggle" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>';
-
-          var itemsWrap = document.createElement('div');
-          itemsWrap.className = 'cmodal__order-items';
-
-          if (items.length === 0) {
-            itemsWrap.innerHTML = '<p class="cmodal__empty" style="padding:0.5rem 0">Sem itens registrados.</p>';
-          } else {
-            items.forEach(function(item) {
-              var imgHtml = (item.image && item.image.length > 0)
-                ? '<img src="' + item.image + '" class="cmodal__item-img" alt="' + item.name + '" crossorigin="anonymous">'
-                : '<div class="cmodal__item-img-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg></div>';
-
-              var subtotal = 'R$ ' + (item.price * item.qty).toFixed(2).replace('.', ',');
-              var row = document.createElement('div');
-              row.className = 'cmodal__order-item';
-              row.innerHTML =
-                imgHtml +
-                '<div class="cmodal__item-info">' +
-                  '<div class="cmodal__item-name">' + item.name + '</div>' +
-                  (item.sku ? '<div class="cmodal__item-sku">' + item.sku + '</div>' : '') +
-                '</div>' +
-                '<div class="cmodal__item-right">' +
-                  '<span class="cmodal__item-qty">x' + item.qty + '</span>' +
-                  '<span class="cmodal__item-price">' + subtotal + '</span>' +
-                '</div>';
-              itemsWrap.appendChild(row);
-            });
-          }
-
-          header.addEventListener('click', function() {
-            var toggle = header.querySelector('.cmodal__order-toggle');
-            var isOpen = itemsWrap.classList.toggle('is-open');
-            toggle.classList.toggle('is-open', isOpen);
-          });
-
-          card.appendChild(header);
-          card.appendChild(itemsWrap);
-          list.appendChild(card);
-        });
-      }
-
-      // Esconde spinner, mostra conteúdo
-      loading.style.display = 'none';
-      content.style.display = 'flex';
-    })
-    .catch(function() {
-      loading.innerHTML = '<p class="cmodal__empty">Erro ao carregar dados. Tente novamente.</p>';
-    });
-  }
-
-  function closeCustomerModal() {
-    document.getElementById('customer-modal-overlay').classList.remove('is-open');
-    document.body.style.overflow = '';
-  }
-</script>
+<%= render 'customers/detail_drawer' %>
+<%= javascript_include_tag 'customers', defer: true %>

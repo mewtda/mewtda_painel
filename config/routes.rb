@@ -181,10 +181,20 @@ Rails.application.routes.draw do
     resources :customers, only: [:index] do
       collection do
         get :export_xlsx
+        get :rfm, path: 'matriz-rfm'
+        post :refresh
+        post :add_to_list
       end
       member do
         get :details
       end
+    end
+    resources :segments, path: 'segmentos', except: [:show] do
+      collection do
+        get :templates, path: 'sugeridos'
+        post :preview
+      end
+      member { post :recount }
     end
 
     resources :users do

@@ -9,6 +9,7 @@ class EmailSuppression < ApplicationRecord
   TOKEN_PURPOSE = :email_unsubscribe
 
   belongs_to :client
+  belongs_to :email_template, optional: true
 
   normalizes :email, with: ->(email) { email.to_s.strip.downcase }
 
@@ -30,31 +31,31 @@ class EmailSuppression < ApplicationRecord
 
   # Registra a recusa (idempotente) e cancela os avisos de estoque pendentes
   # desse e-mail, pra que nada mais seja disparado pra ele.
-  def self.unsubscribe!(client, email, source: 'unsubscribe_link')
+  def self.unsubscribe!(client, email, source: 'unsubscribe_link', template: nil)
     normalized = normalize_value_for(:email, email)
-    suppression = find_by(client:, email: normalized) || create!(client:, email: normalized, source:)
+    suppression = find_by(client:, email: normalized) || create!(client:, email: normalized, source:, email_template: template)
     client.back_in_stock_alerts.pending.where(email: suppression.email).find_each(&:unsubscribe!)
     suppression
   rescue ActiveRecord::RecordNotUnique
     retry
   end
 
-  def self.unsubscribe_token(client, email)
-    verifier.generate({ 'client_id' => client.id, 'email' => normalize_value_for(:email, email) })
+  def self.unsubscribe_token(client, email, template: nil)
+    verifier.generate({ 'client_id' => client.id, 'email' => normalize_value_for(:email, email), 'template_id' => template&.id })
   end
 
-  def self.unsubscribe_url(client, email)
-    path = Rails.application.routes.url_helpers.widget_email_unsubscribe_path(token: unsubscribe_token(client, email))
+  def self.unsubscribe_url(client, email, template: nil)
+    path = Rails.application.routes.url_helpers.widget_email_unsubscribe_path(token: unsubscribe_token(client, email, template:))
     "#{BackInStockSetting::WIDGET_HOST}#{path}"
   end
 
-  # Devolve [client, email] de um token válido, ou nil.
+  # Devolve [client, email, template] de um token válido, ou nil.
   def self.resolve_token(token)
     data = verifier.verified(token.to_s)
     return unless data.is_a?(Hash)
 
     client = Client.find_by(id: data['client_id'])
-    [client, data['email']] if client && data['email'].present?
+    [client, data['email'], client.email_templates.find_by(id: data['template_id'])] if client && data['email'].present?
   end
 
   def self.verifier

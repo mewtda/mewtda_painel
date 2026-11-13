@@ -16,14 +16,14 @@ module Widget
     end
 
     def create
-      EmailSuppression.unsubscribe!(@client, @email)
+      EmailSuppression.unsubscribe!(@client, @email, template: @template)
       render :done
     end
 
     private
 
     def set_recipient
-      @client, @email = EmailSuppression.resolve_token(params[:token])
+      @client, @email, @template = EmailSuppression.resolve_token(params[:token])
       render 'widget/back_in_stock_unsubscribes/invalid', status: :not_found unless @client
     end
   end

@@ -14,13 +14,13 @@
       </div>
 
       <div class="scr-card">
-        <h2 class="scr-card__title"><i class="fa-solid fa-tags"></i> Produtos</h2>
+        <h2 class="scr-card__title"><i class="fa-solid fa-tags"></i> Em quais produtos mostrar o botão</h2>
         <label class="scr-switch">
           <span class="scr-switch__text">
-            <strong>Mostrar o botão só nos produtos marcados</strong>
+            <strong>Mostrar só nos produtos que eu escolher</strong>
             <span>
-              Desligado, o botão aparece em todo produto esgotado. Ligado, só aparece nos produtos com o campo
-              <code>mewtda.avise_me</code> marcado como Verdadeiro na Shopify.
+              Desligado, o botão aparece em <strong>todo produto esgotado</strong>. Ligado, só aparece nos produtos em que você ativar
+              <strong>"Avise-me quando voltar"</strong> na página do produto, dentro da Shopify.
             </span>
           </span>
           <%= form.check_box :only_marked_products %>

@@ -1,0 +1,14 @@
+pt-BR:
+  will_paginate:
+    page_entries_info:
+      single_page:
+        zero: "Nenhum registro encontrado"
+        one: "Exibindo 1 registro"
+        other: "Exibindo todos os %{count} registros"
+      single_page_html:
+        zero: "Nenhum registro encontrado"
+        one: "Exibindo <b>1</b> registro"
+        other: "Exibindo <b>todos os&nbsp;%{count}</b> registros"
+
+      multi_page: "Exibindo %{from} - %{to} de %{count} no total"
+      multi_page_html: "Exibindo <b>%{from}&nbsp;-&nbsp;%{to}</b> de <b>%{count}</b> no total"

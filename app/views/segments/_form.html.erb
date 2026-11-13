@@ -6,16 +6,25 @@
         segments: current_segments.reject { |s| s.id == segment.id }.map { |s| { id: s.id, name: "#{s.kind_label}: #{s.name}" } }
       ).to_json) %></script>
 
-  <div class="sg-head">
-    <%= link_to segments_path, class: 'cx-link', title: 'Voltar' do %><i class="fa-solid fa-chevron-left"></i><% end %>
-    <div class="sg-head__name">
-      <%= form.text_field :name, class: 'sg-title-input', placeholder: segment.static? ? 'Nome da lista' : 'Nome do segmento', required: true %>
-      <%= form.text_field :description, class: 'sg-desc-input', placeholder: 'Descrição (opcional)' %>
+  <div class="sg-topbar">
+    <div class="sg-topbar__left">
+      <%= link_to segments_path, class: 'sg-back' do %><i class="fa-solid fa-arrow-left"></i> Segmentos e listas<% end %>
+      <span class="sg-kind sg-kind--<%= segment.kind %>"><%= segment.kind_label %></span>
     </div>
-    <span class="sg-kind sg-kind--<%= segment.kind %>"><%= segment.kind_label %></span>
     <%= form.button class: 'crm-btn crm-btn--primary' do %>
       <i class="fa-solid fa-floppy-disk"></i> <%= segment.static? ? 'Salvar lista' : 'Salvar segmento' %>
     <% end %>
+  </div>
+
+  <div class="sg-head__name">
+    <div class="sg-head__field">
+      <%= form.label :name, segment.static? ? 'Nome da lista' : 'Nome do segmento', class: 'crm-label' %>
+      <%= form.text_field :name, class: 'crm-input sg-title-input', placeholder: segment.static? ? 'Ex.: Clientes VIP' : 'Ex.: Compraram no verão', required: true %>
+    </div>
+    <div class="sg-head__field sg-head__field--wide">
+      <%= form.label :description, 'Descrição (opcional)', class: 'crm-label' %>
+      <%= form.text_field :description, class: 'crm-input', placeholder: 'Para que serve', maxlength: 500 %>
+    </div>
   </div>
 
   <% if segment.errors.any? %>
@@ -30,11 +39,15 @@
       <i class="fa-solid fa-list-check"></i>
       <div>
         <strong>Lista estática</strong>
-        <p class="cx-muted">
-          Depois de salvar, vá na <%= link_to 'Área de clientes', customers_path %>, marque os clientes (ou use
-          "Selecionar todos do filtro") e clique em <em>Adicionar à lista</em>.
-          <% if segment.persisted? %>Hoje a lista tem <strong><%= segment.segment_memberships.count %></strong> clientes.<% end %>
-        </p>
+        <p class="cx-muted">Uma lista fixa de clientes que você escolhe a dedo.</p>
+        <ol class="sg-steps">
+          <li>Salve a lista.</li>
+          <li>Vá em <%= link_to 'Clientes', customers_path %> e marque as pessoas (ou use <strong>Selecionar todos do filtro</strong>).</li>
+          <li>Clique em <strong>Adicionar à lista</strong>.</li>
+        </ol>
+        <% if segment.persisted? %>
+          <p class="cx-muted">Hoje a lista tem <strong><%= segment.segment_memberships.count %></strong> clientes.</p>
+        <% end %>
       </div>
     </div>
   <% else %>
@@ -54,9 +67,9 @@
         <div class="sg-summary__count" id="sg-count">0</div>
         <div>clientes encontrados</div>
         <div class="cx-muted" id="sg-percent">Representando 0% da sua base</div>
+        <div class="sg-summary__subscribed" id="sg-subscribed"></div>
         <div class="sg-summary__bar"><div id="sg-bar"></div></div>
         <div class="sg-summary__sample" id="sg-sample"></div>
-        <button type="button" class="crm-btn" id="sg-calc"><i class="fa-solid fa-calculator"></i> Calcular segmento</button>
       </aside>
     </div>
     <%= javascript_include_tag 'segments', defer: true %>

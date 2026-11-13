@@ -79,10 +79,10 @@
   const valueControls = (cond, type) => {
     const op = cond.op;
     if (type === "bool") return [];
-    if (type === "rfm") {
+    if (type === "rfm" || type === "marketing") {
       const chosen = new Set(Array.isArray(cond.value) ? cond.value : []);
       const box = el("div", { class: "sg-rfm" });
-      schema.rfm.forEach((r) => {
+      schema[type].forEach((r) => {
         const cb = el("input", { type: "checkbox", value: r.key });
         cb.checked = chosen.has(r.key);
         cb.addEventListener("change", () => {
@@ -200,6 +200,7 @@
       $("#sg-count").textContent = data.count.toLocaleString("pt-BR");
       $("#sg-percent").textContent = `Representando ${String(data.percent).replace(".", ",")}% da sua base`;
       $("#sg-bar").style.width = `${Math.min(data.percent, 100)}%`;
+      $("#sg-subscribed").textContent = `${data.subscribed.toLocaleString("pt-BR")} inscritos em e-mail marketing`;
       const sample = $("#sg-sample");
       sample.replaceChildren();
       if (data.sample.length) {
@@ -219,8 +220,6 @@
     clearTimeout(timer);
     timer = setTimeout(preview, 450);
   }
-
-  $("#sg-calc").addEventListener("click", preview);
 
   render();
   rulesInput.value = JSON.stringify(state);

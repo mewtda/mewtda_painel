@@ -183,7 +183,6 @@ Rails.application.routes.draw do
       collection do
         get :export_xlsx
         get :rfm, path: 'matriz-rfm'
-        post :refresh
         post :add_to_list
       end
       member do
@@ -195,7 +194,10 @@ Rails.application.routes.draw do
         get :templates, path: 'sugeridos'
         post :preview
       end
-      member { post :recount }
+      member do
+        post :recount
+        post :duplicate
+      end
     end
 
     resources :users do

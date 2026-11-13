@@ -2,9 +2,9 @@ require 'test_helper'
 
 module Ses
   class DomainIdentityServiceTest < ActiveSupport::TestCase
-    DkimAttributes = Struct.new(:tokens)
+    DkimAttributes = Struct.new(:tokens, :status)
     CreateResponse = Struct.new(:dkim_attributes)
-    GetResponse = Struct.new(:verified_for_sending_status)
+    GetResponse = Struct.new(:verified_for_sending_status, :dkim_attributes)
 
     class FakeSesClient
       attr_reader :create_email_identity_args, :get_email_identity_args
@@ -16,12 +16,12 @@ module Ses
 
       def create_email_identity(args)
         @create_email_identity_args = args
-        CreateResponse.new(DkimAttributes.new(@tokens))
+        CreateResponse.new(DkimAttributes.new(@tokens, 'PENDING'))
       end
 
       def get_email_identity(args)
         @get_email_identity_args = args
-        GetResponse.new(@verified)
+        GetResponse.new(@verified, DkimAttributes.new(@tokens, 'PENDING'))
       end
     end
 
@@ -30,13 +30,12 @@ module Ses
                       email_sending_domain: 'loja.com.br')
     end
 
-    test 'create! stores the dkim tokens and marks status as pending' do
+    test 'register! stores the dkim tokens and marks status as pending' do
       client = build_client
       fake_ses = FakeSesClient.new(tokens: %w[abc def ghi])
 
-      tokens = DomainIdentityService.new(client, ses: fake_ses).create!
+      DomainIdentityService.new(client, ses: fake_ses).register!('loja.com.br')
 
-      assert_equal %w[abc def ghi], tokens
       client.reload
       assert_equal %w[abc def ghi], client.ses_dkim_tokens
       assert_equal 'pending', client.ses_verification_status
@@ -50,7 +49,7 @@ module Ses
 
       result = DomainIdentityService.new(client, ses: fake_ses).refresh_status!
 
-      assert result
+      assert_equal 'verified', result
       client.reload
       assert_equal 'verified', client.ses_verification_status
       assert client.ses_verified_at.present?
@@ -63,7 +62,7 @@ module Ses
 
       result = DomainIdentityService.new(client, ses: fake_ses).refresh_status!
 
-      assert_not result
+      assert_equal 'pending', result
       client.reload
       assert_equal 'pending', client.ses_verification_status
       assert_nil client.ses_verified_at

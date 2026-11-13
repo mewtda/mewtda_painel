@@ -13,30 +13,42 @@
       </div>
       <%= form_with url: invoice_account_path, method: :get, class: 'invoice-card__picker' do %>
         <%= select_tag :mes, options_for_select(@months.map { |m| [l(m, format: '%B/%Y').capitalize, m.strftime('%Y-%m')] }, @invoice.month.strftime('%Y-%m')),
-                       class: 'crm-input', onchange: 'this.form.requestSubmit()' %>
+                       class: 'crm-input users-form-page__select', data: { autosubmit: true } %>
       <% end %>
     </div>
 
     <table class="invoice-table">
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th class="invoice-table__amount invoice-table__hide-sm">Quantidade</th>
+          <th class="invoice-table__amount invoice-table__hide-sm">Valor unitário</th>
+          <th class="invoice-table__amount">Valor</th>
+        </tr>
+      </thead>
       <tbody>
         <tr>
           <td>
             <strong>Plano <%= @invoice.plan_name || '—' %></strong>
             <small>Mensalidade</small>
           </td>
+          <td class="invoice-table__amount invoice-table__hide-sm">1</td>
+          <td class="invoice-table__amount invoice-table__hide-sm"><%= brl.call(@invoice.plan_price) %></td>
           <td class="invoice-table__amount"><%= brl.call(@invoice.plan_price) %></td>
         </tr>
         <tr>
           <td>
             <strong>E-mails enviados</strong>
-            <small><%= number_with_delimiter(@invoice.emails_sent, delimiter: '.') %> e-mails no mês</small>
+            <small>Cobrados por mil e-mails enviados no mês</small>
           </td>
+          <td class="invoice-table__amount invoice-table__hide-sm"><%= number_with_delimiter(@invoice.emails_sent, delimiter: '.') %></td>
+          <td class="invoice-table__amount invoice-table__hide-sm"><%= brl.call(Billing::Invoice::EMAIL_PRICE_PER_THOUSAND) %> por mil</td>
           <td class="invoice-table__amount"><%= brl.call(@invoice.emails_amount) %></td>
         </tr>
       </tbody>
       <tfoot>
         <tr>
-          <td>Total</td>
+          <td colspan="3">Total</td>
           <td class="invoice-table__amount"><%= brl.call(@invoice.total) %></td>
         </tr>
       </tfoot>

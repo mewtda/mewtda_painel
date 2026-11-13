@@ -15,6 +15,7 @@ module HeaderHelper
     items += [
       { label: 'Pedidos', url: orders_path, icon: 'fa-solid fa-box' },
       { label: 'Clientes', url: customers_path, icon: 'fa-solid fa-users' },
+      { label: 'Segmentos e listas', url: segments_path, icon: 'fa-solid fa-layer-group' },
       { label: 'Produtos', url: products_path, icon: 'fa-solid fa-bag-shopping' },
       { label: 'De volta ao estoque', url: back_in_stock_path, icon: 'fa-solid fa-bell' },
       { label: 'Campanhas', url: campaigns_path, icon: 'fa-solid fa-bullseye' },

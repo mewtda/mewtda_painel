@@ -1,4 +1,4 @@
-# Área de clientes: base de compradores da loja com números de compra e
+# Clientes: base de compradores da loja com números de compra e
 # perfil RFM (customer_profiles), filtros por segmento/RFM e matriz RFM.
 class CustomersController < ApplicationController
   include ClientScoped
@@ -42,11 +42,6 @@ class CustomersController < ApplicationController
     @selected = params[:perfil].presence_in(CustomerProfile::RFM_SEGMENTS.keys)
   end
 
-  def refresh
-    Customers::RefreshProfilesJob.perform_later(@client.id)
-    redirect_back fallback_location: customers_path, notice: 'Atualizando a base de clientes. Leva alguns instantes.'
-  end
-
   # Ação em massa: adiciona os clientes selecionados (ou todo o filtro) a uma lista.
   def add_to_list
     list = target_list
@@ -64,8 +59,8 @@ class CustomersController < ApplicationController
   def details
     profile = @client.customer_profiles.find_by!(customer_id: params[:id])
     customer = profile.customer
-    orders = customer.orders.where(client_id: @client.id).includes(order_items: :product)
-                     .order(shopify_creation_date: :desc)
+    orders = Order.where(client_id: @client.id, customer_id: profile.customer_ids).includes(order_items: :product)
+                  .order(shopify_creation_date: :desc)
 
     render json: {
       shopify_store: @client.shopify_admin_handle,
@@ -91,12 +86,13 @@ class CustomersController < ApplicationController
     sheet = workbook[0]
     sheet.sheet_name = 'Clientes'
     headers = ['Nome', 'E-mail', 'Telefone', 'Cidade', 'UF', 'Nº de compras', 'Total gasto', 'Ticket médio',
-               'Primeira compra', 'Última compra', 'Perfil RFM']
+               'Primeira compra', 'Última compra', 'Valor da última compra', 'Perfil RFM', 'Marketing por e-mail']
     headers.each_with_index { |h, i| sheet.add_cell(0, i, h) }
 
     @scope.order(:name).each.with_index(1) do |p, row|
       [p.name, p.email, p.phone, p.city, p.state, p.orders_count, p.total_spent.to_f, p.avg_ticket.to_f,
-       p.first_order_at&.strftime('%d/%m/%Y'), p.last_order_at&.strftime('%d/%m/%Y'), p.rfm_label]
+       p.first_order_at&.strftime('%d/%m/%Y'), p.last_order_at&.strftime('%d/%m/%Y'), p.last_order_total&.to_f, p.rfm_label,
+       Segments::Rules::MARKETING_STATES.fetch(p.email_marketing_state || 'unknown')]
         .each_with_index { |value, col| sheet.add_cell(row, col, value) }
     end
 

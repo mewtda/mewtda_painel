@@ -46,6 +46,8 @@ class CustomerProfile < ApplicationRecord
 
   def self.rfm_label(key) = RFM_SEGMENTS.dig(key, :label)
 
+  def customer_ids = merged_customer_ids.presence || [customer_id]
+
   def rfm_label = self.class.rfm_label(rfm_segment)
   def rfm_color = RFM_SEGMENTS.dig(rfm_segment, :color)
 

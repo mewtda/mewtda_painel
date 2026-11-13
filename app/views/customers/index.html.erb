@@ -4,7 +4,7 @@
 <% sort_link = lambda do |key, label|
      active = @sort == key
      dir = active && @direction == 'DESC' ? 'asc' : 'desc'
-     link_to customers_path(filter_params.merge(sort: key, dir: dir)), class: "cx-sort #{'is-active' if active}" do
+     link_to customers_path(filter_params.merge(sort: key, dir: dir)), class: "cx-sort #{'is-active' if active}", title: "Ordenar por #{label.downcase}" do
        safe_join([label, tag.i(class: "fa-solid #{active ? (@direction == 'DESC' ? 'fa-arrow-down' : 'fa-arrow-up') : 'fa-sort'}")], ' ')
      end
    end %>
@@ -24,8 +24,9 @@
 
   <div class="clients-table-wrap">
     <%# Barra de filtros %>
-    <%= form_with url: customers_path, method: :get, class: 'cx-toolbar', id: 'cx-filter-form' do %>
-      <div class="cx-toolbar__left">
+    <%= form_with url: customers_path, method: :get, class: 'cx-toolbar', id: 'cx-filter-form',
+                  data: { live_regions: 'cx-toolbar-left,cx-rfm-chips,cx-bulk-form,cx-table-scroll,cx-footer' } do %>
+      <div class="cx-toolbar__left" id="cx-toolbar-left">
         <span class="cx-count">
           <strong><%= number_with_delimiter(@filtered_count, delimiter: '.') %></strong> clientes
           <% if @segment %>em <span class="crm-tag crm-tag--warning"><%= @segment.name %></span><% end %>
@@ -36,20 +37,21 @@
       </div>
       <div class="cx-toolbar__right">
         <%= select_tag :segment_id, options_for_select([['Toda a base', '']] + @segments.map { |s| ["#{s.kind_label}: #{s.name}", s.id] }, params[:segment_id]),
-                       class: 'crm-input cx-select', onchange: 'this.form.requestSubmit()' %>
+                       class: 'crm-input cx-select', data: { autosubmit: true } %>
         <div class="cx-search">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <%= search_field_tag :q, params[:q], class: 'crm-input', placeholder: 'Nome, e-mail ou telefone' %>
+          <%= search_field_tag :q, params[:q], class: 'crm-input', placeholder: 'Nome, e-mail ou telefone',
+                                          autofocus: params[:q].present?, data: { autosubmit_typing: true } %>
         </div>
         <%= hidden_field_tag :sort, params[:sort] %>
         <%= hidden_field_tag :dir, params[:dir] %>
       </div>
 
-      <div class="cx-rfm-chips">
+      <div class="cx-rfm-chips" id="cx-rfm-chips">
         <span class="cx-rfm-chips__label">Perfil RFM:</span>
         <% CustomerProfile::RFM_SEGMENTS.each do |key, info| %>
           <label class="cx-chip <%= 'is-on' if @rfm_filter.include?(key) %>" style="--rfm: <%= info[:color] %>" title="<%= info[:hint] %>">
-            <%= check_box_tag 'rfm[]', key, @rfm_filter.include?(key), onchange: 'this.form.requestSubmit()', id: "rfm-#{key}" %>
+            <%= check_box_tag 'rfm[]', key, @rfm_filter.include?(key), data: { autosubmit: true }, id: "rfm-#{key}" %>
             <%= info[:label] %>
           </label>
         <% end %>
@@ -74,7 +76,7 @@
       <button class="crm-btn crm-btn--primary"><i class="fa-solid fa-list-check"></i> Adicionar à lista</button>
     <% end %>
 
-    <div class="cx-table-scroll">
+    <div class="cx-table-scroll" id="cx-table-scroll" data-live-spinner>
       <table class="crm-table cx-table">
         <thead>
           <tr>
@@ -126,12 +128,11 @@
       </table>
     </div>
 
-    <div class="cx-footer">
+    <div class="cx-footer" id="cx-footer">
       <span class="cx-muted">
         <i class="fa-solid fa-rotate"></i>
         Base atualizada <%= @refreshed_at ? "há #{time_ago_in_words(@refreshed_at)}" : 'ainda não calculada' %>
       </span>
-      <%= button_to refresh_customers_path, class: 'cx-link', form_class: 'cx-inline' do %>Atualizar agora<% end %>
       <span class="cx-bulk__spacer"></span>
       <%= will_paginate @profiles, list_classes: %w[pagination justify-content-center], inner_window: 1, params: filter_params %>
     </div>

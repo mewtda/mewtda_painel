@@ -2,31 +2,26 @@
 
 <div class="orders-wrapper">
 
-  <%= form_tag(orders_path, method: 'get') do %>
+  <%= form_tag(orders_path, method: 'get', data: { live_regions: 'orders-actions,orders-kpis,orders-table-wrap,orders-pagination' }) do %>
     <div class="orders-filters">
 
       <div class="orders-filters__field">
         <label class="crm-label">Buscar</label>
-        <%= text_field_tag :search, params[:search], class: 'crm-input', placeholder: 'Nº do pedido...' %>
+        <%= text_field_tag :search, params[:search], class: 'crm-input', placeholder: 'Nº do pedido...',
+                           autofocus: params[:search].present?, data: { autosubmit_typing: true } %>
       </div>
 
       <div class="orders-filters__field">
         <label class="crm-label">Data início</label>
-        <%= date_field_tag :date_from, params[:date_from], class: 'crm-input' %>
+        <%= date_field_tag :date_from, params[:date_from], class: 'crm-input', data: { autosubmit: true } %>
       </div>
 
       <div class="orders-filters__field">
         <label class="crm-label">Data fim</label>
-        <%= date_field_tag :date_to, params[:date_to], class: 'crm-input' %>
+        <%= date_field_tag :date_to, params[:date_to], class: 'crm-input', data: { autosubmit: true } %>
       </div>
 
-      <div class="orders-filters__actions">
-        <%= button_tag class: 'crm-btn crm-btn--primary', name: '' do %>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
-          Filtrar
-        <% end %>
+      <div class="orders-filters__actions" id="orders-actions">
         <%= link_to export_xlsx_orders_path(params.permit(:search, :kinds, :staff_name, :date_from, :date_to)),
             class: 'crm-btn orders-btn--export' do %>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -45,7 +40,7 @@
     </div>
   <% end %>
 
-  <div class="cx-kpis">
+  <div class="cx-kpis" id="orders-kpis">
     <div class="cx-kpi">
       <span>Pedidos</span>
       <strong><%= number_with_delimiter(@filtered_count, delimiter: '.') %></strong>
@@ -58,7 +53,7 @@
     </div>
   </div>
 
-  <div class="orders-table-wrap">
+  <div class="orders-table-wrap" id="orders-table-wrap" data-live-spinner>
     <table class="crm-table">
       <thead>
         <tr>
@@ -86,7 +81,7 @@
 
               <td>
                 <% shopify_url = "https://admin.shopify.com/store/#{order.client.shopify_admin_handle}/orders/#{order.shopify_order_id}" %>
-                <%= link_to shopify_url, target: '_blank', rel: 'noopener noreferrer', class: 'orders-table__order-link' do %>
+                <%= link_to shopify_url, target: '_blank', rel: 'noopener noreferrer', class: 'orders-table__order-link', title: 'Abrir na Shopify' do %>
                   <span class="orders-badge orders-badge--order">
                     <%= order.shopify_order_number.present? ? order.shopify_order_number : "##{order.shopify_order_id}" %>
                   </span>
@@ -193,7 +188,9 @@
     <p class="orders-entries"><%= page_entries_info @orders %></p>
   </div>
 
-  <%= will_paginate @orders, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
+  <div id="orders-pagination">
+    <%= will_paginate @orders, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
+  </div>
 
 </div>
 

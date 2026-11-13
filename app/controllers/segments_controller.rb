@@ -6,10 +6,14 @@ class SegmentsController < ApplicationController
   before_action :set_client
   before_action :require_client!
   before_action :ensure_profiles, only: %i[index templates new edit]
-  before_action :set_segment, only: %i[edit update destroy recount]
+  before_action :set_segment, only: %i[edit update destroy recount duplicate]
+
+  SORTS = %w[name kind customers_count updated_at].freeze
 
   def index
-    @segments = @client.segments.order(updated_at: :desc)
+    @sort = params[:sort].presence_in(SORTS) || 'updated_at'
+    @direction = params[:dir] == 'asc' ? 'asc' : 'desc'
+    @segments = @client.segments.order(@sort => @direction, id: :desc)
     @segments = @segments.where('name ILIKE ?', "%#{Segment.sanitize_sql_like(params[:q])}%") if params[:q].present?
     @base_total = @client.customer_profiles.count
   end
@@ -57,6 +61,11 @@ class SegmentsController < ApplicationController
     redirect_to segments_path
   end
 
+  def duplicate
+    copy = @segment.duplicate!
+    redirect_to edit_segment_path(copy), notice: "#{copy.kind_label} duplicado. Ajuste o nome e as regras."
+  end
+
   # Contagem ao vivo no construtor ("Resumo do seu segmento").
   def preview
     segment = @client.segments.find_by(id: params[:id]) || @client.segments.new
@@ -65,7 +74,8 @@ class SegmentsController < ApplicationController
     count = rules.empty? ? 0 : rules.scope.count
     total = @client.customer_profiles.count
     sample = rules.empty? ? [] : rules.scope.order(total_spent: :desc).limit(5).pluck(:name, :total_spent)
-    render json: { count:, total:, percent: total.zero? ? 0 : (count * 100.0 / total).round(1),
+    subscribed = rules.empty? ? 0 : rules.scope.where(email_marketing_state: 'subscribed').count
+    render json: { count:, subscribed:, total:, percent: total.zero? ? 0 : (count * 100.0 / total).round(1),
                    sample: sample.map { |name, spent| { name:, spent: spent.to_f } } }
   end
 

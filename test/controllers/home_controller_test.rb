@@ -20,7 +20,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_response :success
-    assert_match 'Gerencie sua loja com inteligência', response.body
+    assert_match 'Soluções para e-commerce', response.body
   end
 
   test 'shows the sales preview to a signed-in common user with a client' do

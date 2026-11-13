@@ -28,6 +28,11 @@ back_in_stock_restock_check:
   class: "BackInStock::RestockCheckJob"
   queue: default
 
+customers_marketing_sync:
+  cron: "0 4 * * * America/Sao_Paulo"
+  class: "Customers::SyncMarketingJob"
+  queue: default
+
 customer_profiles_refresh:
   cron: "30 4 * * * America/Sao_Paulo"
   class: "Customers::RefreshProfilesJob"

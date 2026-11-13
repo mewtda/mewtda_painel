@@ -12,6 +12,6 @@
     </p>
     <%= button_to 'Resetar Senha', reset_password_user_path(@user), method: :patch,
         class: 'crm-btn crm-btn--secondary',
-        form: { onsubmit: "return confirm('Resetar a senha de #{j @user.name} para o padrão?');" } %>
+        form: { data: { confirm: "Resetar a senha de #{@user.name} para a senha padrão?", confirm_label: 'Resetar' } } %>
   </div>
 </div>

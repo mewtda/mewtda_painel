@@ -1,6 +1,7 @@
 // Minha conta › Meus limites / Fatura
-.account-tabs { margin-bottom: 1.25rem; }
-.account-tabs .popups-tabs__link i { margin-right: 0.3rem; }
+.account-tabs { gap: 0.25rem; margin: 1.25rem 0 1.75rem; }
+.account-tabs .popups-tabs__link { padding: 0.75rem 1.25rem; }
+.account-tabs .popups-tabs__link i { margin-right: 0.4rem; }
 .account-empty { text-align: center; color: var(--fg-alt); padding: 2.5rem 1rem; }
 .account-empty i { font-size: 1.6rem; margin-bottom: 0.5rem; }
 
@@ -37,15 +38,20 @@
 .limit-chart__legend { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--fg-alt); margin-top: -0.4rem; }
 .limits-footnote { margin-top: 1rem; font-size: 0.8rem; color: var(--fg-alt); }
 
-.invoice-card { max-width: 640px; }
-.invoice-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.invoice-card { max-width: none; }
+.invoice-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--outline); }
 .invoice-card__eyebrow { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-alt); }
 .invoice-card__month { margin: 0.1rem 0 0.4rem; font-size: 1.4rem; color: var(--fg); }
 .invoice-card__picker .crm-input { min-width: 170px; }
 .invoice-table { width: 100%; border-collapse: collapse; }
+.invoice-table th { padding: 0.75rem 0; border-bottom: 1px solid var(--outline); color: var(--fg-alt); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-align: left; text-transform: uppercase; }
+.invoice-table th.invoice-table__amount { text-align: right; }
 .invoice-table td { padding: 0.85rem 0; border-bottom: 1px solid var(--outline); color: var(--fg); vertical-align: top; }
 .invoice-table td small { display: block; color: var(--fg-alt); font-size: 0.78rem; margin-top: 0.15rem; }
 .invoice-table__amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.invoice-table tfoot td { border-bottom: 0; font-size: 1.15rem; font-weight: 700; padding-top: 1rem; }
-.invoice-card__note { margin: 1rem 0 0; font-size: 0.8rem; color: var(--fg-alt); }
+.invoice-table tfoot td { border-top: 1rem solid transparent; border-bottom: 0; background: var(--hover); background-clip: padding-box; font-size: 1.15rem; font-weight: 700; padding: 1rem; }
+@media (max-width: 640px) { .invoice-table__hide-sm { display: none; } }
+.invoice-table tfoot td:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.invoice-table tfoot td:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+.invoice-card__note { margin: 1.25rem 0 0; font-size: 0.8rem; color: var(--fg-alt); }
 .invoice-card__note i { color: #16a34a; margin-right: 0.3rem; }

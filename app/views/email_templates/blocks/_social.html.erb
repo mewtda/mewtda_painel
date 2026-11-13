@@ -1,11 +1,26 @@
-<% links = EmailTemplates::Message::SOCIAL_LABELS.filter_map { |key, label| [label, block[key]] if block[key].present? } %>
-<% social_color = message.color(block['color'], message.design['text_color']) %>
-<% if links.any? %>
-  <div style="text-align: <%= block['align'] %>;">
-    <% links.each do |label, url| %>
-      <a href="<%= url %>" target="_blank" style="display: inline-block; margin: 4px; padding: 8px 14px; border: 1px solid <%= social_color %>; border-radius: 999px; font-size: 13px; font-weight: bold; color: <%= social_color %>; text-decoration: none;"><%= label %></a>
-    <% end %>
-  </div>
+<% networks = EmailTemplates::Message::SOCIAL_LABELS.select { |key, _label| block[key].present? } %>
+<% size = message.social_icon_size(block) %>
+<% if networks.any? %>
+  <table role="presentation" align="<%= block['align'] %>" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <% networks.each do |key, label| %>
+        <% background = message.social_background(key, block) %>
+        <td style="padding: 0 6px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td width="<%= size %>" height="<%= size %>" bgcolor="<%= background %>"
+                  style="background: <%= background %>; border-radius: <%= message.social_radius(block) %>; line-height: 0; font-size: 0;">
+                <a href="<%= block[key] %>" target="_blank" style="display: block; text-decoration: none;">
+                  <img src="<%= message.social_glyph_url(key, background) %>" alt="<%= label %>" width="<%= size %>" height="<%= size %>"
+                       style="display: block; width: <%= size %>px; height: <%= size %>px; border: 0;">
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      <% end %>
+    </tr>
+  </table>
 <% elsif message.preview? %>
   <span class="email-placeholder">Redes sociais — adicione os links</span>
 <% end %>

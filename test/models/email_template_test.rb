@@ -164,4 +164,20 @@ class EmailTemplateTest < ActiveSupport::TestCase
       assert_equal preset[:blocks].size, template.blocks.size
     end
   end
+
+  test 'sanitizes the menu block: caps the links, drops unsafe urls and keeps short labels' do
+    items = Array.new(12) { |i| { 'label' => "Item #{i}", 'link' => 'javascript:alert(1)' } }
+    blocks = EmailTemplates::Blocks.sanitize([{ 'type' => 'menu', 'items' => items }])
+
+    assert_equal EmailTemplates::Blocks::MAX_MENU_ITEMS, blocks.first['items'].size
+    assert_equal '', blocks.first['items'].first['link']
+  end
+
+  test 'sanitizes the social block style to the allowed values' do
+    block = EmailTemplates::Blocks.sanitize([{ 'type' => 'social', 'shape' => 'hexagon', 'tone' => 'neon', 'x' => 'https://x.com/loja' }]).first
+
+    assert_equal 'circle', block['shape']
+    assert_equal 'custom', block['tone']
+    assert_equal 'https://x.com/loja', block['x']
+  end
 end

@@ -46,4 +46,43 @@ class EmailTemplatesMessageTest < ActiveSupport::TestCase
     assert_match 'https://loja.com/p', with_product.html
     assert_no_match 'Comprar agora', without.html
   end
+
+  test 'menu block renders the links, falls back to the store url and lists them in the text version' do
+    blocks = [{ 'type' => 'menu', 'uppercase' => true,
+                'items' => [{ 'label' => 'Mulher', 'link' => 'https://loja.com/mulher' }, { 'label' => 'Sale', 'link' => '' }] }]
+    message = EmailTemplates::Message.new(template(blocks), default_url: 'https://loja.com')
+
+    assert_match 'href="https://loja.com/mulher"', message.html
+    assert_match 'href="https://loja.com"', message.html
+    assert_match 'text-transform: uppercase', message.html
+    assert_match 'Mulher: https://loja.com/mulher', message.text
+  end
+
+  test 'social block paints the background with the chosen color and picks a glyph that contrasts' do
+    dark = [{ 'type' => 'social', 'instagram' => 'https://instagram.com/loja', 'color' => '#111111', 'shape' => 'square' }]
+    light = [{ 'type' => 'social', 'instagram' => 'https://instagram.com/loja', 'color' => '#f1f1f4' }]
+    dark_html = EmailTemplates::Message.new(template(dark)).html
+    light_html = EmailTemplates::Message.new(template(light)).html
+
+    assert_match 'https://www.mewtda.com.br/email/icons/instagram-white.png', dark_html
+    assert_match 'border-radius: 0', dark_html
+    assert_match 'https://www.mewtda.com.br/email/icons/instagram-black.png', light_html
+    assert_match 'border-radius: 50%', light_html
+  end
+
+  test 'social block with network colors uses the brand color and ignores networks without link' do
+    blocks = [{ 'type' => 'social', 'tone' => 'brand', 'instagram' => 'https://instagram.com/loja' }]
+    html = EmailTemplates::Message.new(template(blocks)).html
+
+    assert_match '#E4405F', html
+    assert_no_match 'facebook', html
+  end
+
+  test 'social block saved before the colors falls back to dark icons' do
+    blocks = [{ 'type' => 'social', 'instagram' => 'https://instagram.com/loja' }]
+    html = EmailTemplates::Message.new(template(blocks)).html
+
+    assert_match '#111111', html
+    assert_match '/email/icons/instagram-white.png', html
+  end
 end

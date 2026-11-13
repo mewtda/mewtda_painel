@@ -10,6 +10,8 @@ module EmailTemplates
     MAX_BLOCKS = 60
     MAX_TEXT = 5_000
     MAX_GALLERY_ITEMS = 3
+    MAX_MENU_ITEMS = 8
+    MAX_LABEL = 60
 
     COMMON = { 'bg' => :color, 'pad' => PADDING }.freeze
 
@@ -35,12 +37,15 @@ module EmailTemplates
       'divider' => { 'color' => :color, 'thickness' => %w[1 2 4] },
       'spacer' => { 'height' => %w[24 8 16 32 48 64 96] },
       'social' => {
-        'instagram' => :url, 'facebook' => :url, 'tiktok' => :url, 'youtube' => :url,
-        'whatsapp' => :url, 'site' => :url, 'align' => ALIGN, 'color' => :color
-      }
+        'instagram' => :url, 'facebook' => :url, 'tiktok' => :url, 'youtube' => :url, 'whatsapp' => :url,
+        'linkedin' => :url, 'x' => :url, 'pinterest' => :url, 'site' => :url,
+        'shape' => %w[circle square], 'tone' => %w[custom brand], 'color' => :color, 'size' => %w[md sm lg], 'align' => ALIGN
+      },
+      'menu' => { 'items' => :links, 'size' => %w[md sm lg], 'align' => ALIGN, 'color' => :color, 'uppercase' => :bool }
     }.freeze
 
     GALLERY_ITEM = { 'image_id' => :image, 'link' => :url, 'caption' => :text }.freeze
+    LINK_ITEM = { 'label' => :label, 'link' => :url }.freeze
 
     FONTS = {
       'arial' => 'Arial, Helvetica, sans-serif',
@@ -100,6 +105,8 @@ module EmailTemplates
       when :image then value.to_s.first(600)
       when :bool then ActiveModel::Type::Boolean.new.cast(value) ? true : false
       when :items then items(value)
+      when :links then links(value)
+      when :label then value.to_s.strip.first(MAX_LABEL)
       end
     end
 
@@ -112,6 +119,12 @@ module EmailTemplates
       return [] unless value.is_a?(Array)
 
       value.first(MAX_GALLERY_ITEMS).filter_map { |item| clean_fields(GALLERY_ITEM, item) if item.is_a?(Hash) }
+    end
+
+    def links(value)
+      return [] unless value.is_a?(Array)
+
+      value.first(MAX_MENU_ITEMS).filter_map { |item| clean_fields(LINK_ITEM, item) if item.is_a?(Hash) }
     end
 
     # Aceita JSON (vindo do formulário) ou estruturas Ruby; normaliza as chaves

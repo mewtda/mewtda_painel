@@ -23,9 +23,11 @@ a.scr-tab { text-decoration: none; }
 .bp-dot { display: inline-block; width: 0.6rem; height: 0.6rem; margin-right: 0.2rem; border-radius: 50%; }
 .bp-metrics { margin-top: 1rem; }
 
-.bp-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.9rem; }
+.bp-charts { margin-top: 0.8rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.9rem; }
 .bp-chart-card { padding: 1rem 1rem 0.5rem; border: 1px solid var(--outline); border-radius: 14px; background: var(--bg); box-shadow: var(--shadow-sm); }
 .bp-chart-card__title { margin-bottom: 0.25rem; font-size: 0.85rem; font-weight: 700; color: var(--fg); }
+.bp-chart { min-height: 210px; }
+.bp-chart--error { display: grid; place-items: center; padding: 0 0.5rem; text-align: center; font-size: 0.82rem; color: var(--fg-alt); }
 
 .bp-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.6rem 0 0.9rem; }
 .bp-table-wrap { overflow-x: auto; border: 1px solid var(--outline); border-radius: 14px; background: var(--bg); }

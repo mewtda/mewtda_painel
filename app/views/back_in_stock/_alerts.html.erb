@@ -99,7 +99,7 @@
                 <th>E-mail</th>
                 <th>WhatsApp</th>
                 <th>Pedido em</th>
-                <% if status == 'notified' %><th>Avisado em</th><% end %>
+                <% if status == 'notified' %><th>Avisado em</th><th>Status</th><% end %>
                 <% if status == 'cancelled' %><th>Cancelado em</th><% end %>
                 <% if status == 'pending' %><th></th><% end %>
               </tr>
@@ -112,6 +112,7 @@
                   <td><%= contact.created_at.strftime('%d/%m/%Y %H:%M') %></td>
                   <% if status == 'notified' %>
                     <td><%= contact.notified_at&.strftime('%d/%m/%Y %H:%M') || '—' %></td>
+                    <td><%= back_in_stock_event_status(notice_events.fetch(contact.id, [])) %></td>
                   <% end %>
                   <% if status == 'cancelled' %>
                     <td><%= contact.cancelled_at&.strftime('%d/%m/%Y %H:%M') || '—' %></td>

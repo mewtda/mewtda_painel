@@ -60,7 +60,7 @@
           <%= form.collection_select :email_template_id, email_templates, :id, :name,
                                      { include_blank: 'Escolha um modelo' }, class: 'crm-input' %>
         </div>
-        <% domain_verified = setting.client.ses_domain_verified? %>
+        <% domain_verified = setting.client.tools_email_domain.present? %>
         <ul class="bis-checklist">
           <li class="<%= email_template ? 'is-ok' : 'is-pending' %>">
             <i class="fa-solid <%= email_template ? 'fa-circle-check' : 'fa-circle-exclamation' %>"></i>
@@ -77,7 +77,10 @@
             <i class="fa-solid <%= domain_verified ? 'fa-circle-check' : 'fa-circle-exclamation' %>"></i>
             <span>
               <% if domain_verified %>
-                <strong>Envio por <%= setting.client.email_sending_domain %></strong>
+                <strong>Envio por <%= setting.client.tools_email_domain %></strong>
+                <% unless setting.client.ses_domain_verified? %>
+                  <%= link_to 'Usar o meu domínio', edit_email_configuration_path %>
+                <% end %>
               <% else %>
                 <strong>Domínio de envio não verificado</strong>
                 <%= link_to 'Configurar domínio', edit_email_configuration_path %>

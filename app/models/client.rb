@@ -105,6 +105,10 @@ class Client < ApplicationRecord
     ses_verification_status == 'verified'
   end
 
+  def tools_email_domain
+    ses_domain_verified? ? email_sending_domain : ENV['SHARED_EMAIL_DOMAIN'].presence
+  end
+
   def storefront_url
     (site_url.presence || shopify_shop_url).to_s.sub(%r{\A(?!https?://)}, 'https://').delete_suffix('/')
   end

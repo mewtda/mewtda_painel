@@ -3,7 +3,9 @@
 class EmailSuppression < ApplicationRecord
   SOURCES = {
     'unsubscribe_link' => 'Link "Não quero mais receber"',
-    'manual' => 'Adicionado manualmente'
+    'manual' => 'Adicionado manualmente',
+    'bounce' => 'E-mail não existe ou recusou (bounce)',
+    'complaint' => 'Marcou como spam'
   }.freeze
 
   TOKEN_PURPOSE = :email_unsubscribe

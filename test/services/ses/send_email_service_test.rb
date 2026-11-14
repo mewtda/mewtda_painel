@@ -35,6 +35,58 @@ class Ses::SendEmailServiceTest < ActiveSupport::TestCase
     assert_equal false, result
   end
 
+  test 'tools fall back to the shared CRM domain only when it is configured' do
+    client = build_client(verified: false)
+    send_to = lambda do |shared_domain|
+      ENV['SHARED_EMAIL_DOMAIN'] = shared_domain
+      fake_ses = Minitest::Mock.new
+      fake_ses.expect(:send_email, true) { |args| args[:from_email_address].end_with?('@avisos.crm.com.br>') } if shared_domain
+      result = Ses::SendEmailService.new(client, ses: fake_ses, shared: true).call(to: 'ana@example.com', subject: 'A', html_body: 'B')
+      fake_ses.verify
+      result
+    end
+
+    assert_equal false, send_to.call(nil)
+    assert send_to.call('avisos.crm.com.br')
+  ensure
+    ENV.delete('SHARED_EMAIL_DOMAIN')
+  end
+
+  test 'campaign sending never uses the shared CRM domain' do
+    ENV['SHARED_EMAIL_DOMAIN'] = 'avisos.crm.com.br'
+
+    result = Ses::SendEmailService.new(build_client(verified: false), ses: Minitest::Mock.new).call(
+      to: 'ana@example.com', subject: 'A', html_body: 'B'
+    )
+
+    assert_equal false, result
+  ensure
+    ENV.delete('SHARED_EMAIL_DOMAIN')
+  end
+
+  test 'sends the configuration set and tags only when tracking is configured and tags are given' do
+    ENV['SES_CONFIGURATION_SET'] = 'mewtda-crm-eventos'
+    client = build_client
+    sent = []
+    fake_ses = Object.new
+    fake_ses.define_singleton_method(:send_email) { |args| sent << args }
+    service = Ses::SendEmailService.new(client, ses: fake_ses)
+
+    service.call(to: 'ana@example.com', subject: 'A', html_body: 'B', tags: { source: 'campaign', campaign_id: 7 })
+    service.call(to: 'ana@example.com', subject: 'A', html_body: 'B')
+
+    assert_equal 'mewtda-crm-eventos', sent.first[:configuration_set_name]
+    assert_equal({ 'source' => 'campaign', 'campaign_id' => '7', 'client_id' => client.id.to_s },
+                 sent.first[:email_tags].to_h { |tag| [tag[:name], tag[:value]] })
+    assert_not sent.last.key?(:configuration_set_name)
+
+    ENV.delete('SES_CONFIGURATION_SET')
+    service.call(to: 'bia@example.com', subject: 'A', html_body: 'B', tags: { source: 'campaign' })
+    assert_not sent.last.key?(:email_tags)
+  ensure
+    ENV.delete('SES_CONFIGURATION_SET')
+  end
+
   test 'returns false without calling SES when the recipient is on the refusal list' do
     client = build_client
     EmailSuppression.unsubscribe!(client, 'Ana@Example.com')

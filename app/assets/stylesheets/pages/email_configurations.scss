@@ -10,3 +10,13 @@
 .email-config-dns__verify { background: var(--bg); border-color: var(--outline-strong); }
 .email-config-dns__verify:hover { background: var(--bg); border-color: var(--fg); color: var(--fg); }
 .email-config-footer { background: transparent; border-top: 0; padding-top: 0; }
+
+.email-config-domain-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
+.email-config-domain-head .crm-label { margin: 0; }
+.email-config-notice {
+  display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.75rem 1rem; border-radius: 10px;
+  background: var(--primary-tint); color: var(--fg); font-size: 0.85rem;
+}
+.email-config-notice i { margin-top: 0.15rem; color: var(--primary); }
+.email-config-notice p { margin: 0; }
+.email-config-notice strong { font: inherit; font-weight: 700; }

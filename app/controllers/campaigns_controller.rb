@@ -3,7 +3,7 @@ class CampaignsController < ApplicationController
 
   before_action :set_client
   before_action :require_client!
-  before_action :set_campaign, only: %i[edit update destroy preview send_test schedule cancel]
+  before_action :set_campaign, only: %i[edit update destroy preview send_test schedule cancel details recipients]
   before_action :require_draft!, only: %i[edit update schedule]
 
   rate_limit to: 5, within: 1.minute, only: :send_test,
@@ -13,6 +13,18 @@ class CampaignsController < ApplicationController
     @campaigns = @client.campaigns.includes(:segment, :email_template).order(updated_at: :desc)
     @campaigns = @campaigns.where(channel: params[:canal]) if params[:canal].in?(Campaign::CHANNELS.keys)
     @campaigns = @campaigns.where('name ILIKE ?', "%#{Campaign.sanitize_sql_like(params[:q].to_s.strip)}%") if params[:q].present?
+  end
+
+  def details
+    render partial: 'details', locals: { campaign: @campaign, pending: @campaign.recipients.where(status: 'pending').count }
+  end
+
+  def recipients
+    status = params[:status].presence_in(Spreadsheets::CampaignRecipients::STATUSES)
+    return redirect_to(campaigns_path, alert: 'Lista não encontrada.') unless status
+
+    sheet = Spreadsheets::CampaignRecipients.new(@campaign, status)
+    send_data sheet.to_xlsx, filename: sheet.filename, type: sheet.content_type
   end
 
   def create
@@ -109,7 +121,7 @@ class CampaignsController < ApplicationController
 
   def campaign_params
     params.require(:campaign).permit(:name, :email_template_id, :segment_id, :send_mode, :scheduled_on,
-                                           :scheduled_time, :window_from, :window_to, window_days: [])
+                                     :scheduled_time, :window_from, :window_to, window_days: [])
   end
 
   def schedule_error
@@ -126,7 +138,8 @@ class CampaignsController < ApplicationController
   def test_error(address, template)
     return 'Informe um e-mail válido.' unless address.match?(URI::MailTo::EMAIL_REGEXP)
     return 'Escolha o e-mail da campanha primeiro.' unless template
-    return 'O domínio de envio da loja ainda não foi verificado.' unless @client.ses_domain_verified?
+
+    'O domínio de envio da loja ainda não foi verificado.' unless @client.ses_domain_verified?
   end
 
   def campaign_message(template, unsubscribe_url)
@@ -163,19 +176,13 @@ class CampaignsController < ApplicationController
     {
       recipients: audience.recipients, subscribed: audience.subscribed, not_subscribed: audience.not_subscribed,
       suppressed: audience.suppressed, without_email: audience.without_email,
-      cost: cost_label(audience.cost),
+      cost: helpers.campaign_cost_label(audience.cost),
       daily_limit: audience.daily_limit, used_today: audience.used_today, first_day_capacity: capacity,
       first_day_label: @campaign.first_day_label, resume_label: @campaign.resume_label,
       timing_ready: @campaign.step_done['timing'],
       resume_time: format('%<hour>02d:00', hour: Campaign::RESUME_HOUR),
       days_needed: days_needed(audience, capacity)
     }
-  end
-
-  def cost_label(cost)
-    return 'menos de R$ 0,01' if cost.positive? && cost < BigDecimal('0.01')
-
-    helpers.number_to_currency(cost, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n')
   end
 
   # Quantos e-mails cabem no primeiro dia de envio: o que sobrou de hoje, ou o

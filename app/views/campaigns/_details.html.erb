@@ -1,0 +1,90 @@
+<%# locals: campaign, pending %>
+<dl class="ec-details__list">
+  <div>
+    <dt><i class="fa-solid fa-bullhorn"></i> Nome da campanha</dt>
+    <dd><%= campaign.display_name %></dd>
+  </div>
+  <div>
+    <dt><i class="fa-solid fa-paper-plane"></i> Status</dt>
+    <dd><%= campaign_status_tag(campaign) %><% if campaign.status_note %><small class="ec-sub"><%= campaign.status_note %></small><% end %></dd>
+  </div>
+  <div>
+    <dt><i class="fa-solid fa-envelope"></i> Canal de envio</dt>
+    <dd><%= campaign.channel_label %></dd>
+  </div>
+  <div>
+    <dt><i class="fa-solid fa-circle-user"></i> Criada por</dt>
+    <dd><%= campaign.created_by&.name || 'Não informado' %></dd>
+  </div>
+  <div>
+    <dt><i class="fa-solid fa-table-list"></i> Modelo de mensagem</dt>
+    <dd><%= campaign.email_template&.name || '—' %></dd>
+  </div>
+  <div>
+    <dt><i class="fa-solid fa-users"></i> Público</dt>
+    <dd>
+      <%= campaign.segment&.name || '—' %>
+      <% if campaign.recipients_count %><small class="ec-sub"><%= number_with_delimiter(campaign.recipients_count, delimiter: '.') %> <%= 'pessoa'.pluralize(campaign.recipients_count) %></small><% end %>
+    </dd>
+  </div>
+  <% { 'sent' => ['Enviados', 'fa-check', campaign.sent_count], 'failed' => ['Falhas', 'fa-ban', campaign.failed_count],
+       'blocked' => ['Bloqueios', 'fa-user-slash', campaign.blocked_count] }.each do |status, (label, icon, count)| %>
+    <div>
+      <dt><i class="fa-solid <%= icon %>"></i> <%= label %></dt>
+      <dd>
+        <%= number_with_delimiter(count.to_i, delimiter: '.') %> <%= 'pessoa'.pluralize(count.to_i) %>
+        <% if count.to_i.positive? %>
+          <%= link_to recipients_campaign_path(campaign, status: status), class: 'ec-details__download' do %>
+            <i class="fa-solid fa-download"></i> Baixar lista
+          <% end %>
+        <% end %>
+      </dd>
+    </div>
+  <% end %>
+  <% if pending.positive? %>
+    <div>
+      <dt><i class="fa-solid fa-hourglass-half"></i> Aguardando envio</dt>
+      <dd><%= number_with_delimiter(pending, delimiter: '.') %> <%= 'pessoa'.pluralize(pending) %></dd>
+    </div>
+  <% end %>
+  <div>
+    <dt><i class="fa-solid fa-calendar-plus"></i> Data de criação</dt>
+    <dd><%= l(campaign.created_at, format: '%d/%m/%Y às %H:%M') %></dd>
+  </div>
+  <div>
+    <dt><i class="fa-solid fa-calendar-check"></i> Data de envio</dt>
+    <dd>
+      <% if campaign.started_at %>
+        <%= l(campaign.started_at, format: '%d/%m/%Y às %H:%M') %>
+      <% elsif campaign.next_run_at %>
+        Agendada para <%= l(campaign.next_run_at, format: '%d/%m/%Y às %H:%M') %>
+      <% else %>
+        —
+      <% end %>
+    </dd>
+  </div>
+  <% if campaign.published_at %>
+    <div>
+      <dt><i class="fa-solid fa-user-check"></i> Confirmada por</dt>
+      <dd>
+        <%= campaign.published_by&.name || 'Não informado' %>
+        <small class="ec-sub"><%= l(campaign.published_at, format: '%d/%m/%Y às %H:%M') %></small>
+      </dd>
+    </div>
+  <% end %>
+  <% if campaign.acknowledged_not_subscribed.to_i.positive? %>
+    <div>
+      <dt><i class="fa-solid fa-clipboard-check"></i> Consentimento</dt>
+      <dd><%= number_with_delimiter(campaign.acknowledged_not_subscribed, delimiter: '.') %> <%= campaign.acknowledged_not_subscribed == 1 ? 'pessoa não inscrita' : 'pessoas não inscritas' %> <small class="ec-sub">Aceitou enviar mesmo assim</small></dd>
+    </div>
+  <% end %>
+  <div>
+    <dt><i class="fa-solid fa-coins"></i> Custo</dt>
+    <dd><%= campaign_cost_label(campaign.sent_cost) %></dd>
+  </div>
+</dl>
+<% if campaign.started_at %>
+  <%= link_to campaign_performance_path(campanha: campaign.id), class: 'ec-details__performance' do %>
+    <i class="fa-solid fa-chart-column"></i> Ver desempenho da campanha
+  <% end %>
+<% end %>

@@ -129,8 +129,7 @@
           <h3>Resumo</h3>
           <div class="ec-summary__big"><strong data-summary="recipients">0</strong><span>pessoas</span></div>
           <dl class="ec-summary__list">
-            <% price = number_to_currency(Billing::Invoice::EMAIL_PRICE_PER_THOUSAND, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %>
-            <div><dt>Custo estimado <span class="ec-info" tabindex="0" title="Cobramos <%= price %> a cada 1.000 e-mails enviados. O valor entra na sua fatura do mês, somado aos outros envios (avisos de estoque e testes também contam). Campanhas pequenas custam menos de um centavo.">
+            <div><dt>Custo estimado <span class="ec-info" tabindex="0" title="Esse valor entra na sua fatura do mês.">
                 <i class="fa-solid fa-circle-info"></i></span></dt><dd data-summary="cost">R$ 0,00</dd></div>
             <div><dt>Envio</dt><dd data-summary="timing"><%= @campaign.timing_summary %></dd></div>
             <div><dt>Limite de hoje</dt><dd><span data-summary="limit">—</span><small data-summary="limit-left"></small></dd></div>

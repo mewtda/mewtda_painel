@@ -40,6 +40,8 @@ class Campaign < ApplicationRecord
                    blocked_count: counts.fetch('blocked', 0))
   end
 
+  def sent_cost = sent_count.to_i * Billing::Invoice::EMAIL_PRICE_PER_THOUSAND / 1000
+
   def progress_label
     return unless recipients_count
 
@@ -51,14 +53,16 @@ class Campaign < ApplicationRecord
 
   def status_note(now = Time.current)
     return unless status.in?(RUNNABLE)
+    return 'Enviando agora' if status == 'sending'
     return 'Confira o e-mail e o público desta campanha' if next_run_at.nil?
+    return 'Enviando agora' if next_run_at <= now
 
     when_label = I18n.l(next_run_at, format: '%d/%m às %H:%M')
-    return "Começa em #{when_label}" if status == 'scheduled' && next_run_at > now
-    return "Continua em #{when_label}" if next_run_at > now
+    return "Continua em #{when_label}" if status == 'paused'
 
-    'Enviando agora'
+    "Começa em #{when_label}" unless send_mode == 'scheduled'
   end
+
   def status_label = STATUSES.fetch(status)
   def channel_label = CHANNELS.fetch(channel)
   def display_name = name.presence || 'Campanha sem nome'
@@ -128,7 +132,7 @@ class Campaign < ApplicationRecord
     {
       'name' => name.present?, 'template' => email_template.present?, 'audience' => segment.present?,
       'timing' => send_mode == 'now' || (send_mode == 'scheduled' && scheduled_at.present?) ||
-                  (send_mode == 'window' && window.valid?)
+        (send_mode == 'window' && window.valid?)
     }
   end
 

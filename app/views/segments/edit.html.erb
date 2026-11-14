@@ -1,5 +1,5 @@
 <% title("Editar #{@segment.kind_label.downcase}") %>
 
 <div class="clients-wrapper cx-page">
-  <%= render 'form', segment: @segment, current_segments: @client.segments.order(:name) %>
+  <%= render 'form', segment: @segment, current_segments: @client.segments.order(:name), product_options: @product_options %>
 </div>

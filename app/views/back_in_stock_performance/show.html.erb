@@ -1,0 +1,162 @@
+<% title 'Desempenho do De volta ao estoque' %>
+
+<% result = @result %>
+<% totals = result.totals %>
+<% count = ->(value) { number_with_delimiter(value.to_i, delimiter: '.') } %>
+<% days = ->(value) { value ? "#{number_with_precision(value, precision: 1, separator: ',')} #{'dia'.pluralize(value.round)}" : '—' } %>
+<% funnel_total = result.funnel.values.sum %>
+
+<div class="clients-wrapper cp-page">
+  <h1 class="cp-title">
+    <%= link_to back_in_stock_path, class: 'cp-title__back', title: 'Voltar para o De volta ao estoque' do %><i class="fa-solid fa-chevron-left"></i><% end %>
+    Desempenho do De volta ao estoque
+    <%= link_to export_back_in_stock_performance_path(request.query_parameters.slice('periodo', 'de', 'ate')), class: 'crm-btn crm-btn--secondary bp-export' do %>
+      <i class="fa-solid fa-file-arrow-down"></i> Exportar solicitações
+    <% end %>
+  </h1>
+
+  <%= form_with url: back_in_stock_performance_path, method: :get, class: 'cp-filters', data: { live_regions: 'cp-period,cp-results' } do %>
+    <%= render 'shared/period_picker', period: @period %>
+
+    <div id="cp-results" data-live-spinner class="bp-results">
+      <section class="cp-section">
+        <h2>Relatórios rápidos</h2>
+        <p class="cp-section__note">Comparado com o período anterior de mesmo tamanho.</p>
+        <div class="cp-grid cp-grid--4">
+          <%= render 'campaign_performance/card', icon: 'fa-box-open', tone: 'primary', label: 'Produtos exigentes', value: count.call(totals.variants), delta: result.change(:variants),
+                                                  hint: 'Produtos e variações que receberam pelo menos uma solicitação no período.' %>
+          <%= render 'campaign_performance/card', icon: 'fa-bell', tone: 'primary', label: 'Solicitações', value: count.call(totals.requests), delta: result.change(:requests),
+                                                  hint: 'Pessoas que pediram para ser avisadas quando o produto voltar.' %>
+          <%= render 'campaign_performance/card', icon: 'fa-paper-plane', tone: 'primary', label: 'Notificações enviadas', value: count.call(totals.notified), delta: result.change(:notified),
+                                                  hint: 'Avisos de volta ao estoque enviados no período.' %>
+          <%= render 'campaign_performance/card', icon: 'fa-sack-dollar', tone: 'success', label: 'Receita recuperada', value: back_in_stock_currency(totals.revenue), delta: result.change(:revenue),
+                                                  detail: "#{count.call(totals.purchases)} #{'pedido'.pluralize(totals.purchases)}",
+                                                  hint: 'Pedidos de quem recebeu o aviso e comprou a mesma variante em até 7 dias depois. É uma estimativa.' %>
+        </div>
+      </section>
+
+      <section class="cp-section">
+        <h2>Estado das solicitações</h2>
+        <p class="cp-section__note">Solicitações feitas no período e o que aconteceu com elas.</p>
+        <% if funnel_total.zero? %>
+          <div class="cp-soon"><i class="fa-solid fa-circle-info"></i><p>Nenhuma solicitação neste período.</p></div>
+        <% else %>
+          <% parts = [[:waiting, 'Esperando', 'waiting'], [:notified, 'Notificado', 'notified'], [:ordered, 'Comprou', 'ordered'], [:cancelled, 'Cancelado', 'cancelled']] %>
+          <div class="bp-bar" role="img" aria-label="Estado das solicitações">
+            <% parts.each do |key, label, tone| %>
+              <% next if result.funnel[key].zero? %>
+              <div class="bp-bar__part bp-bar__part--<%= tone %>" style="width: <%= result.funnel[key] * 100.0 / funnel_total %>%" title="<%= label %>: <%= count.call(result.funnel[key]) %>"></div>
+            <% end %>
+          </div>
+          <ul class="bp-legend">
+            <% parts.each do |key, label, tone| %>
+              <li><span class="bp-dot bp-dot--<%= tone %>"></span> <%= label %> <strong><%= number_with_precision(result.funnel[key] * 100.0 / funnel_total, precision: 1, separator: ',') %>%</strong> <small><%= count.call(result.funnel[key]) %></small></li>
+            <% end %>
+          </ul>
+        <% end %>
+        <div class="cp-grid cp-grid--4 bp-metrics">
+          <%= render 'campaign_performance/card', icon: 'fa-percent', tone: 'success', label: 'Taxa de conversão',
+                                                  value: (result.conversion ? "#{number_with_precision(result.conversion, precision: 1, separator: ',')}%" : '—'),
+                                                  hint: 'Dos avisos enviados no período, quantos viraram compra da mesma variante em até 7 dias.' %>
+          <%= render 'campaign_performance/card', icon: 'fa-hourglass-half', tone: 'primary', label: 'Tempo médio para avisar', value: days.call(result.avg_notify_days),
+                                                  hint: 'Tempo entre o pedido da pessoa e o envio do aviso, nos avisos do período.' %>
+          <%= render 'campaign_performance/card', icon: 'fa-clock', tone: 'warning', label: 'Idade média das pendentes', value: days.call(result.avg_age_days),
+                                                  hint: 'Há quanto tempo, em média, as solicitações que ainda esperam foram feitas.' %>
+        </div>
+      </section>
+
+      <section class="cp-section">
+        <h2>Evolução no período</h2>
+        <div class="bp-charts">
+          <% [['Solicitações por dia', result.requests_by_day, 'int'], ['Notificações enviadas por dia', result.notified_by_day, 'int'], ['Valor dos pedidos por dia', result.revenue_by_day, 'money']].each do |name, series, format| %>
+            <div class="bp-chart-card">
+              <div class="bp-chart-card__title"><%= name %></div>
+              <div class="bp-chart" data-bis-chart data-name="<%= name %>" data-format="<%= format %>"
+                   data-labels="<%= series.keys.map { |day| l(day, format: '%d/%m') }.to_json %>"
+                   data-values="<%= series.values.map { |value| value.to_f.round(2) }.to_json %>"></div>
+            </div>
+          <% end %>
+        </div>
+      </section>
+
+      <section class="cp-section">
+        <h2>Há quanto tempo estão esperando</h2>
+        <p class="cp-section__note">Solicitações pendentes hoje, por idade. Quanto mais antigas, mais urgente repor.</p>
+        <% if result.age_buckets.sum { |bucket| bucket[:count] }.zero? %>
+          <div class="cp-soon"><i class="fa-solid fa-circle-info"></i><p>Nenhuma solicitação esperando.</p></div>
+        <% else %>
+          <div class="bp-bar">
+            <% result.age_buckets.each_with_index do |bucket, index| %>
+              <% next if bucket[:count].zero? %>
+              <div class="bp-bar__part bp-bar__part--age-<%= index %>" style="width: <%= bucket[:percent] %>%" title="<%= bucket[:label] %>: <%= count.call(bucket[:count]) %>"></div>
+            <% end %>
+          </div>
+          <ul class="bp-legend">
+            <% result.age_buckets.each_with_index do |bucket, index| %>
+              <li><span class="bp-dot bp-dot--age-<%= index %>"></span> <%= bucket[:label] %> <strong><%= number_with_precision(bucket[:percent], precision: 1, separator: ',') %>%</strong> <small><%= count.call(bucket[:count]) %></small></li>
+            <% end %>
+          </ul>
+        <% end %>
+      </section>
+
+      <section class="cp-section">
+        <h2>Produtos mais pedidos</h2>
+        <div class="bp-tabs">
+          <% { 'demand' => 'Alta demanda', 'trending' => 'Tendências', 'value' => 'Alto potencial de receita' }.each do |key, label| %>
+            <button type="submit" name="ordem" value="<%= key %>" class="cp-chip <%= 'is-active' if (params[:ordem].presence || 'demand') == key %>"><%= label %></button>
+          <% end %>
+        </div>
+        <% if result.top_variants.empty? %>
+          <div class="cp-soon"><i class="fa-solid fa-circle-info"></i><p>Nenhum produto com solicitações pendentes.</p></div>
+        <% else %>
+          <div class="bp-table-wrap">
+            <table class="crm-table">
+              <thead><tr><th>Produto</th><th>Pedidos atuais</th><th>Esperando desde</th><th>Valor potencial</th><th>Total histórico</th></tr></thead>
+              <tbody>
+                <% result.top_variants.each do |group| %>
+                  <tr>
+                    <td class="bp-product">
+                      <% if group.image_url.present? %><%= image_tag group.image_url, alt: '', class: 'bp-product__img', loading: 'lazy' %><% end %>
+                      <span><strong><%= group.product_title %></strong><% if group.variant_title.present? && group.variant_title != 'Default Title' %><small><%= group.variant_title %></small><% end %></span>
+                    </td>
+                    <td><%= count.call(group.alerts_count) %></td>
+                    <td class="cx-nowrap"><%= l(group.first_requested_at.in_time_zone.to_date, format: '%d/%m/%Y') %> <small class="cx-muted">há <%= time_ago_in_words(group.first_requested_at) %></small></td>
+                    <td><%= back_in_stock_currency(group.demand_value) %></td>
+                    <td><%= count.call(result.history.fetch(group.shopify_variant_id, 0)) %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+          <p class="cp-section__note"><%= link_to 'Ver todos os alertas', back_in_stock_path(anchor: 'alertas') %></p>
+        <% end %>
+      </section>
+
+      <section class="cp-section">
+        <h2>Últimas notificações</h2>
+        <p class="cp-section__note">Entregue, aberto e clicado vêm do rastreio do envio e aparecem para os avisos enviados daqui para frente.</p>
+        <% if result.notifications.empty? %>
+          <div class="cp-soon"><i class="fa-solid fa-circle-info"></i><p>Nenhum aviso enviado neste período.</p></div>
+        <% else %>
+          <div class="bp-table-wrap">
+            <table class="crm-table">
+              <thead><tr><th>Produto</th><th>Contato</th><th>Enviado em</th><th>Status</th></tr></thead>
+              <tbody>
+                <% result.notifications.each do |alert, events| %>
+                  <tr>
+                    <td><strong><%= alert.product_title %></strong><% if alert.variant_title.present? && alert.variant_title != 'Default Title' %> <small class="cx-muted"><%= alert.variant_title %></small><% end %></td>
+                    <td><%= alert.email %><% if alert.phone.present? %><small class="bp-phone"><%= back_in_stock_phone(alert.phone) %></small><% end %></td>
+                    <td class="cx-nowrap"><%= l(alert.notified_at.in_time_zone, format: '%d/%m/%Y às %H:%M') %></td>
+                    <td><%= back_in_stock_event_status(events) %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </section>
+    </div>
+  <% end %>
+</div>
+
+<%= javascript_include_tag 'campaign_performance', 'back_in_stock_performance', defer: true %>

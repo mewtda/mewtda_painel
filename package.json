@@ -16,7 +16,7 @@
     "turbo": "^1.10.14"
   },
   "scripts": {
-    "build": "esbuild app/javascript/*.* --bundle --sourcemap --outdir=app/assets/builds",
+    "build": "esbuild $(ls app/javascript/*.js | grep -v /application.js) --bundle --sourcemap --outdir=app/assets/builds",
     "build:css": "sass ./app/assets/stylesheets/admin.scss --no-source-map --load-path=node_modules"
   }
 }

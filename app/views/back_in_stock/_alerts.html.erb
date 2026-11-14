@@ -16,7 +16,7 @@
   <% end %>
 </nav>
 
-<%= form_with url: back_in_stock_path(anchor: 'alertas'), method: :get, class: 'bis-toolbar', data: { autosubmit: true } do |form| %>
+<%= form_with url: back_in_stock_path(anchor: 'alertas'), method: :get, class: 'bis-toolbar', data: { autosubmit: true, live_regions: 'bis-filter-summary,bis-results' } do |form| %>
   <%= form.hidden_field :status, value: status %>
   <div class="bis-toolbar__search">
     <i class="fa-solid fa-magnifying-glass"></i>
@@ -25,11 +25,21 @@
   </div>
   <label class="bis-toolbar__sort">
     Ordenar por
-    <%= form.select :sort, back_in_stock_sort_options(filters[:sort]), {}, class: 'crm-input' %>
+    <%= form.select :sort, back_in_stock_sort_options(filters[:sort]), {}, class: 'crm-input', data: { custom_select: true } %>
   </label>
-  <%= form.button class: 'crm-btn crm-btn--secondary' do %>
-    <i class="fa-solid fa-filter"></i> Filtrar
-  <% end %>
+  <%= render 'alert_filters', form:, filters:, status:, alert_filter: alert_filter, options: filter_options %>
+<% end %>
+
+<div id="bis-results" data-live-spinner>
+<% if alert_filter.active_count.positive? %>
+  <div class="bis-active-filters">
+    <% alert_filter.chips.each do |chip| %>
+      <%= link_to back_in_stock_path(filters.slice(:status, :q, :sort).merge(chip[:params], anchor: 'alertas')), class: 'bis-active-filters__chip', title: 'Remover filtro' do %>
+        <%= chip[:label] %> <i class="fa-solid fa-xmark"></i>
+      <% end %>
+    <% end %>
+    <%= link_to 'Limpar filtros', back_in_stock_path(filters.slice(:status, :q, :sort).merge(anchor: 'alertas')), class: 'bis-active-filters__clear' %>
+  </div>
 <% end %>
 
 <% if groups.empty? %>
@@ -127,3 +137,4 @@
   <%= will_paginate groups, params: filters.merge(anchor: 'alertas'),
                             list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
 <% end %>
+</div>

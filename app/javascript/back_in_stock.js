@@ -57,5 +57,30 @@
   copyButton.addEventListener("click", copySnippet);
   sortSelect?.addEventListener("change", () => sortSelect.form.requestSubmit());
 
+  document.addEventListener("click", (event) => {
+    const open = root.querySelector(".bis-filter[open]");
+    if (open && event.target.isConnected && !open.contains(event.target)) open.removeAttribute("open");
+  });
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-clear-filters]");
+    if (!button) return;
+
+    const panel = button.closest(".bis-filter__panel");
+    panel.querySelectorAll("input[type=checkbox]").forEach((box) => { box.checked = false; });
+    panel.querySelectorAll("input:not([type=checkbox])").forEach((input) => { input.value = ""; });
+    panel.querySelectorAll("select").forEach((select) => {
+      select.selectedIndex = 0;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    button.form.requestSubmit();
+  });
+
+  document.addEventListener("submit", (event) => {
+    if (event.target.matches(".bis-toolbar")) root.querySelector(".bis-filter[open]")?.removeAttribute("open");
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") root.querySelector(".bis-filter[open]")?.removeAttribute("open");
+  });
+
   showTab(location.hash.slice(1));
 })();

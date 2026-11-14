@@ -3,7 +3,8 @@
   <%= form.hidden_field :kind %>
   <%= hidden_field_tag 'segment[rules_json]', segment.rules.to_json, id: 'sg-rules' %>
   <script type="application/json" id="sg-schema"><%= raw json_escape(Segments::Rules.schema.merge(
-        segments: current_segments.reject { |s| s.id == segment.id }.map { |s| { id: s.id, name: "#{s.kind_label}: #{s.name}" } }
+        segments: current_segments.reject { |s| s.id == segment.id }.map { |s| { id: s.id, name: "#{s.kind_label}: #{s.name}" } },
+        **product_options
       ).to_json) %></script>
 
   <div class="sg-topbar">

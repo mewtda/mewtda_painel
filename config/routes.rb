@@ -148,6 +148,8 @@ Rails.application.routes.draw do
     end
     get 'popup/cadastros', to: 'popups#submissions', as: :submissions_popup
 
+    get 'de-volta-ao-estoque/desempenho', to: 'back_in_stock_performance#show', as: :back_in_stock_performance
+    get 'de-volta-ao-estoque/desempenho/exportar', to: 'back_in_stock_performance#export', as: :export_back_in_stock_performance
     resource :back_in_stock, path: 'de-volta-ao-estoque', controller: 'back_in_stock', only: %i[show create update] do
       patch :regenerate_token, path: 'novo-token'
       patch 'alertas/:alert_id/cancelar', action: :cancel_alert, as: :cancel_alert

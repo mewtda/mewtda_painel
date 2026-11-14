@@ -1,0 +1,20 @@
+<%# locals: period %>
+<div id="cp-period">
+  <details class="cp-period">
+    <summary class="cp-pill"><%= period.label %> <i class="fa-solid fa-caret-down"></i></summary>
+    <div class="cp-period__panel">
+      <div class="cp-period__presets">
+        <strong>Selecione por período pré-estabelecido:</strong>
+        <% Campaigns::Period::PRESETS.each do |key, label| %>
+          <button type="submit" name="periodo" value="<%= key %>" class="cp-chip <%= 'is-active' if period.key == key %>"><%= label %></button>
+        <% end %>
+      </div>
+      <div class="cp-period__custom">
+        <strong>ou escolha as datas:</strong>
+        <label>De <%= date_field_tag :de, period.from, class: 'crm-input' %></label>
+        <label>Até <%= date_field_tag :ate, period.to, class: 'crm-input' %></label>
+        <button type="submit" name="periodo" value="custom" class="crm-btn crm-btn--primary">Confirmar</button>
+      </div>
+    </div>
+  </details>
+</div>

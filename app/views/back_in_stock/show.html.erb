@@ -31,6 +31,9 @@
       <button type="button" class="scr-tab" role="tab" data-tab="resumo">
         <i class="fa-solid fa-chart-column"></i><span>Resumo</span>
       </button>
+      <%= link_to back_in_stock_performance_path, class: 'scr-tab' do %>
+        <i class="fa-solid fa-chart-line"></i><span>Desempenho</span>
+      <% end %>
       <button type="button" class="scr-tab" role="tab" data-tab="configuracoes">
         <i class="fa-solid fa-sliders"></i><span>Configurações</span>
       </button>

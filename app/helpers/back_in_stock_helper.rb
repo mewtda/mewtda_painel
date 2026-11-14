@@ -47,4 +47,12 @@ module BackInStockHelper
   def back_in_stock_product_url(client, handle)
     "#{client.storefront_url}/products/#{handle}"
   end
+
+  EVENT_STATUSES = [%w[complaint Denúncia danger], ['bounce', 'Não entregue', 'warning'], %w[click Clicado success],
+                    %w[open Aberto info], %w[delivery Entregue success]].freeze
+
+  def back_in_stock_event_status(events)
+    _, label, tone = EVENT_STATUSES.find { |type, *| events.include?(type) }
+    tag.span(label || 'Enviado', class: "crm-tag crm-tag--#{tone || 'neutral'}")
+  end
 end

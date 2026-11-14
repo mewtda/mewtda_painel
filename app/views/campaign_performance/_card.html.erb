@@ -1,4 +1,4 @@
-<%# locals: icon, tone, label, value, hint, detail (opcional) %>
+<%# locals: icon, tone, label, value, hint, detail (opcional), delta (opcional, variação em %) %>
 <div class="cp-card">
   <span class="cp-card__icon cp-card__icon--<%= tone %>"><i class="fa-solid <%= icon %>"></i></span>
   <div class="cp-card__label">
@@ -8,5 +8,10 @@
   <div class="cp-card__value">
     <strong><%= value %></strong>
     <% if local_assigns[:detail] %><small><%= detail %></small><% end %>
+    <% if local_assigns[:delta] %>
+      <span class="cp-delta cp-delta--<%= delta.negative? ? 'down' : 'up' %>" title="Em relação ao período anterior">
+        <i class="fa-solid fa-chevron-<%= delta.negative? ? 'down' : 'up' %>"></i> <%= number_with_precision(delta.abs, precision: 1, separator: ',') %>%
+      </span>
+    <% end %>
   </div>
 </div>

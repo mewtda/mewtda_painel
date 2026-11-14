@@ -13,25 +13,7 @@
   </h1>
 
   <%= form_with url: campaign_performance_path, method: :get, class: 'cp-filters', data: { live_regions: 'cp-period,cp-results' } do %>
-    <div id="cp-period">
-    <details class="cp-period">
-      <summary class="cp-pill"><%= @period.label %> <i class="fa-solid fa-caret-down"></i></summary>
-      <div class="cp-period__panel">
-        <div class="cp-period__presets">
-          <strong>Selecione por período pré-estabelecido:</strong>
-          <% Campaigns::Period::PRESETS.each do |key, label| %>
-            <button type="submit" name="periodo" value="<%= key %>" class="cp-chip <%= 'is-active' if @period.key == key %>"><%= label %></button>
-          <% end %>
-        </div>
-        <div class="cp-period__custom">
-          <strong>ou escolha as datas:</strong>
-          <label>De <%= date_field_tag :de, @period.from, class: 'crm-input' %></label>
-          <label>Até <%= date_field_tag :ate, @period.to, class: 'crm-input' %></label>
-          <button type="submit" name="periodo" value="custom" class="crm-btn crm-btn--primary">Confirmar</button>
-        </div>
-      </div>
-    </details>
-    </div>
+    <%= render 'shared/period_picker', period: @period %>
 
     <%= select_tag :canal, options_for_select([['Todos os canais', '']] + Campaign::CHANNELS.invert.to_a, params[:canal]),
                    class: 'crm-input cp-select', data: { autosubmit: true, custom_select: true } %>

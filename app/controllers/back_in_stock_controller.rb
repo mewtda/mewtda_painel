@@ -66,6 +66,7 @@ class BackInStockController < ApplicationController
     @pending_variants = alerts.pending.distinct.count(:shopify_variant_id)
     @groups = paginated_groups(filtered)
     @contacts = filtered.where(shopify_variant_id: @groups.map(&:shopify_variant_id)).contacts_by_variant
+    @notice_events = notice_events(@contacts)
   end
 
   def load_summary
@@ -90,6 +91,14 @@ class BackInStockController < ApplicationController
       total = alerts.group(:shopify_variant_id).having('COUNT(*) >= ?', demand).count.size
     end
     groups.paginate(page: params[:page], per_page: GROUPS_PER_PAGE, total_entries: total)
+  end
+
+  def notice_events(contacts)
+    return {} unless selected_status == 'notified'
+
+    ids = contacts.values.flatten.map(&:id)
+    EmailEvent.where(back_in_stock_alert_id: ids).group(:back_in_stock_alert_id)
+              .pluck(:back_in_stock_alert_id, Arel.sql('ARRAY_AGG(DISTINCT event_type)')).to_h
   end
 
   def filter_options

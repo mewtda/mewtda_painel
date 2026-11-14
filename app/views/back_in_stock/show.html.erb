@@ -45,7 +45,8 @@
     <section class="scr-panel" data-panel="alertas" hidden>
       <%= render 'alerts', client: @client, filters: @filters, status_counts: @status_counts,
                            pending_value: @pending_value, pending_variants: @pending_variants,
-                           groups: @groups, contacts: @contacts, alert_filter: @alert_filter, filter_options: @filter_options %>
+                           groups: @groups, contacts: @contacts, alert_filter: @alert_filter, filter_options: @filter_options,
+                           notice_events: @notice_events %>
     </section>
 
     <section class="scr-panel" data-panel="resumo" hidden>

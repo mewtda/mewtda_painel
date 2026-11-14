@@ -34,6 +34,21 @@ class BackInStockControllerTest < ActionDispatch::IntegrationTest
     assert_select '#bis-filter-summary'
   end
 
+  test 'the notified tab shows the tracked status of each notice' do
+    clicked = alert('click@example.com', status: 'notified', notified_at: 1.day.ago)
+    alert('plain@example.com', status: 'notified', notified_at: 1.day.ago)
+    %w[delivery open click].each do |type|
+      EmailEvent.create!(client: @client, source: 'back_in_stock', back_in_stock_alert: clicked, event_type: type,
+                         ses_message_id: 'm-1', occurred_at: Time.current)
+    end
+
+    get back_in_stock_path(status: 'notified')
+
+    assert_select 'th', text: 'Status'
+    assert_select '.crm-tag--success', text: 'Clicado'
+    assert_select '.crm-tag--neutral', text: 'Enviado'
+  end
+
   test 'a size filter keeps only the matching products and shows the active chip' do
     alert('p@example.com', title: 'Blusa Pequena', variant: 1, variant_title: 'P/36 / PRETA')
     alert('g@example.com', title: 'Blusa Grande', variant: 2, variant_title: 'G/42 / PRETA')

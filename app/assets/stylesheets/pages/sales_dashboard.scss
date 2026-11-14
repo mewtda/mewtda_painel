@@ -99,7 +99,7 @@ $sd-header-blue: var(--chrome-bg);
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #fef3c7;
+  background: var(--warning-bg);
   color: #92400e;
   border-radius: 10px;
   padding: 14px 18px;
@@ -406,7 +406,7 @@ $sd-header-blue: var(--chrome-bg);
 .sd-disclaimer-icon {
   margin-left: 5px;
   font-size: 11px;
-  color: #b06000;
+  color: var(--warning-fg);
   cursor: help;
 }
 

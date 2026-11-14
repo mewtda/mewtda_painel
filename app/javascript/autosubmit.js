@@ -8,10 +8,10 @@
   const setLoading = (ids, loading) =>
     ids.forEach((id) => document.getElementById(id)?.classList.toggle("is-live-loading", loading));
 
-  async function refreshRegions(form) {
+  async function refreshRegions(form, submitter) {
     const ids = regionIds(form);
     const url = new URL(form.action || location.href, location.href);
-    url.search = new URLSearchParams(new FormData(form)).toString();
+    url.search = new URLSearchParams(new FormData(form, submitter)).toString();
 
     controller?.abort();
     controller = new AbortController();
@@ -52,7 +52,7 @@
     if (!regionIds(form).length) return;
 
     event.preventDefault();
-    refreshRegions(form);
+    refreshRegions(form, event.submitter);
   });
 
   document.addEventListener("change", (event) => {

@@ -137,7 +137,7 @@ class DispatchJobTest < ActiveJob::TestCase
       campaign.reload
 
       assert_empty sender.calls
-      assert_equal 'sending', campaign.status
+      assert_equal 'paused', campaign.status
       assert_equal Time.zone.local(2026, 11, 18, 8, 0), campaign.next_run_at
     end
   end

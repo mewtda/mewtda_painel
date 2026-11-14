@@ -29,8 +29,8 @@
 // Modificadores locais de crm-btn
 .affiliates-btn--success { background: #1d7a3e; color: #fff; }
 .affiliates-btn--icon { background: var(--primary-tint); color: var(--primary); border: 1px solid var(--outline); padding: 0.4rem 0.6rem; font-size: 0.82rem; }
-.affiliates-btn--danger { color: #c5221f; border-color: #f6b3ae; background: #fce8e6; }
-.affiliates-btn--danger:hover { background: #f9d3ce; }
+.affiliates-btn--danger { color: var(--danger-fg); border-color: var(--danger-border); background: var(--danger-bg); }
+.affiliates-btn--danger:hover { background: var(--danger-bg); }
 .affiliates-btn--view { color: var(--primary); border-color: var(--primary); background: var(--primary-tint); }
 .affiliates-btn--view:hover { filter: brightness(.95); }
 
@@ -227,8 +227,8 @@
 .aff-table tbody tr { border-bottom: 1px solid var(--outline); transition: background .1s; }
 .aff-table tbody tr:last-child { border-bottom: none; }
 .aff-table tbody tr:hover { background: var(--primary-tint); }
-.aff-table tbody tr.aff-table__row--converted { background: #f0fdf4; }
-.aff-table tbody tr.aff-table__row--converted:hover { background: #dcfce7; }
+.aff-table tbody tr.aff-table__row--converted { background: var(--success-bg); }
+.aff-table tbody tr.aff-table__row--converted:hover { background: var(--success-bg); }
 .aff-table td { padding: 14px 16px; font-size: 13px; color: var(--fg-alt); vertical-align: middle; }
 .aff-table td.center { text-align: center; }
 .aff-table__empty { text-align: center; padding: 40px; color: var(--fg-alt); }
@@ -236,12 +236,12 @@
 .aff-badge { display: inline-block; padding: 3px 8px; border-radius: var(--radius); font-size: 11px; font-weight: 600; }
 .aff-badge--mono { font-family: monospace; background: var(--outline); color: var(--fg-alt); }
 .aff-badge--page { background: #dbeafe; color: #1d4ed8; }
-.aff-badge--product { background: #dcfce7; color: #15803d; }
-.aff-badge--cart { background: #fef3c7; color: #b45309; }
-.aff-badge--checkout { background: #fce7f3; color: #be185d; }
+.aff-badge--product { background: var(--success-bg); color: #15803d; }
+.aff-badge--cart { background: var(--warning-bg); color: var(--warning-fg); }
+.aff-badge--checkout { background: var(--pink-bg); color: var(--pink-fg); }
 .aff-badge--count { background: #0f172a; color: #fff; }
-.aff-badge--success { background: #e6f4ea; color: #1d7a3e; }
-.aff-badge--warning { background: #fef7e0; color: #b06000; }
+.aff-badge--success { background: var(--success-bg); color: var(--success-fg); }
+.aff-badge--warning { background: var(--warning-bg); color: var(--warning-fg); }
 
 .aff-session-kinds { display: flex; gap: 4px; flex-wrap: wrap; }
 
@@ -251,8 +251,8 @@
   align-items: center;
   gap: 1rem;
   padding: 1.25rem 1.5rem;
-  background: #f0fdf4;
-  border-bottom: 1px solid #bbf7d0;
+  background: var(--success-bg);
+  border-bottom: 1px solid var(--success-border);
   border-radius: var(--radius) var(--radius) 0 0;
 }
 
@@ -292,7 +292,7 @@
 
 .affiliates-form-wrap { background: var(--bg); border: 1px solid var(--outline); border-radius: var(--radius); box-shadow: 0 1px 4px rgba(0,0,0,0.05); overflow: hidden; }
 
-.affiliates-form__errors { background: #fce8e6; border: 1px solid #f6b3ae; border-radius: var(--radius); padding: 1rem 1.25rem; margin: 1.5rem; color: #c5221f; }
+.affiliates-form__errors { background: var(--danger-bg); border: 1px solid var(--danger-border); border-radius: var(--radius); padding: 1rem 1.25rem; margin: 1.5rem; color: var(--danger-fg); }
 .affiliates-form__errors strong { display: block; margin-bottom: 0.5rem; }
 .affiliates-form__errors ul { margin: 0; padding-left: 1.25rem; }
 .affiliates-form__errors li { font-size: 0.875rem; }

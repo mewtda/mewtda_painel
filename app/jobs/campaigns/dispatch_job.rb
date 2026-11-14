@@ -36,7 +36,7 @@ module Campaigns
     def claim(campaign_id)
       now = Time.current
       claimed = Campaign.where(id: campaign_id, status: Campaign::RUNNABLE).where(next_run_at: ..now)
-                        .update_all(next_run_at: now + LEASE, updated_at: now)
+                        .update_all(status: 'sending', next_run_at: now + LEASE, updated_at: now)
       Campaign.find(campaign_id) if claimed == 1
     end
 
@@ -96,7 +96,8 @@ module Campaigns
       message = message_for(recipient)
       sent = Ses::SendEmailService.new(client).call(
         to: recipient.email, subject: message.subject, html_body: message.html, text_body: message.text,
-        unsubscribe_url: message.unsubscribe_url
+        unsubscribe_url: message.unsubscribe_url,
+        tags: { source: 'campaign', campaign_id: campaign.id, recipient_id: recipient.id }
       )
       return recipient.update!(status: 'sent', sent_at: Time.current) if sent
 
@@ -134,8 +135,7 @@ module Campaigns
       return finish_campaign unless campaign.recipients.where(status: 'pending').exists?
 
       case @reason
-      when :pause then campaign.update!(status: 'paused', next_run_at: @next_run)
-      when :wait then campaign.update!(status: 'sending', next_run_at: @next_run)
+      when :pause, :wait then campaign.update!(status: 'paused', next_run_at: @next_run)
       else continue_now
       end
     end

@@ -36,8 +36,8 @@
 .users-form-page__title { font-size: 1.05rem; font-weight: 700; color: var(--fg); margin: 0; }
 .users-form-page__subtitle { font-size: 0.8rem; color: var(--fg-alt); margin: 0.15rem 0 0; }
 
-.users-form-page__errors { display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem 1.5rem; background: #fce8e6; border-bottom: 1px solid #f6b3ae; color: #c5221f; font-size: 0.85rem; }
-.users-form-page__errors-icon { flex-shrink: 0; color: #c5221f; }
+.users-form-page__errors { display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem 1.5rem; background: var(--danger-bg); border-bottom: 1px solid var(--danger-border); color: var(--danger-fg); font-size: 0.85rem; }
+.users-form-page__errors-icon { flex-shrink: 0; color: var(--danger-fg); }
 .users-form-page__errors ul { margin: 0.5rem 0 0 1rem; padding: 0; }
 .users-form-page__errors li { margin: 0.25rem 0; }
 

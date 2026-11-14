@@ -22,9 +22,10 @@ module BackInStock
     end
 
     def send_email(alert, message)
-      Ses::SendEmailService.new(alert.client).call(to: alert.email, subject: message.subject,
-                                                   html_body: message.html, text_body: message.text,
-                                                   unsubscribe_url: message.unsubscribe_url)
+      Ses::SendEmailService.new(alert.client, shared: true).call(
+        to: alert.email, subject: message.subject, html_body: message.html, text_body: message.text,
+        unsubscribe_url: message.unsubscribe_url, tags: { source: 'back_in_stock', alert_id: alert.id }
+      )
     end
 
     def message_for(alert, template, snapshot)

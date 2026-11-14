@@ -112,13 +112,16 @@ class CampaignTest < ActiveSupport::TestCase
 
   test 'progress and status notes tell the shop what is going on' do
     now = Time.zone.local(2026, 11, 16, 10, 0)
-    campaign = @client.campaigns.create!(status: 'sending', recipients_count: 6009, sent_count: 5000, failed_count: 1,
+    campaign = @client.campaigns.create!(status: 'paused', recipients_count: 6009, sent_count: 5000, failed_count: 1,
                                          blocked_count: 3, next_run_at: Time.zone.local(2026, 11, 17, 8, 0))
 
     assert_equal '5000 de 6009 enviados · 1 falha · 3 bloqueios', campaign.progress_label
     assert_equal 'Continua em 17/11 às 08:00', campaign.status_note(now)
     assert_equal 'Enviando agora', campaign.tap { |c| c.next_run_at = now - 1.minute }.status_note(now)
     assert_equal 'Confira o e-mail e o público desta campanha', campaign.tap { |c| c.next_run_at = nil }.status_note(now)
+    assert_equal 'Enviando agora', @client.campaigns.create!(status: 'sending', next_run_at: now + 5.minutes).status_note(now)
+    assert_equal 'Começa em 16/11 às 17:00', @client.campaigns.create!(status: 'scheduled', send_mode: 'now', next_run_at: now + 7.hours).status_note(now)
+    assert_nil @client.campaigns.create!(status: 'scheduled', send_mode: 'scheduled', next_run_at: now + 7.hours).status_note(now)
     assert_nil @client.campaigns.create!(status: 'sent').status_note
   end
 

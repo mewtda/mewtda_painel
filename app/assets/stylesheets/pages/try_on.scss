@@ -45,7 +45,7 @@
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
-  background: #f1f5f9;
+  background: var(--hover);
   padding: 6px;
   border-radius: 12px;
   width: fit-content;
@@ -117,10 +117,10 @@
   flex-shrink: 0;
 }
 .tryon-card__icon--product { background: #dbeafe; color: #2563eb; }
-.tryon-card__icon--model { background: #fce7f3; color: #db2777; }
-.tryon-card__icon--result { background: #dcfce7; color: #16a34a; }
-.tryon-card__icon--face { background: #fef3c7; color: #d97706; }
-.tryon-card__icon--settings { background: #f1f5f9; color: var(--fg-alt); }
+.tryon-card__icon--model { background: var(--pink-bg); color: var(--pink-fg); }
+.tryon-card__icon--result { background: var(--success-bg); color: #16a34a; }
+.tryon-card__icon--face { background: var(--warning-bg); color: var(--warning-fg); }
+.tryon-card__icon--settings { background: var(--hover); color: var(--fg-alt); }
 .tryon-card__title {
   font-size: 14px;
   font-weight: 700;
@@ -133,7 +133,7 @@
 .tryon-card__optional {
   font-size: 10px;
   color: var(--fg-alt);
-  background: #f1f5f9;
+  background: var(--hover);
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: auto;
@@ -146,7 +146,7 @@
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
-  background: #f8fafc;
+  background: var(--hover);
   position: relative;
   min-height: 180px;
   display: flex;
@@ -158,13 +158,13 @@
 .tryon-upload--small { min-height: 120px; padding: 20px 16px; }
 .tryon-upload:hover {
   border-color: var(--primary);
-  background: #f0f9ff;
+  background: var(--info-bg);
 }
 .tryon-upload.has-image {
   padding: 12px;
   border-style: solid;
   border-color: #22c55e;
-  background: #f0fdf4;
+  background: var(--success-bg);
 }
 .tryon-upload__icon {
   width: 48px;
@@ -239,7 +239,7 @@
   width: 64px;
   height: 64px;
   border-radius: 16px;
-  background: #f1f5f9;
+  background: var(--hover);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -298,7 +298,7 @@
   cursor: not-allowed;
 }
 .tryon-btn--secondary {
-  background: #f1f5f9;
+  background: var(--hover);
   color: var(--fg);
   border: 1px solid var(--outline);
 }
@@ -333,7 +333,7 @@
 }
 
 .tryon-error {
-  background: #fef2f2;
+  background: var(--danger-bg);
   border: 1px solid #fecaca;
   border-radius: 10px;
   padding: 16px;
@@ -343,7 +343,7 @@
 }
 
 .tryon-info {
-  background: #f0f9ff;
+  background: var(--info-bg);
   border: 1px solid #bae6fd;
   border-radius: 12px;
   padding: 16px 20px;
@@ -415,7 +415,7 @@
 /* Variações pontuais que hoje são style="" inline no HTML/JS — cores semânticas
    sem token equivalente (ver nota da Task 28), só movidas para CSS nomeado. */
 .tryon-badge--ecommerce {
-  background: #dcfce7;
+  background: var(--success-bg);
   color: #16a34a;
   font-size: 10px;
   font-weight: 700;
@@ -424,7 +424,7 @@
   margin-left: 2px;
 }
 
-.tryon-info--success { background: #f0fdf4; border-color: #86efac; }
+.tryon-info--success { background: var(--success-bg); border-color: var(--success-border); }
 .tryon-info__title--success { color: #16a34a; }
 .tryon-info__list--success { color: #14532d; }
 
@@ -432,5 +432,5 @@
   background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
 }
 
-.tryon-result__empty-icon--danger { background: #fef2f2; color: #ef4444; }
+.tryon-result__empty-icon--danger { background: var(--danger-bg); color: #ef4444; }
 .tryon-result__empty-text--danger { color: #dc2626; }

@@ -31,6 +31,82 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match 'De outra loja', response.body
   end
 
+  test 'details shows the campaign summary with download links only when there is something to download' do
+    campaign = @client.campaigns.create!(name: 'Black Friday', status: 'sent', recipients_count: 3, sent_count: 2, failed_count: 1)
+
+    get details_campaign_path(campaign)
+
+    assert_response :success
+    assert_match 'Black Friday', response.body
+    assert_match 'Baixar lista', response.body
+    assert_includes response.body, recipients_campaign_path(campaign, status: 'sent')
+    assert_includes response.body, recipients_campaign_path(campaign, status: 'failed')
+    assert_not_includes response.body, recipients_campaign_path(campaign, status: 'blocked')
+  end
+
+  test 'details of another store campaign is not found' do
+    other = build_client.campaigns.create!(name: 'Alheia', status: 'sent')
+
+    get details_campaign_path(other)
+
+    assert_redirected_to campaigns_path
+  end
+
+  test 'recipients downloads a spreadsheet of the chosen status' do
+    campaign = @client.campaigns.create!(name: 'Black Friday', status: 'sent')
+    campaign.recipients.create!(email: 'ana@example.com', name: 'Ana', status: 'sent', sent_at: Time.current)
+    campaign.recipients.create!(email: 'bia@example.com', status: 'failed', error: 'caixa cheia')
+
+    get recipients_campaign_path(campaign, status: 'failed')
+
+    assert_response :success
+    assert_equal 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', response.media_type
+    sheet = RubyXL::Parser.parse_buffer(response.body)[0]
+    headers = sheet[0].cells.map(&:value)
+    assert_equal %w[Nome E-mail], headers.first(2)
+    assert_equal 'Motivo', headers.last
+    assert_includes headers, 'Total gasto'
+    assert_equal 'bia@example.com', sheet[1][1].value
+    assert_equal 'caixa cheia', sheet[1].cells.last.value
+    assert_nil sheet[2]
+  end
+
+  test 'recipients spreadsheet carries the customer profile data' do
+    campaign = @client.campaigns.create!(name: 'Black Friday', status: 'sent')
+    customer = Customer.create!(shopify_customer_id: 987, email: 'ana@example.com', first_name: 'Ana')
+    CustomerProfile.create!(client: @client, customer:, name: 'Ana Souza', email: 'ana@example.com', city: 'Santos', state: 'SP',
+                            orders_count: 3, total_spent: 450, avg_ticket: 150, refreshed_at: Time.current)
+    campaign.recipients.create!(email: 'ana@example.com', name: 'Ana Souza', customer_id: customer.id, status: 'sent', sent_at: Time.current)
+
+    get recipients_campaign_path(campaign, status: 'sent')
+
+    sheet = RubyXL::Parser.parse_buffer(response.body)[0]
+    headers = sheet[0].cells.map(&:value)
+    row = sheet[1].cells.map(&:value)
+    assert_equal 'Santos', row[headers.index('Cidade')]
+    assert_equal 3, row[headers.index('Nº de compras')]
+    assert_equal 450.0, row[headers.index('Total gasto')]
+    assert_match %r{\A\d{2}/\d{2}/\d{4} \d{2}:\d{2}\z}, row.last
+  end
+
+  test 'recipients rejects an unknown status' do
+    campaign = @client.campaigns.create!(name: 'Black Friday', status: 'sent')
+
+    get recipients_campaign_path(campaign, status: 'pending')
+
+    assert_redirected_to campaigns_path
+  end
+
+  test 'index links to the performance of campaigns that already started' do
+    started = @client.campaigns.create!(name: 'Enviada', status: 'sent', started_at: 1.day.ago)
+    pending = @client.campaigns.create!(name: 'Agendada', status: 'scheduled')
+
+    get campaigns_path
+
+    assert_includes response.body, campaign_performance_path(campanha: started.id)
+    assert_not_includes response.body, campaign_performance_path(campanha: pending.id)
+  end
+
   test 'index searches campaigns by name' do
     @client.campaigns.create!(name: 'Promoção de verão')
     @client.campaigns.create!(name: 'Dia das mães')
@@ -68,7 +144,7 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match 'Quando enviar', response.body
-    assert_match 'a cada 1.000 e-mails', response.body
+    assert_match 'entra na sua fatura do mês', response.body
   end
 
   test 'update autosaves and returns the summary' do

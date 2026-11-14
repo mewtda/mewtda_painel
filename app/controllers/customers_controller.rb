@@ -82,23 +82,8 @@ class CustomersController < ApplicationController
   end
 
   def export_xlsx
-    workbook = RubyXL::Workbook.new
-    sheet = workbook[0]
-    sheet.sheet_name = 'Clientes'
-    headers = ['Nome', 'E-mail', 'Telefone', 'Cidade', 'UF', 'Nº de compras', 'Total gasto', 'Ticket médio',
-               'Primeira compra', 'Última compra', 'Valor da última compra', 'Perfil RFM', 'Marketing por e-mail']
-    headers.each_with_index { |h, i| sheet.add_cell(0, i, h) }
-
-    @scope.order(:name).each.with_index(1) do |p, row|
-      [p.name, p.email, p.phone, p.city, p.state, p.orders_count, p.total_spent.to_f, p.avg_ticket.to_f,
-       p.first_order_at&.strftime('%d/%m/%Y'), p.last_order_at&.strftime('%d/%m/%Y'), p.last_order_total&.to_f, p.rfm_label,
-       Segments::Rules::MARKETING_STATES.fetch(p.email_marketing_state || 'unknown')]
-        .each_with_index { |value, col| sheet.add_cell(row, col, value) }
-    end
-
-    send_data workbook.stream.string,
-              filename: "clientes_#{Time.current.strftime('%Y%m%d_%H%M')}.xlsx",
-              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    sheet = Spreadsheets::Customers.new(@scope)
+    send_data sheet.to_xlsx, filename: sheet.filename, type: sheet.content_type
   end
 
   private

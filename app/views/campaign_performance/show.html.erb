@@ -1,0 +1,123 @@
+<% title 'Desempenho das campanhas' %>
+
+<% result = @result %>
+<% percent = ->(part) { "#{number_with_precision(result.percent_of_audience(part), precision: 2, separator: ',')}%" } %>
+<% count = ->(value) { number_with_delimiter(value, delimiter: '.') } %>
+<% percent_of_sent = ->(part) { "#{number_with_precision(result.rate(part, result.sent), precision: 2, separator: ',')}%" } %>
+<% percent_of_delivered = ->(part) { "#{number_with_precision(result.rate(part, result.delivered), precision: 2, separator: ',')}%" } %>
+
+<div class="clients-wrapper cp-page">
+  <h1 class="cp-title">
+    <%= link_to campaigns_path, class: 'cp-title__back', title: 'Voltar para as campanhas' do %><i class="fa-solid fa-chevron-left"></i><% end %>
+    Desempenho das campanhas
+  </h1>
+
+  <%= form_with url: campaign_performance_path, method: :get, class: 'cp-filters', data: { live_regions: 'cp-period,cp-results' } do %>
+    <div id="cp-period">
+    <details class="cp-period">
+      <summary class="cp-pill"><%= @period.label %> <i class="fa-solid fa-caret-down"></i></summary>
+      <div class="cp-period__panel">
+        <div class="cp-period__presets">
+          <strong>Selecione por período pré-estabelecido:</strong>
+          <% Campaigns::Period::PRESETS.each do |key, label| %>
+            <button type="submit" name="periodo" value="<%= key %>" class="cp-chip <%= 'is-active' if @period.key == key %>"><%= label %></button>
+          <% end %>
+        </div>
+        <div class="cp-period__custom">
+          <strong>ou escolha as datas:</strong>
+          <label>De <%= date_field_tag :de, @period.from, class: 'crm-input' %></label>
+          <label>Até <%= date_field_tag :ate, @period.to, class: 'crm-input' %></label>
+          <button type="submit" name="periodo" value="custom" class="crm-btn crm-btn--primary">Confirmar</button>
+        </div>
+      </div>
+    </details>
+    </div>
+
+    <%= select_tag :canal, options_for_select([['Todos os canais', '']] + Campaign::CHANNELS.invert.to_a, params[:canal]),
+                   class: 'crm-input cp-select', data: { autosubmit: true, custom_select: true } %>
+
+    <%= select_tag :campanha,
+                   options_for_select([['Todas as campanhas', '']] +
+                                      @campaign_options.map { |c| ["#{c.display_name} (#{l(c.started_at.to_date, format: '%d/%m')})", c.id] }, @campaign&.id),
+                   class: 'crm-input cp-select', data: { autosubmit: true, custom_select: true } %>
+  <% end %>
+
+  <div id="cp-results" data-live-spinner>
+  <% if result.campaigns_count.zero? %>
+    <div class="cp-empty">
+      <i class="fa-solid fa-chart-column"></i>
+      <p>Nenhuma campanha enviada <%= @campaign ? 'com esse filtro' : 'neste período' %>. Quando uma campanha começar a enviar, os números aparecem aqui.</p>
+    </div>
+  <% else %>
+    <section class="cp-section">
+      <h2>Faturamento gerado</h2>
+      <p class="cp-section__note"><%= @campaign ? 'O período não vale para a campanha escolhida: os números são da campanha inteira.' : 'Conta as compras de quem recebeu e comprou em até 7 dias depois do envio.' %></p>
+      <div class="cp-grid cp-grid--5">
+        <%= render 'card', icon: 'fa-sack-dollar', tone: 'primary', label: 'Receita gerada', value: campaign_cost_label(result.revenue),
+                           hint: 'Soma dos pedidos de quem recebeu a campanha e comprou em até 7 dias depois do envio.' %>
+        <%= render 'card', icon: 'fa-coins', tone: 'primary', label: 'Investimento', value: campaign_cost_label(result.investment),
+                           hint: 'Quanto os envios custaram. Entra na sua fatura do mês.' %>
+        <%= render 'card', icon: 'fa-chart-line', tone: 'success', label: 'Retorno financeiro', value: campaign_cost_label(result.net),
+                           hint: 'Receita gerada menos o investimento: o que sobrou.' %>
+        <%= render 'card', icon: 'fa-bag-shopping', tone: 'primary', label: 'Quantidade de compras', value: count.call(result.purchases),
+                           hint: 'Pedidos feitos em até 7 dias por quem recebeu a campanha.' %>
+        <%= render 'card', icon: 'fa-receipt', tone: 'primary', label: 'Ticket médio', value: campaign_cost_label(result.avg_ticket),
+                           hint: 'Receita gerada dividida pela quantidade de compras.' %>
+      </div>
+    </section>
+
+    <section class="cp-section">
+      <h2>Alcance</h2>
+      <p class="cp-section__note"><%= @campaign ? 'O período não vale para a campanha escolhida: os números são da campanha inteira.' : "#{count.call(result.campaigns_count)} #{'campanha'.pluralize(result.campaigns_count)} iniciada#{'s' if result.campaigns_count != 1} no período." %></p>
+      <div class="cp-grid cp-grid--4">
+        <%= render 'card', icon: 'fa-users', tone: 'primary', label: 'Público selecionado', value: count.call(result.audience),
+                           hint: 'Pessoas que estavam na lista quando a campanha começou.' %>
+        <%= render 'card', icon: 'fa-user-slash', tone: 'warning', label: 'Contatos bloqueados', value: percent.call(result.blocked), detail: count.call(result.blocked),
+                           hint: 'Pessoas que não receberam porque estão na Lista de recusa.' %>
+        <%= render 'card', icon: 'fa-triangle-exclamation', tone: 'danger', label: 'Falhas', value: percent.call(result.failed), detail: count.call(result.failed),
+                           hint: 'Envios que deram erro antes de sair, como domínio ou limite. Não contam como enviados.' %>
+        <%= render 'card', icon: 'fa-paper-plane', tone: 'primary', label: 'Enviados', value: percent.call(result.sent), detail: count.call(result.sent),
+                           hint: 'E-mails aceitos para envio. Isso não significa que já chegaram na caixa de entrada.' %>
+      </div>
+    </section>
+
+    <% if result.tracked %>
+      <section class="cp-section">
+        <h2>Entrega e engajamento</h2>
+        <p class="cp-section__note">Dados do rastreio do envio. As aberturas são uma estimativa: alguns aplicativos de e-mail abrem a mensagem sozinhos.</p>
+        <div class="cp-grid cp-grid--4">
+          <%= render 'card', icon: 'fa-inbox', tone: 'primary', label: 'Entregues', value: percent_of_sent.call(result.delivered), detail: count.call(result.delivered),
+                             hint: 'E-mails que chegaram ao provedor da pessoa (Gmail, Outlook etc.).' %>
+          <%= render 'card', icon: 'fa-envelope-circle-check', tone: 'success', label: 'Taxa de abertura', value: percent_of_delivered.call(result.opened), detail: "#{count.call(result.opened)} abertos",
+                             hint: 'Quantas pessoas abriram o e-mail, sobre os entregues. Cada pessoa conta uma vez.' %>
+          <%= render 'card', icon: 'fa-hand-pointer', tone: 'primary', label: 'Taxa de cliques', value: percent_of_delivered.call(result.clicked), detail: "#{count.call(result.clicked)} clicaram",
+                             hint: 'Quantas pessoas clicaram em algum link, sobre os entregues. Cada pessoa conta uma vez.' %>
+          <%= render 'card', icon: 'fa-envelope-open', tone: 'warning', label: 'Não entregues', value: percent_of_sent.call(result.bounced), detail: count.call(result.bounced),
+                             hint: 'E-mails que voltaram: endereço que não existe, caixa cheia ou recusa do provedor (bounce).' %>
+          <%= render 'card', icon: 'fa-ban', tone: 'danger', label: 'Taxa de denúncia', value: percent_of_delivered.call(result.complaints), detail: count.call(result.complaints),
+                             hint: 'Pessoas que marcaram o e-mail como spam, sobre os entregues. Mantenha perto de zero.' %>
+        </div>
+        <div class="cp-hours">
+          <div class="cp-hours__title"><i class="fa-solid fa-clock"></i> Melhores horários</div>
+          <p class="cp-section__note">Quando as pessoas mais abrem e clicam, no horário de Brasília.</p>
+          <% peak = [result.hours.values.max.to_i, 1].max %>
+          <% result.hours.each do |hour, total| %>
+            <div class="cp-hours__row">
+              <span><%= hour %>h</span>
+              <div class="cp-hours__track"><div class="cp-hours__bar" style="width: <%= (total * 100.0 / peak).round %>%"></div></div>
+              <span><%= count.call(total) %></span>
+            </div>
+          <% end %>
+        </div>
+      </section>
+    <% else %>
+      <div class="cp-soon">
+        <i class="fa-solid fa-circle-info"></i>
+        <p>Entregues, aberturas, cliques, denúncias e bounces aparecem aqui quando o rastreio do envio estiver ligado.</p>
+      </div>
+    <% end %>
+  <% end %>
+  </div>
+</div>
+
+<%= javascript_include_tag 'campaign_performance', defer: true %>

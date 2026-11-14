@@ -23,6 +23,7 @@
  *= require components/tag
  *= require components/confirm
  *= require components/select
+ *= require components/tooltip
  *= require layouts/topbar
  *= require layouts/sidebar
  *= require layouts/footer
@@ -48,6 +49,7 @@
  *= require pages/screen
  *= require pages/back_in_stock
  *= require pages/campaign_builder
+ *= require pages/campaign_performance
  *= require pages/custom_automations
  *= require pages/affiliates
  *= require pages/auth

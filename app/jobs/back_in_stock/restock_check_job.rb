@@ -15,7 +15,7 @@ module BackInStock
     private
 
     def ready?(setting)
-      setting.client.ses_domain_verified? && setting.email_template.present?
+      setting.client.tools_email_domain.present? && setting.email_template.present?
     end
 
     def check(setting)

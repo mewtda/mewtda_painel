@@ -38,15 +38,22 @@
       <%= form_for current_client, as: :client, url: email_configuration_path, method: :patch,
                    html: { autocomplete: 'off' } do |form| %>
         <div class="users-form-page__body">
-          <div class="users-form-page__field">
-            <%= form.label :email_sending_domain, 'Domínio de envio', class: 'crm-label' %>
-            <%= form.text_field :email_sending_domain, class: 'crm-input', placeholder: 'Ex.: loja.com.br' %>
-            <span class="cpform-field__hint">Os e-mails de marketing desse cliente serão enviados a partir desse domínio, via AWS SES.</span>
-          </div>
+          <% unless current_client.ses_domain_verified? %>
+            <div class="email-config-notice">
+              <i class="fa-solid fa-circle-info"></i>
+              <p>
+                <% if current_client.tools_email_domain.present? %>
+                  Enquanto o domínio não for verificado, os avisos automáticos das ferramentas saem por <strong><%= current_client.tools_email_domain %></strong>. Para fazer campanhas, verifique o seu domínio.
+                <% else %>
+                  Enquanto o domínio não for verificado, essa loja não envia e-mails.
+                <% end %>
+              </p>
+            </div>
+          <% end %>
 
           <div class="users-form-page__field">
-            <label class="crm-label">Status</label>
-            <div>
+            <div class="email-config-domain-head">
+              <%= form.label :email_sending_domain, 'Domínio de envio', class: 'crm-label' %>
               <% case current_client.ses_verification_status %>
               <% when 'verified' %>
                 <span class="crm-tag crm-tag--success">Verificado</span>
@@ -58,6 +65,8 @@
                 <span class="crm-tag crm-tag--neutral">Não configurado</span>
               <% end %>
             </div>
+            <%= form.text_field :email_sending_domain, class: 'crm-input', placeholder: 'Ex.: loja.com.br' %>
+            <span class="cpform-field__hint">As campanhas e os avisos dessa loja serão enviados a partir desse domínio, via AWS SES.</span>
           </div>
         </div>
 

@@ -27,7 +27,7 @@ module Ses
 
     def build_client
       Client.create!(name: 'Loja Teste', email: "loja-#{SecureRandom.hex(4)}@example.com",
-                      email_sending_domain: 'loja.com.br')
+                     email_sending_domain: 'loja.com.br')
     end
 
     test 'register! stores the dkim tokens and marks status as pending' do

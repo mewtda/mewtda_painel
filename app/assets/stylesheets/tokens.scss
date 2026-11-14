@@ -5,6 +5,21 @@
 :root {
   --primary: #5800e8;
   --primary-hover: #4700bd;
+  --primary-solid: #5800e8;
+  --success-bg: #e6f4ea;
+  --success-fg: #1d7a3e;
+  --danger-bg: #fce8e6;
+  --danger-fg: #c5221f;
+  --danger-border: #f6b3ae;
+  --warning-bg: #fef7e0;
+  --warning-fg: #b06000;
+  --success-border: #bbf7d0;
+  --warning-border: #fde68a;
+  --info-bg: #eaf2ff;
+  --info-fg: #1a56db;
+  --info-border: #bfdbfe;
+  --pink-bg: #fce7f3;
+  --pink-fg: #be185d;
   --bg: #ffffff;
   --fg: #0d1321;
   --fg-alt: #6f7482;
@@ -24,6 +39,21 @@
 :root.theme-dark {
   --primary: #a27bff;
   --primary-hover: #b896ff;
+  --primary-solid: #7c4dff;
+  --success-bg: rgba(74, 222, 128, .14);
+  --success-fg: #86efac;
+  --danger-bg: rgba(248, 113, 113, .14);
+  --danger-fg: #fca5a5;
+  --danger-border: rgba(248, 113, 113, .35);
+  --warning-bg: rgba(251, 191, 36, .14);
+  --warning-fg: #fcd34d;
+  --success-border: rgba(74, 222, 128, .3);
+  --warning-border: rgba(251, 191, 36, .3);
+  --info-bg: rgba(96, 165, 250, .14);
+  --info-fg: #93c5fd;
+  --info-border: rgba(96, 165, 250, .3);
+  --pink-bg: rgba(244, 114, 182, .14);
+  --pink-fg: #f9a8d4;
   --bg: #15141b;
   --fg: #ecebf2;
   --fg-alt: #a2a1ad;

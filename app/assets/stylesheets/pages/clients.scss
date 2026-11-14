@@ -28,7 +28,7 @@
 /* ---- Botões sem variante no design system ---- */
 .clients-btn--success { background: #1d7a3e; color: #fff; }
 .clients-btn--icon { background: var(--primary-tint); color: var(--primary); border: 1px solid var(--outline); padding: 0.4rem 0.6rem; font-size: 0.82rem; }
-.clients-btn--danger { background: #fce8e6; color: #c5221f; border-color: transparent; }
+.clients-btn--danger { background: var(--danger-bg); color: var(--danger-fg); border-color: transparent; }
 .clients-btn--danger:hover { filter: brightness(.95); }
 
 /* ---- Tabela (wrapper + partes específicas; a tabela em si usa .crm-table) ---- */
@@ -65,8 +65,8 @@
 .cform-card__title { font-size: 1.05rem; font-weight: 700; color: var(--fg); margin: 0; }
 .cform-card__subtitle { font-size: 0.8rem; color: var(--fg-alt); margin: 0.15rem 0 0; }
 
-.cform-errors { display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem 1.5rem; background: #fce8e6; border-bottom: 1px solid #fce8e6; color: #c5221f; font-size: 0.85rem; }
-.cform-errors__icon { flex-shrink: 0; color: #c5221f; }
+.cform-errors { display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem 1.5rem; background: var(--danger-bg); border-bottom: 1px solid var(--danger-border); color: var(--danger-fg); font-size: 0.85rem; }
+.cform-errors__icon { flex-shrink: 0; color: var(--danger-fg); }
 .cform-errors ul { margin: 0.5rem 0 0 1rem; padding: 0; }
 .cform-errors li { margin: 0.25rem 0; }
 
@@ -89,8 +89,8 @@
 .cform-toggle__label { font-size: 0.875rem; color: var(--fg); }
 
 .cform-alert { display: flex; align-items: center; gap: 0.65rem; padding: 0.85rem 1rem; border-radius: var(--radius); font-size: 0.85rem; }
-.cform-alert--success { background: #e6f4ea; color: #1d7a3e; }
-.cform-alert--warning { background: #fef7e0; color: #b06000; }
+.cform-alert--success { background: var(--success-bg); color: var(--success-fg); }
+.cform-alert--warning { background: var(--warning-bg); color: var(--warning-fg); }
 
 .cform-accordion { background: var(--bg); border: 1px solid var(--outline); border-radius: var(--radius); overflow: hidden; }
 .cform-accordion[open] > .cform-accordion__summary { border-bottom: 1px solid var(--outline); }
@@ -104,8 +104,8 @@
 .cform-accordion__summary-title { flex: 1; }
 
 .cform-accordion__status { font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 999px; white-space: nowrap; }
-.cform-accordion__status--ok { background: #e6f4ea; color: #1d7a3e; }
-.cform-accordion__status--pending { background: #fef7e0; color: #b06000; }
+.cform-accordion__status--ok { background: var(--success-bg); color: var(--success-fg); }
+.cform-accordion__status--pending { background: var(--warning-bg); color: var(--warning-fg); }
 
 .cform-accordion__chevron { flex-shrink: 0; color: var(--fg-alt); transition: transform 0.15s ease; }
 .cform-accordion[open] .cform-accordion__chevron { transform: rotate(180deg); }
@@ -172,6 +172,6 @@
 .wan-card details form, .wan__add { display: flex; flex-direction: column; gap: 0.5rem; }
 .wan__users { border: 0; padding: 0; margin: 0; }
 .wan__users label { display: block; font-size: 0.9rem; }
-.wan-card__warn { color: #b45309; font-size: 0.85rem; margin: 0; }
+.wan-card__warn { color: var(--warning-fg); font-size: 0.85rem; margin: 0; }
 .cform-logo-preview { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
 .cform-logo-preview__img { height: 56px; width: auto; max-width: 240px; object-fit: contain; padding: 0.5rem 0.75rem; background: #fff; border: 1px solid var(--outline); border-radius: var(--radius); }

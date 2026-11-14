@@ -71,7 +71,7 @@
 }
 
 .custom-automations-warnings {
-  background: #fff8e1;
+  background: var(--warning-bg);
   border: 1px solid #f5d77a;
 
   .campaigns-alert__content strong,
@@ -85,7 +85,7 @@
 }
 
 .custom-automations-success {
-  background: #e7f6ec;
+  background: var(--success-bg);
   border: 1px solid #a7dbb7;
 
   .campaigns-alert__content strong,

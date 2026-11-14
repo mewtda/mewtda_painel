@@ -39,10 +39,9 @@
         <tr>
           <td>
             <strong>E-mails enviados</strong>
-            <small>Cobrados por mil e-mails enviados no mês</small>
           </td>
           <td class="invoice-table__amount invoice-table__hide-sm"><%= number_with_delimiter(@invoice.emails_sent, delimiter: '.') %></td>
-          <td class="invoice-table__amount invoice-table__hide-sm"><%= brl.call(Billing::Invoice::EMAIL_PRICE_PER_THOUSAND) %> por mil</td>
+          <td class="invoice-table__amount invoice-table__hide-sm">—</td>
           <td class="invoice-table__amount"><%= brl.call(@invoice.emails_amount) %></td>
         </tr>
       </tbody>

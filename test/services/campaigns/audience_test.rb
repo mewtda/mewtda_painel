@@ -12,8 +12,8 @@ class AudienceTest < ActiveSupport::TestCase
 
   def everyone
     @client.segments.create!(name: 'Todos', kind: 'dynamic', rules: { 'groups' => [{ 'conditions' => [
-      { 'field' => 'orders_count', 'op' => 'gte', 'value' => '0' }
-    ] }] })
+                               { 'field' => 'orders_count', 'op' => 'gte', 'value' => '0' }
+                             ] }] })
   end
 
   test 'counts recipients, leaves out suppressed and missing e-mails, and reports consent without blocking' do

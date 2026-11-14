@@ -1,0 +1,12 @@
+<%# locals: icon, tone, label, value, hint, detail (opcional) %>
+<div class="cp-card">
+  <span class="cp-card__icon cp-card__icon--<%= tone %>"><i class="fa-solid <%= icon %>"></i></span>
+  <div class="cp-card__label">
+    <%= label %>
+    <span class="ec-info" tabindex="0" title="<%= hint %>"><i class="fa-solid fa-circle-info"></i></span>
+  </div>
+  <div class="cp-card__value">
+    <strong><%= value %></strong>
+    <% if local_assigns[:detail] %><small><%= detail %></small><% end %>
+  </div>
+</div>

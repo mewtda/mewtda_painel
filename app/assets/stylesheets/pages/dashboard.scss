@@ -120,13 +120,13 @@
     width: 28px;
     height: 28px;
     border-radius: var(--radius);
-    border: 1px solid #c5221f;
-    background: #fce8e6;
-    color: #c5221f;
+    border: 1px solid var(--danger-fg);
+    background: var(--danger-bg);
+    color: var(--danger-fg);
     text-decoration: none;
     transition: all .15s;
   }
-  .db-month-filter__clear:hover { background: #fce8e6; filter: brightness(.95); }
+  .db-month-filter__clear:hover { background: var(--danger-bg); filter: brightness(.95); }
   @media (max-width: 768px) {
     .db-month-filter__form { flex-wrap: wrap; }
     .db-month-filter__select { flex: 1; min-width: 90px; }
@@ -556,8 +556,8 @@
   .db-table { min-width: 700px; }
   .db-table th.center, .db-table td.center { text-align: center; }
   .db-table tbody tr { cursor: pointer; }
-  .db-table tbody tr.db-table__row--abandoned { background: #fce8e6; }
-  .db-table tbody tr.db-table__row--abandoned:hover { background: #fce8e6; filter: brightness(.97); }
+  .db-table tbody tr.db-table__row--abandoned { background: var(--danger-bg); }
+  .db-table tbody tr.db-table__row--abandoned:hover { background: var(--danger-bg); filter: brightness(.97); }
   .db-table__empty {
     text-align: center;
     padding: 48px;
@@ -574,7 +574,7 @@
   }
   .db-badge--mono   { font-family: monospace; background: var(--outline); color: var(--fg); }
   .db-badge--info   { background: var(--primary-tint); color: var(--primary); }
-  .db-badge--checkout{ background: #fce7f3; color: #be185d; }
+  .db-badge--checkout{ background: var(--pink-bg); color: var(--pink-fg); }
   .db-badge--count  { background: var(--chrome-bg); color: var(--chrome-fg); }
   .db-badge--device { background: var(--outline); color: var(--fg-alt); font-size: 10px; }
 

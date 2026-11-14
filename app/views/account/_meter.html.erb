@@ -4,7 +4,7 @@
 <% pct = limit ? [(today * 100.0 / limit).round, 100].min : 0 %>
 <% level = pct >= 100 ? 'is-full' : (pct >= 80 ? 'is-warn' : 'is-ok') %>
 <% series = usage.daily_series(channel) %>
-<% peak = [series.values.max.to_i, limit.to_i, 1].max %>
+<% peak = [series.values.max.to_i, 1].max %>
 <div class="crm-card limit-card limit-card--<%= channel %>">
   <div class="limit-card__head">
     <span class="limit-card__icon"><i class="<%= icon %>"></i></span>
@@ -41,11 +41,16 @@
 
   <div class="limit-chart" aria-label="Envios dos últimos 14 dias">
     <% series.each do |day, count| %>
-      <div class="limit-chart__col" title="<%= l(day, format: '%d/%m') %>: <%= count %>">
-        <div class="limit-chart__bar <%= 'is-today' if day == Time.zone.today %>" style="height: <%= (count * 100.0 / peak).round %>%"></div>
+      <div class="limit-chart__col <%= 'is-today' if day == Time.zone.today %>">
+        <div class="limit-chart__bar" style="height: <%= (count * 100.0 / peak).round %>%" data-tip="<%= l(day, format: '%d/%m') %>: <%= number_with_delimiter(count, delimiter: '.') %>"></div>
+        <span class="limit-chart__day"><%= day.day %></span>
       </div>
     <% end %>
-    <% if limit %><div class="limit-chart__limit" style="bottom: <%= (limit * 100.0 / peak).round %>%"></div><% end %>
   </div>
-  <div class="limit-chart__legend"><span>Últimos 14 dias</span><span>Mês: <strong><%= number_with_delimiter(usage.count(channel, channel == 'whatsapp' ? @month_range.first.beginning_of_day..Time.current : @month_range), delimiter: '.') %></strong></span></div>
+  <p class="limit-chart__caption">Últimos 14 dias</p>
+
+  <div class="limit-card__month">
+    <span class="limit-card__label">Este mês</span>
+    <span class="limit-card__month-value"><%= number_with_delimiter(usage.count(channel, channel == 'whatsapp' ? @month_range.first.beginning_of_day..Time.current : @month_range), delimiter: '.') %></span>
+  </div>
 </div>

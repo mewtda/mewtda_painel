@@ -22,6 +22,8 @@ Rails.application.routes.draw do
   # Webhook da Evolution API: autenticado pelo token do número, fora do CRM.
   post 'whatsapp/webhooks/:instance_key', to: 'whatsapp/webhooks#create'
 
+  post 'webhooks/ses', to: 'webhooks/ses#create'
+
   namespace :widget do
     get  'popup/config',      to: 'popup#show_config'
     post 'popup/submissions', to: 'popup#create_submission'
@@ -159,9 +161,12 @@ Rails.application.routes.draw do
       end
     end
     resources :email_suppressions, path: 'lista-de-recusa', only: %i[index create destroy]
+    get 'campanhas/desempenho', to: 'campaign_performance#show', as: :campaign_performance
     resources :campaigns, path: 'campanhas', only: %i[index create edit update destroy] do
       member do
         get :preview
+        get :details
+        get :recipients
         post :send_test
         post :schedule
         post :cancel

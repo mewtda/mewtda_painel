@@ -1,8 +1,5 @@
 <% title 'Campanhas' %>
 
-<% status_tags = { 'draft' => 'neutral', 'scheduled' => 'info', 'sending' => 'warning', 'paused' => 'warning',
-                   'sent' => 'success', 'cancelled' => 'danger' } %>
-
 <div class="clients-wrapper cx-page">
   <div class="clients-table-wrap">
     <div class="clients-table-header">
@@ -16,6 +13,9 @@
             <%= search_field_tag :q, params[:q], class: 'crm-input', placeholder: 'Buscar campanha',
                                  autofocus: params[:q].present?, data: { autosubmit_typing: true } %>
           </div>
+        <% end %>
+        <%= link_to campaign_performance_path, class: 'crm-btn crm-btn--secondary' do %>
+          <i class="fa-solid fa-chart-column"></i> Desempenho
         <% end %>
         <%= button_to campaigns_path, method: :post, class: 'crm-btn crm-btn--primary' do %>
           <i class="fa-solid fa-plus"></i> Criar campanha
@@ -40,11 +40,15 @@
         <% @campaigns.each do |campaign| %>
           <tr>
             <td>
-              <%= link_to campaign.display_name, (campaign.draft? ? edit_campaign_path(campaign) : '#'), class: 'cx-link' %>
+              <% if campaign.draft? %>
+                <%= link_to campaign.display_name, edit_campaign_path(campaign), class: 'cx-link' %>
+              <% else %>
+                <%= link_to campaign.display_name, details_campaign_path(campaign), class: 'cx-link', data: { campaign_details: details_campaign_path(campaign) } %>
+              <% end %>
               <% if campaign.email_template %><small class="cx-muted ec-sub"><%= campaign.email_template.name %></small><% end %>
             </td>
             <td><span class="crm-tag crm-tag--info"><i class="fa-solid fa-envelope"></i> <%= campaign.channel_label %></span></td>
-            <td><span class="crm-tag crm-tag--<%= status_tags.fetch(campaign.status) %>"><%= campaign.status_label %></span></td>
+            <td><%= campaign_status_tag(campaign) %></td>
             <td class="cx-muted"><%= campaign.segment&.name || '—' %></td>
             <td class="cx-muted">
               <%= campaign.timing_summary %>
@@ -60,6 +64,17 @@
                 <% if campaign.draft? %>
                   <%= link_to edit_campaign_path(campaign), class: 'crm-btn clients-btn--icon', title: 'Continuar editando' do %>
                     <i class="fa-solid fa-pen"></i>
+                  <% end %>
+                <% end %>
+                <% unless campaign.draft? %>
+                  <%= link_to details_campaign_path(campaign), class: 'crm-btn clients-btn--icon', title: 'Detalhes da campanha',
+                      data: { campaign_details: details_campaign_path(campaign) } do %>
+                    <i class="fa-solid fa-eye"></i>
+                  <% end %>
+                  <% if campaign.started_at %>
+                    <%= link_to campaign_performance_path(campanha: campaign.id), class: 'crm-btn clients-btn--icon', title: 'Ver desempenho' do %>
+                      <i class="fa-solid fa-chart-column"></i>
+                    <% end %>
                   <% end %>
                 <% end %>
                 <% if campaign.cancelable? %>
@@ -91,3 +106,13 @@
     </div>
   </div>
 </div>
+
+<dialog class="crm-confirm ec-details" id="ec-details-dialog">
+  <div class="ec-details__head">
+    <h2 class="crm-confirm__title">Detalhes da campanha</h2>
+    <button type="button" class="ec-details__close" data-details-close aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="ec-details__body" data-details-body></div>
+</dialog>
+
+<%= javascript_include_tag 'campaign_details', defer: true %>

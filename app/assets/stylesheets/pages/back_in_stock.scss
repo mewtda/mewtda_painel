@@ -16,7 +16,7 @@
   li a { font-size: 0.8rem; }
   i { margin-top: 0.2rem; }
   .is-ok i { color: #15803d; }
-  .is-pending i { color: #b45309; }
+  .is-pending i { color: var(--warning-fg); }
 }
 
 .bis-snippet {

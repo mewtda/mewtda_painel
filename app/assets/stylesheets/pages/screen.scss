@@ -9,7 +9,7 @@
 
 .scr-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 500; background: var(--hover); color: var(--fg-alt); }
 .scr-chip--on { background: rgba(22, 163, 74, .12); color: #15803d; }
-.scr-chip--warn { background: rgba(217, 119, 6, .14); color: #b45309; }
+.scr-chip--warn { background: rgba(217, 119, 6, .14); color: var(--warning-fg); }
 
 .scr-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--outline); overflow-x: auto; }
 .scr-tab { display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border: 0; background: none; color: var(--fg-alt); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; text-decoration: none; }
@@ -59,8 +59,8 @@
 
 .scr-banner { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: 12px; font-size: 14px; }
 .scr-banner p { margin: 2px 0 0; font-size: 13px; }
-.scr-banner--danger { background: #fce8e6; color: #b3261e; }
-.scr-banner--warn { background: #fff4e5; color: #8a5300; }
+.scr-banner--danger { background: var(--danger-bg); color: var(--danger-fg); }
+.scr-banner--warn { background: var(--warning-bg); color: var(--warning-fg); }
 .scr-banner--info { background: var(--primary-tint); color: var(--fg); }
 
 .scr-sticky { position: fixed; right: 32px; bottom: 32px; z-index: 50; display: flex; gap: 8px; }

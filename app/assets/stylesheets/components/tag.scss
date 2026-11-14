@@ -9,8 +9,8 @@
 
 .crm-tag > i:first-child { margin-right: 0.35rem; }
 
-.crm-tag--success { background: #e6f4ea; color: #1d7a3e; }
-.crm-tag--danger  { background: #fce8e6; color: #c5221f; }
-.crm-tag--warning { background: #fef7e0; color: #b06000; }
+.crm-tag--success { background: var(--success-bg); color: var(--success-fg); }
+.crm-tag--danger  { background: var(--danger-bg); color: var(--danger-fg); }
+.crm-tag--warning { background: var(--warning-bg); color: var(--warning-fg); }
 .crm-tag--neutral { background: var(--outline); color: var(--fg-alt); }
 .crm-tag--info    { background: var(--primary-tint); color: var(--primary); }

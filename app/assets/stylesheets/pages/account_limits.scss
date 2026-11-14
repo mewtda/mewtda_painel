@@ -25,17 +25,34 @@
 .limit-meter.is-warn .limit-meter__fill { background: #f59e0b; }
 .limit-meter.is-full .limit-meter__fill { background: #dc2626; }
 .limit-card__status { margin: 0; font-size: 0.8rem; color: var(--fg-alt); }
-.limit-card__status.is-warn { color: #b45309; }
+.limit-card__status.is-warn { color: var(--warning-fg); }
 .limit-card__status.is-full { color: #dc2626; font-weight: 600; }
 .limit-card__status.is-ok i { color: #16a34a; }
 
-.limit-chart { position: relative; display: flex; align-items: flex-end; gap: 4px; height: 72px; padding-top: 4px; border-bottom: 1px solid var(--outline); }
-.limit-chart__col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
-.limit-chart__bar { width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; background: var(--primary); opacity: .35; }
-.limit-chart__bar.is-today { opacity: 1; }
+.limit-chart { display: flex; gap: 4px; height: 96px; }
+.limit-chart__col { flex: 1; min-width: 0; display: grid; grid-template-rows: 1fr auto; }
+.limit-chart__bar {
+  position: relative; align-self: end; min-height: 3px; border-radius: 3px 3px 0 0;
+  background: var(--primary); opacity: .35;
+}
+.limit-chart__col.is-today .limit-chart__bar { opacity: 1; }
 .limit-chart__col:hover .limit-chart__bar { opacity: .8; }
-.limit-chart__limit { position: absolute; left: 0; right: 0; border-top: 1px dashed #dc2626; opacity: .6; }
-.limit-chart__legend { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--fg-alt); margin-top: -0.4rem; }
+.limit-chart__bar::after {
+  content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+  padding: 0.25rem 0.5rem; border-radius: 6px; background: #1f2937; color: #fff; font-size: 0.75rem; line-height: 1.2;
+  white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .12s ease; z-index: 2;
+}
+.limit-chart__col:hover .limit-chart__bar::after { opacity: 1; }
+.limit-chart__day {
+  padding-top: 3px; border-top: 1px solid var(--outline); text-align: center; font-size: 0.65rem; color: var(--fg-alt);
+}
+.limit-chart__col.is-today .limit-chart__day { color: var(--fg); font-weight: 700; }
+.limit-chart__caption { margin: -0.4rem 0 0; font-size: 0.75rem; color: var(--fg-alt); }
+.limit-card__month {
+  display: flex; justify-content: space-between; align-items: baseline; margin-top: 0.1rem; padding-top: 0.9rem;
+  border-top: 1px solid var(--outline);
+}
+.limit-card__month-value { font-size: 1.25rem; font-weight: 700; color: var(--fg); }
 .limits-footnote { margin-top: 1rem; font-size: 0.8rem; color: var(--fg-alt); }
 
 .invoice-card { max-width: none; }

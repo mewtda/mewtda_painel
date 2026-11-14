@@ -68,7 +68,7 @@
 
     <section class="cp-section">
       <h2>Alcance</h2>
-      <p class="cp-section__note"><%= @campaign ? 'O período não vale para a campanha escolhida: os números são da campanha inteira.' : "#{count.call(result.campaigns_count)} #{'campanha'.pluralize(result.campaigns_count)} iniciada#{'s' if result.campaigns_count != 1} no período." %></p>
+      <p class="cp-section__note"><%= @campaign ? 'O período não vale para a campanha escolhida: os números são da campanha inteira.' : "#{count.call(result.campaigns_count)} #{'campanha'.pluralize(result.campaigns_count)} #{'iniciada'.pluralize(result.campaigns_count)} no período." %></p>
       <div class="cp-grid cp-grid--4">
         <%= render 'card', icon: 'fa-users', tone: 'primary', label: 'Público selecionado', value: count.call(result.audience),
                            hint: 'Pessoas que estavam na lista quando a campanha começou.' %>
@@ -88,9 +88,9 @@
         <div class="cp-grid cp-grid--4">
           <%= render 'card', icon: 'fa-inbox', tone: 'primary', label: 'Entregues', value: percent_of_sent.call(result.delivered), detail: count.call(result.delivered),
                              hint: 'E-mails que chegaram ao provedor da pessoa (Gmail, Outlook etc.).' %>
-          <%= render 'card', icon: 'fa-envelope-circle-check', tone: 'success', label: 'Taxa de abertura', value: percent_of_delivered.call(result.opened), detail: "#{count.call(result.opened)} abertos",
+          <%= render 'card', icon: 'fa-envelope-circle-check', tone: 'success', label: 'Taxa de abertura', value: percent_of_delivered.call(result.opened), detail: "#{count.call(result.opened)} #{'aberto'.pluralize(result.opened)}",
                              hint: 'Quantas pessoas abriram o e-mail, sobre os entregues. Cada pessoa conta uma vez.' %>
-          <%= render 'card', icon: 'fa-hand-pointer', tone: 'primary', label: 'Taxa de cliques', value: percent_of_delivered.call(result.clicked), detail: "#{count.call(result.clicked)} clicaram",
+          <%= render 'card', icon: 'fa-hand-pointer', tone: 'primary', label: 'Taxa de cliques', value: percent_of_delivered.call(result.clicked), detail: "#{count.call(result.clicked)} #{'clique'.pluralize(result.clicked)}",
                              hint: 'Quantas pessoas clicaram em algum link, sobre os entregues. Cada pessoa conta uma vez.' %>
           <%= render 'card', icon: 'fa-envelope-open', tone: 'warning', label: 'Não entregues', value: percent_of_sent.call(result.bounced), detail: count.call(result.bounced),
                              hint: 'E-mails que voltaram: endereço que não existe, caixa cheia ou recusa do provedor (bounce).' %>

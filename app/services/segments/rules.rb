@@ -15,12 +15,14 @@ module Segments
     LIST_OPS = { 'in' => 'É um de', 'not_in' => 'Não é nenhum de' }.freeze
     BOOL_OPS = { 'yes' => 'Sim', 'no' => 'Não' }.freeze
     SEGMENT_OPS = { 'in' => 'Faz parte', 'not_in' => 'Não faz parte' }.freeze
+    ITEM_OPS = { 'in' => 'Comprou' }.freeze
 
     MARKETING_STATES = { 'subscribed' => 'Inscrito', 'not_subscribed' => 'Não inscrito', 'pending' => 'Pendente',
                          'unsubscribed' => 'Cancelou a inscrição', 'unknown' => 'Sem informação' }.freeze
 
     OPS = { number: NUMBER_OPS, money: NUMBER_OPS, date: DATE_OPS, text: TEXT_OPS, rfm: LIST_OPS, bool: BOOL_OPS,
-            segment: SEGMENT_OPS, marketing: LIST_OPS }.freeze
+            segment: SEGMENT_OPS, marketing: LIST_OPS, categories: ITEM_OPS, sizes: ITEM_OPS }.freeze
+    LIST_TYPES = %i[rfm marketing categories sizes].freeze
 
     P = 'customer_profiles'.freeze
 
@@ -40,6 +42,8 @@ module Segments
       'product' => { group: 'Produto', label: 'Produto em qualquer compra', type: :text, exists: :product },
       'not_product' => { group: 'Produto', label: 'Nunca comprou o produto', type: :text, exists: :product, negate: true },
       'product_tag' => { group: 'Produto', label: 'Comprou produto com a tag', type: :text, exists: :product_tag },
+      'product_category' => { group: 'Produto', label: 'Comprou produto da categoria', type: :categories, item: :category },
+      'product_size' => { group: 'Produto', label: 'Comprou produto no tamanho', type: :sizes, item: :size },
       # Dados do cliente
       'rfm_segment' => { group: 'Dados do cliente', label: 'Perfil RFM', type: :rfm, column: "#{P}.rfm_segment" },
       'name' => { group: 'Dados do cliente', label: 'Nome', type: :text, column: "#{P}.name" },
@@ -84,7 +88,7 @@ module Segments
       return unless field && OPS.fetch(field[:type]).key?(cond['op'].to_s)
 
       value = cond['value']
-      value = Array(value).map(&:to_s).first(20) if field[:type].in?(%i[rfm marketing])
+      value = Array(value).map(&:to_s).first(20) if field[:type].in?(LIST_TYPES)
       { 'field' => cond['field'].to_s, 'op' => cond['op'].to_s,
         'value' => value.is_a?(Array) ? value : value.to_s.strip.first(200),
         'value2' => cond['value2'].to_s.strip.first(200) }
@@ -93,6 +97,8 @@ module Segments
     # Definição exportada para o construtor (JS).
     def self.schema
       {
+        categories: [],
+        sizes: [],
         fields: FIELDS.map { |key, f| { key:, group: f[:group], label: f[:label], type: f[:type] } },
         ops: OPS.transform_values { |ops| ops.map { |k, l| { key: k, label: l } } },
         rfm: CustomerProfile::RFM_SEGMENTS.map { |k, v| { key: k, label: v[:label] } },
@@ -118,8 +124,37 @@ module Segments
     private
 
     def group_sql(group)
-      parts = Array(group['conditions']).filter_map { |cond| condition_sql(cond) }
-      parts.join(' AND ') if parts.any?
+      items, others = Array(group['conditions']).partition { |cond| FIELDS.dig(cond['field'], :item) }
+      parts = others.filter_map { |cond| condition_sql(cond) }
+      parts << item_sql(items)
+      parts.compact.join(' AND ').presence
+    end
+
+    def item_sql(conditions)
+      inner = conditions.filter_map { |cond| item_condition_sql(cond) }
+      "(EXISTS (#{product_from} AND #{inner.join(' AND ')}))" if inner.any?
+    end
+
+    def item_condition_sql(cond)
+      case FIELDS.dig(cond['field'], :item)
+      when :category then category_sql(cond)
+      when :size then size_sql(cond)
+      end
+    end
+
+    def category_sql(cond)
+      values = Array(cond['value']).map { |value| value.to_s.strip.downcase }.compact_blank.first(20)
+      return if values.empty?
+
+      "EXISTS (SELECT 1 FROM unnest(string_to_array(p.tags, ',')) AS item_tag WHERE LOWER(BTRIM(item_tag)) IN (#{bind(values)}))"
+    end
+
+    def size_sql(cond)
+      values = Array(cond['value']).map { |value| value.to_s.strip.upcase }.compact_blank.first(20)
+      return if values.empty?
+
+      list = bind(values)
+      "(#{%w[option1 option2 option3].map { |column| "UPPER(SPLIT_PART(COALESCE(p.#{column}, ''), '/', 1)) IN (#{list})" }.join(' OR ')})"
     end
 
     def bind(value)

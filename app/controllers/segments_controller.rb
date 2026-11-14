@@ -7,6 +7,7 @@ class SegmentsController < ApplicationController
   before_action :require_client!
   before_action :ensure_profiles, only: %i[index templates new edit]
   before_action :set_segment, only: %i[edit update destroy recount duplicate]
+  before_action :set_product_options, only: %i[new edit create update]
 
   SORTS = %w[name kind customers_count updated_at].freeze
 
@@ -80,6 +81,11 @@ class SegmentsController < ApplicationController
   end
 
   private
+
+  def set_product_options
+    options = Segments::ProductOptions.new(@client)
+    @product_options = { categories: options.categories, sizes: options.sizes }
+  end
 
   def require_client!
     redirect_to crm_path, alert: 'Nenhum cliente selecionado.' unless @client

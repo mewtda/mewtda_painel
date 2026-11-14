@@ -79,9 +79,10 @@
   const valueControls = (cond, type) => {
     const op = cond.op;
     if (type === "bool") return [];
-    if (type === "rfm" || type === "marketing") {
+    if (["rfm", "marketing", "categories", "sizes"].includes(type)) {
       const chosen = new Set(Array.isArray(cond.value) ? cond.value : []);
       const box = el("div", { class: "sg-rfm" });
+      if (!schema[type].length) box.appendChild(el("span", { class: "cx-muted", text: "Nada encontrado nos produtos desta loja." }));
       schema[type].forEach((r) => {
         const cb = el("input", { type: "checkbox", value: r.key });
         cb.checked = chosen.has(r.key);

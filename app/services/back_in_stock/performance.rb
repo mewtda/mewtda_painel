@@ -1,23 +1,8 @@
 module BackInStock
   class Performance
-    ATTRIBUTION_DAYS = 7
     TOP_LIMIT = 5
     NOTIFICATIONS_LIMIT = 12
-    AGE_BUCKETS = [['Menos de 3 dias', 0...3], ['3 a 10 dias', 3...10], ['10 a 30 dias', 10...30],
-                   ['1 a 3 meses', 30...90], ['Mais de 3 meses', 90..]].freeze
     DAY_SQL = "(%s AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo')::date".freeze
-    ATTRIBUTION_SQL = <<~SQL.squish.freeze
-      FROM back_in_stock_alerts a
-      JOIN customer_profiles cp ON cp.client_id = a.client_id AND LOWER(cp.email) = a.email
-      JOIN orders o ON o.client_id = a.client_id AND o.cancelled_at IS NULL
-        AND (o.customer_id = cp.customer_id OR o.customer_id = ANY(cp.merged_customer_ids))
-      JOIN order_items oi ON oi.order_id = o.id
-      JOIN products p ON p.id = oi.product_id AND p.shopify_variant_id = a.shopify_variant_id::text
-      WHERE a.client_id = :client_id AND a.status = 'notified' AND a.notified_at IS NOT NULL
-        AND o.shopify_creation_date >= a.notified_at
-        AND o.shopify_creation_date < a.notified_at + INTERVAL '#{ATTRIBUTION_DAYS} days'
-    SQL
-
     Totals = Struct.new(:variants, :requests, :notified, :purchases, :revenue, keyword_init: true)
     Result = Struct.new(:totals, :previous, :funnel, :requests_by_day, :notified_by_day, :revenue_by_day, :age_buckets,
                         :avg_age_days, :avg_notify_days, :conversion, :top_variants, :history, :notifications,
@@ -32,6 +17,7 @@ module BackInStock
 
     def initialize(client, period, sort: 'demand')
       @client = client
+      @attribution = Attribution.new(client)
       @period = period
       @sort = BackInStockAlert::SORTS.key?(sort) ? sort : 'demand'
     end
@@ -47,7 +33,7 @@ module BackInStock
 
     private
 
-    attr_reader :client, :period, :sort
+    attr_reader :client, :period, :sort, :attribution
 
     def alerts = client.back_in_stock_alerts
 
@@ -61,7 +47,7 @@ module BackInStock
     end
 
     def totals(range)
-      orders = attributed_orders(range)
+      orders = attribution.orders(range)
       Totals.new(variants: alerts.where(created_at: range).distinct.count(:shopify_variant_id),
                  requests: alerts.where(created_at: range).count, notified: alerts.notified.where(notified_at: range).count,
                  purchases: orders.size, revenue: orders.sum { |order| order.total_price.to_d })
@@ -69,7 +55,7 @@ module BackInStock
 
     def funnel(range)
       created = alerts.where(created_at: range)
-      ordered = ordered_alert_ids(created_at: range)
+      ordered = attribution.ordered_alert_ids(created_at: range)
       notified = created.notified.count
       converted = created.notified.where(id: ordered).count
       { waiting: created.pending.count, notified: notified - converted, ordered: converted, cancelled: created.cancelled.count }
@@ -82,8 +68,8 @@ module BackInStock
     end
 
     def revenue_by_day(range)
-      attributed_orders(range).group_by { |order| order[:ordered_at].in_time_zone.to_date }
-                              .transform_values { |orders| orders.sum { |order| order.total_price.to_d } }
+      by_day = attribution.orders(range).group_by { |order| order[:ordered_at].in_time_zone.to_date }
+      by_day.transform_values { |orders| orders.sum { |order| order.total_price.to_d } }
     end
 
     def filled(series)
@@ -99,7 +85,7 @@ module BackInStock
 
     def age_buckets
       ages = pending_ages
-      AGE_BUCKETS.map do |label, days|
+      BackInStockAlert::AGE_BUCKETS.map do |_key, label, days|
         count = ages.count { |age| days.cover?(age) }
         { label:, count:, percent: ages.empty? ? 0 : count * 100.0 / ages.size }
       end
@@ -115,7 +101,7 @@ module BackInStock
       notified = alerts.notified.where(notified_at: range).count
       return if notified.zero?
 
-      ordered_alert_ids(notified_at: range).size * 100.0 / notified
+      attribution.ordered_alert_ids(notified_at: range).size * 100.0 / notified
     end
 
     def top(_range)
@@ -130,19 +116,5 @@ module BackInStock
                          .pluck(:back_in_stock_alert_id, Arel.sql('ARRAY_AGG(DISTINCT event_type)')).to_h
       recent.map { |alert| [alert, events.fetch(alert.id, [])] }
     end
-
-    def attributed_orders(range)
-      sql = "SELECT DISTINCT ON (o.id) o.id, o.total_price, o.shopify_creation_date AS ordered_at #{ATTRIBUTION_SQL} " \
-            'AND o.shopify_creation_date BETWEEN :from AND :to ORDER BY o.id, a.notified_at'
-      Order.find_by_sql([sql, binds(range)])
-    end
-
-    def ordered_alert_ids(created_at: nil, notified_at: nil)
-      column, range = created_at ? ['a.created_at', created_at] : ['a.notified_at', notified_at]
-      query = "SELECT DISTINCT a.id #{ATTRIBUTION_SQL} AND #{column} BETWEEN :from AND :to"
-      ActiveRecord::Base.connection.select_values(ActiveRecord::Base.sanitize_sql_array([query, binds(range)]))
-    end
-
-    def binds(range) = { client_id: client.id, from: range.begin || Time.zone.at(0), to: range.end }
   end
 end

@@ -1,0 +1,70 @@
+<%# locals: form, filters, status, alert_filter, options %>
+<details class="bis-filter">
+  <summary id="bis-filter-summary" class="crm-btn crm-btn--secondary">
+    <i class="fa-solid fa-filter"></i> Filtrar
+    <% if alert_filter.active_count.positive? %><span class="bis-filter__count"><%= alert_filter.active_count %></span><% end %>
+  </summary>
+
+  <div class="bis-filter__panel">
+    <div class="bis-filter__row">
+      <label class="bis-filter__field">De
+        <%= date_field_tag :de, filters[:de], class: 'crm-input' %>
+      </label>
+      <label class="bis-filter__field">Até
+        <%= date_field_tag :ate, filters[:ate], class: 'crm-input' %>
+      </label>
+    </div>
+
+    <% if options[:sizes].any? %>
+      <fieldset class="bis-filter__group">
+        <legend>Tamanho</legend>
+        <div class="bis-chips">
+          <% options[:sizes].each do |size| %>
+            <label class="bis-chip"><%= check_box_tag 'tamanho[]', size, Array(filters[:tamanho]).include?(size), id: nil %><span><%= size %></span></label>
+          <% end %>
+        </div>
+      </fieldset>
+    <% end %>
+
+    <% if options[:categories].any? %>
+      <fieldset class="bis-filter__group">
+        <legend>Categoria</legend>
+        <div class="bis-chips">
+          <% options[:categories].each do |category| %>
+            <label class="bis-chip"><%= check_box_tag 'categoria[]', category, Array(filters[:categoria]).include?(category), id: nil %><span><%= category %></span></label>
+          <% end %>
+        </div>
+      </fieldset>
+    <% end %>
+
+    <div class="bis-filter__row">
+      <label class="bis-filter__field">Solicitado há
+        <%= select_tag :espera, options_for_select([['Qualquer prazo', '']] + BackInStockAlert::AGE_BUCKETS.map { |key, label, _| [label, key] }, filters[:espera]),
+                       class: 'crm-input', data: { custom_select: true } %>
+      </label>
+      <label class="bis-filter__field">Pelo menos
+        <span class="bis-filter__suffix">
+          <%= number_field_tag :demanda, filters[:demanda], min: 1, max: 9999, placeholder: 'Qualquer', class: 'crm-input' %> <small>pessoas</small>
+        </span>
+      </label>
+    </div>
+
+    <% if status == 'notified' %>
+      <div class="bis-filter__row">
+        <label class="bis-filter__field">Status do aviso
+          <%= select_tag :aviso, options_for_select([['Qualquer', '']] + BackInStock::AlertFilter::NOTICE_STATUSES.invert.to_a, filters[:aviso]),
+                         class: 'crm-input', data: { custom_select: true } %>
+        </label>
+        <label class="bis-filter__field">Comprou depois do aviso
+          <%= select_tag :comprou, options_for_select([['Tanto faz', '']] + BackInStock::AlertFilter::BOUGHT.invert.to_a, filters[:comprou]),
+                         class: 'crm-input', data: { custom_select: true } %>
+        </label>
+      </div>
+    <% end %>
+
+    <div class="bis-filter__actions">
+      <button type="button" class="crm-btn crm-btn--secondary" data-clear-filters>Limpar</button>
+      <%= form.button class: 'crm-btn crm-btn--primary' do %>Aplicar filtros<% end %>
+    </div>
+  </div>
+</details>

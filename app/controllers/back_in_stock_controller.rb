@@ -56,9 +56,11 @@ class BackInStockController < ApplicationController
     return unless @setting
 
     alerts = @client.back_in_stock_alerts
-    filtered = alerts.where(status: selected_status).search(search_term)
+    @alert_filter = BackInStock::AlertFilter.new(@client, params, status: selected_status)
+    filtered = @alert_filter.apply(alerts.where(status: selected_status)).search(search_term)
 
-    @filters = { status: selected_status, q: search_term, sort: selected_sort }
+    @filters = { status: selected_status, q: search_term, sort: selected_sort }.merge(@alert_filter.to_params)
+    @filter_options = filter_options
     @status_counts = alerts.group(:status).count
     @pending_value = alerts.pending.sum(:price)
     @pending_variants = alerts.pending.distinct.count(:shopify_variant_id)
@@ -80,9 +82,19 @@ class BackInStockController < ApplicationController
   end
 
   def paginated_groups(alerts)
-    alerts.grouped_by_variant(selected_sort)
-          .paginate(page: params[:page], per_page: GROUPS_PER_PAGE,
-                    total_entries: alerts.distinct.count(:shopify_variant_id))
+    groups = alerts.grouped_by_variant(selected_sort)
+    demand = @alert_filter.min_demand
+    total = alerts.distinct.count(:shopify_variant_id)
+    if demand
+      groups = groups.having('COUNT(*) >= ?', demand)
+      total = alerts.group(:shopify_variant_id).having('COUNT(*) >= ?', demand).count.size
+    end
+    groups.paginate(page: params[:page], per_page: GROUPS_PER_PAGE, total_entries: total)
+  end
+
+  def filter_options
+    options = Segments::ProductOptions.new(@client)
+    { sizes: options.sizes.pluck(:key), categories: options.categories.pluck(:key) }
   end
 
   def selected_status

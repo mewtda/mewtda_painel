@@ -58,7 +58,7 @@
         <div class="scr-field">
           <%= form.label :email_template_id, 'Modelo do aviso' %>
           <%= form.collection_select :email_template_id, email_templates, :id, :name,
-                                     { include_blank: 'Escolha um modelo' }, class: 'crm-input' %>
+                                     { include_blank: 'Escolha um modelo' }, class: 'crm-input crm-select-block', data: { custom_select: true } %>
         </div>
         <% domain_verified = setting.client.tools_email_domain.present? %>
         <ul class="bis-checklist">

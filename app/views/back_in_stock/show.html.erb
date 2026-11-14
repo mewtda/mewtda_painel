@@ -29,7 +29,7 @@
         <% end %>
       </button>
       <button type="button" class="scr-tab" role="tab" data-tab="resumo">
-        <i class="fa-solid fa-chart-column"></i><span>Resumo</span>
+        <i class="fa-solid fa-envelope"></i><span>Envios</span>
       </button>
       <%= link_to back_in_stock_performance_path, class: 'scr-tab' do %>
         <i class="fa-solid fa-chart-line"></i><span>Desempenho</span>
@@ -45,7 +45,7 @@
     <section class="scr-panel" data-panel="alertas" hidden>
       <%= render 'alerts', client: @client, filters: @filters, status_counts: @status_counts,
                            pending_value: @pending_value, pending_variants: @pending_variants,
-                           groups: @groups, contacts: @contacts %>
+                           groups: @groups, contacts: @contacts, alert_filter: @alert_filter, filter_options: @filter_options %>
     </section>
 
     <section class="scr-panel" data-panel="resumo" hidden>

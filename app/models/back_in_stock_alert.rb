@@ -1,6 +1,8 @@
 class BackInStockAlert < ApplicationRecord
   PENDING_LIMIT_PER_EMAIL = 20
   TRENDING_WINDOW = 7.days
+  AGE_BUCKETS = [['lt3', 'Menos de 3 dias', 0...3], ['3_10', '3 a 10 dias', 3...10], ['10_30', '10 a 30 dias', 10...30],
+                 ['30_90', '1 a 3 meses', 30...90], ['gt90', 'Mais de 3 meses', 90..]].freeze
   SORTS = {
     'demand' => ['alerts_count DESC'],
     'value' => ['demand_value DESC', 'alerts_count DESC'],

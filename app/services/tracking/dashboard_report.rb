@@ -104,9 +104,14 @@ module Tracking
       @unique_sessions       = base_scope.distinct.count(:session_id)
       @prev_unique_sessions  = prev_scope.distinct.count(:session_id)
 
-      sessions_with_checkout = base_scope.where(kind: "checkout_completed").distinct.count(:session_id)
-      @abandoned_carts       = @unique_sessions - sessions_with_checkout
-      @abandoned_rate        = @unique_sessions > 0 ? ((@abandoned_carts.to_f / @unique_sessions) * 100).round(1) : 0
+      @funnel = session_funnel(base_scope, prev_scope)
+      purchase = @funnel.last
+      cart = @funnel.find { |step| step[:key] == :cart }
+      @conversion_rate      = purchase[:pct_total]
+      @prev_conversion_rate = rate(purchase[:prev_count], @prev_unique_sessions)
+      @abandoned_carts      = [cart[:count] - purchase[:count], 0].max
+      @abandoned_rate       = rate(@abandoned_carts, cart[:count])
+      @orders_summary       = orders_summary(range, prev_range)
 
       @devices = { mobile: 0, desktop: 0, tablet: 0 }
       base_scope
@@ -180,6 +185,61 @@ module Tracking
                       .count
 
       @sessions = fetch_sessions(@client.id, range)
+    end
+
+    FUNNEL_STEPS = [
+      { key: :sessions, label: 'Sessões', kind: nil },
+      { key: :product, label: 'Viram produto', kind: 'product_viewed' },
+      { key: :cart, label: 'Adicionaram ao carrinho', kind: 'product_added_to_cart' },
+      { key: :checkout, label: 'Iniciaram o checkout', kind: 'checkout_started' },
+      { key: :purchase, label: 'Compraram', kind: 'checkout_completed' }
+    ].freeze
+
+    # Funil por sessão: cada etapa conta sessões únicas que tiveram o evento,
+    # então todas as porcentagens têm a mesma base e uma etapa explica a outra.
+    def session_funnel(base_scope, prev_scope)
+      kinds = FUNNEL_STEPS.filter_map { |step| step[:kind] }
+      current = base_scope.where(kind: kinds).group(:kind).distinct.count(:session_id)
+      previous = prev_scope.where(kind: kinds).group(:kind).distinct.count(:session_id)
+
+      steps = FUNNEL_STEPS.map do |step|
+        count = step[:kind] ? current.fetch(step[:kind], 0) : @unique_sessions
+        prev_count = step[:kind] ? previous.fetch(step[:kind], 0) : @prev_unique_sessions
+        step.merge(count: count, prev_count: prev_count)
+      end
+
+      steps.each_with_index.map do |step, index|
+        before = index.zero? ? step : steps[index - 1]
+        step.merge(pct_total: rate(step[:count], @unique_sessions),
+                   pct_step: index.zero? ? 100.0 : rate(step[:count], before[:count]),
+                   lost: index.zero? ? 0 : [before[:count] - step[:count], 0].max,
+                   change: change(step[:count], step[:prev_count]))
+      end
+    end
+
+    # Pedidos que a Shopify registrou no período (todos os canais), para
+    # completar o funil do pixel com venda e receita de verdade.
+    def orders_summary(range, prev_range)
+      scope = Order.where(client_id: @client.id, cancelled_at: nil)
+      current = scope.where(shopify_creation_date: range)
+      previous = scope.where(shopify_creation_date: prev_range)
+      revenue = current.sum(:total_price).to_d
+      prev_revenue = previous.sum(:total_price).to_d
+      count = current.count
+
+      { count: count, revenue: revenue, revenue_change: change(revenue, prev_revenue),
+        average_ticket: count.positive? ? (revenue / count).round(2) : 0,
+        revenue_per_session: @unique_sessions.positive? ? (revenue / @unique_sessions).round(2) : 0 }
+    end
+
+    def rate(part, total)
+      total.to_f.positive? ? (part.to_f / total * 100).round(2) : 0.0
+    end
+
+    def change(current, previous)
+      return nil unless previous.to_f.positive?
+
+      ((current.to_f - previous.to_f) / previous.to_f * 100).round(1)
     end
 
     def fetch_top_products(scope, kind)

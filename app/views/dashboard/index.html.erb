@@ -235,8 +235,8 @@ function renderDbCharts(d) {
 
   new ApexCharts(document.querySelector("#funnel_bar_chart"), {
     chart: { type: 'bar', height: 200, toolbar: { show: false }, fontFamily: 'inherit' },
-    series: [{ name: 'Eventos', data: d.funnel }],
-    xaxis: { categories: ['Paginas', 'Produtos', 'Carrinho', 'Checkout'] },
+    series: [{ name: 'Sessões', data: d.funnel }],
+    xaxis: { categories: ['Sessões', 'Produto', 'Carrinho', 'Checkout', 'Compra'] },
     colors: COLORS,
     plotOptions: { bar: { distributed: true, borderRadius: 6, columnWidth: '50%' } },
     legend: { show: false },

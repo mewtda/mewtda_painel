@@ -124,7 +124,8 @@ Rails.application.routes.draw do
     end
 
     post 'update_selected_client', to: 'clients#update_selected_client'
-    get '/', to: 'dashboard#index', as: :crm
+    get '/', to: 'site_summary#index', as: :crm
+    get 'trackeamento', to: 'dashboard#index', as: :tracking_dashboard
     get '/session/:session_id', to: 'dashboard#session_detail', as: :crm_session
 
     get 'clients/:id/shopify/auth', to: 'shopify_auth#auth', as: :client_shopify_auth

@@ -25,15 +25,15 @@
   <div class="db-header__right">
     <%# Filtros rapidos de periodo %>
     <div class="db-filters <%= 'db-filters--muted' if @using_month_filter %>">
-      <%= link_to "Hoje",    crm_path(period: "1"),  class: "db-filter-btn #{'db-filter-btn--active' if @period == '1' && !@using_month_filter}" %>
-      <%= link_to "7 dias",  crm_path(period: "7"),  class: "db-filter-btn #{'db-filter-btn--active' if @period == '7' && !@using_month_filter}" %>
-      <%= link_to "15 dias", crm_path(period: "15"), class: "db-filter-btn #{'db-filter-btn--active' if @period == '15' && !@using_month_filter}" %>
-      <%= link_to "30 dias", crm_path(period: "30"), class: "db-filter-btn #{'db-filter-btn--active' if @period == '30' && !@using_month_filter}" %>
+      <%= link_to "Hoje",    tracking_dashboard_path(period: "1"),  class: "db-filter-btn #{'db-filter-btn--active' if @period == '1' && !@using_month_filter}" %>
+      <%= link_to "7 dias",  tracking_dashboard_path(period: "7"),  class: "db-filter-btn #{'db-filter-btn--active' if @period == '7' && !@using_month_filter}" %>
+      <%= link_to "15 dias", tracking_dashboard_path(period: "15"), class: "db-filter-btn #{'db-filter-btn--active' if @period == '15' && !@using_month_filter}" %>
+      <%= link_to "30 dias", tracking_dashboard_path(period: "30"), class: "db-filter-btn #{'db-filter-btn--active' if @period == '30' && !@using_month_filter}" %>
     </div>
 
     <%# Filtro por mes/ano %>
     <div class="db-month-filter">
-      <%= form_with url: crm_path, method: :get, local: true, class: "db-month-filter__form" do |f| %>
+      <%= form_with url: tracking_dashboard_path, method: :get, local: true, class: "db-month-filter__form" do |f| %>
         <select name="year" class="db-month-filter__select <%= 'db-month-filter__select--active' if @using_month_filter %>">
           <option value="">Ano</option>
           <% [2025, 2026].each do |y| %>
@@ -54,7 +54,7 @@
         </button>
 
         <% if @using_month_filter %>
-          <%= link_to crm_path(period: "1"), class: "db-month-filter__clear" do %>
+          <%= link_to tracking_dashboard_path(period: "1"), class: "db-month-filter__clear" do %>
             <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           <% end %>
         <% end %>

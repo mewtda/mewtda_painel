@@ -66,11 +66,12 @@
     <% end %>
 
     <div class="invoice-secure">
-      <% if landing_image?('logos/asaas.svg') %>
-        <%= image_tag 'logos/asaas.svg', alt: 'Asaas', class: 'invoice-secure__logo' %>
-      <% else %>
-        <span class="invoice-secure__brand">asaas</span>
-      <% end %>
+      <span class="invoice-secure__brand">
+        <% if landing_image?('logos/asaas.svg') %>
+          <%= image_tag 'logos/asaas.svg', alt: '', class: 'invoice-secure__logo' %>
+        <% end %>
+        asaas
+      </span>
       <p class="invoice-secure__text">
         <i class="fa-solid fa-lock"></i>
         A cobrança desta fatura é gerada e processada com segurança pelo <strong>Asaas</strong>.

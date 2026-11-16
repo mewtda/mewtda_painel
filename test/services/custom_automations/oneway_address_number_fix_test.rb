@@ -21,10 +21,24 @@ class CustomAutomations::OnewayAddressNumberFixTest < ActiveSupport::TestCase
       @updates << [order_id, address]
       @errors
     end
+
+    def tags
+      @tags ||= []
+    end
+
+    def add_tag(order_id, tag)
+      tags << [order_id, tag]
+      []
+    end
   end
 
+  NO_CEP = ->(_zip) {}
+
+  PEDROSO = { 'street' => 'Rua Pedroso Alvarenga', 'neighborhood' => 'Itaim Bibi', 'city' => 'São Paulo',
+              'state' => 'SP', 'range' => 'até 530 - lado par' }.freeze
+
   def fix(address1, address2 = '', city = 'São Paulo')
-    Fix.fix('address1' => address1, 'address2' => address2, 'city' => city)
+    Fix.fix({ 'address1' => address1, 'address2' => address2, 'city' => city })
   end
 
   test 'moves a bare number from the complement to the street' do
@@ -84,7 +98,7 @@ class CustomAutomations::OnewayAddressNumberFixTest < ActiveSupport::TestCase
                                 { 'id' => 'gid://shopify/Order/2', 'name' => '#38515', 'shippingAddress' => ok },
                                 { 'id' => 'gid://shopify/Order/3', 'name' => '#38500', 'shippingAddress' => nil }
                               ])
-    results = Fix.new(Client.new(name: 'OneWay'), lookback_hours: 72, gateway: gateway).call
+    results = Fix.new(Client.new(name: 'OneWay'), lookback_hours: 72, gateway: gateway, cep_lookup: NO_CEP).call
 
     assert_in_delta 72.hours.ago, gateway.since, 5
     assert_equal 1, gateway.updates.size
@@ -102,8 +116,48 @@ class CustomAutomations::OnewayAddressNumberFixTest < ActiveSupport::TestCase
                                  'shippingAddress' => { 'address1' => 'Rua X', 'address2' => '5' } }],
                               errors: ['Address is invalid'])
 
-    results = Fix.new(Client.new(name: 'OneWay'), gateway: gateway).call
+    results = Fix.new(Client.new(name: 'OneWay'), gateway: gateway, cep_lookup: NO_CEP).call
 
     assert_equal 'Address is invalid', results.first.error
+  end
+
+  test 'uses the official street and city spelling from the CEP when it is the same name' do
+    cep = PEDROSO.merge('street' => 'Rua Lopes Quintas', 'city' => 'Rio de Janeiro')
+    assert_equal({ 'address1' => 'Rua Lopes Quintas, 977', 'city' => 'Rio de Janeiro' },
+                 Fix.fix({ 'address1' => 'Rua Lópes Quintas, 977', 'address2' => '', 'city' => 'rio de janeiro' },
+                         cep: cep))
+    assert_equal({ 'address1' => 'Rua Pedroso Alvarenga, 100', 'address2' => '' },
+                 Fix.fix({ 'address1' => 'Pedroso Alvarenga', 'address2' => '100', 'city' => 'São Paulo' }, cep: PEDROSO))
+  end
+
+  test 'keeps what the customer typed when the CEP points to another street or city' do
+    assert_nil Fix.fix({ 'address1' => 'Rua Outra, 10', 'address2' => '', 'city' => 'Osasco' }, cep: PEDROSO)
+  end
+
+  test 'tags orders that still have no house number and does not touch the address' do
+    order = { 'id' => 'gid://shopify/Order/38489', 'name' => '#38489', 'tags' => [],
+              'shippingAddress' => { 'address1' => 'Rua Pedroso Alvarenga', 'address2' => 'Apartamento 21',
+                                     'city' => 'São Paulo', 'zip' => '04531-000', 'countryCodeV2' => 'BR' } }
+    gateway = FakeGateway.new([order])
+    zips = []
+
+    results = Fix.new(Client.new(name: 'OneWay'), gateway: gateway,
+                                                  cep_lookup: ->(zip) { zips << zip && PEDROSO }).call
+
+    assert_equal ['04531-000'], zips
+    assert_empty gateway.updates
+    assert_equal [['gid://shopify/Order/38489', 'endereço sem número']], gateway.tags
+    assert results.first.tagged
+  end
+
+  test 'does not tag again an order that already has the tag' do
+    order = { 'id' => 'gid://shopify/Order/1', 'name' => '#1', 'tags' => ['endereço sem número'],
+              'shippingAddress' => { 'address1' => 'Rua Pedroso Alvarenga', 'address2' => 'Apto 21' } }
+    gateway = FakeGateway.new([order])
+
+    results = Fix.new(Client.new(name: 'OneWay'), gateway: gateway, cep_lookup: NO_CEP).call
+
+    assert_empty gateway.tags
+    assert_empty results
   end
 end

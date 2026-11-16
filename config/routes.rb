@@ -99,6 +99,9 @@ Rails.application.routes.draw do
                                                        as: :resend_cart_recovery_automation
 
     resources :custom_automations, path: 'custom-automations', only: [:index, :new, :create, :show] do
+      collection do
+        post 'rotinas/:kind/rodar', action: :run_routine, as: :run_routine
+      end
       member do
         get  :spreadsheet
         post :emit

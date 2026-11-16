@@ -14,16 +14,18 @@ module CustomAutomations
       }
     }.freeze
 
-    # Rotinas sob medida que rodam sozinhas (sem tela): cada uma é um service
-    # com `new(client, **options).call`, ligada aos clientes de client_keys.
-    # O CustomAutomations::RoutineJob roda todas (ou uma, pelo kind) para cada
-    # cliente ativo com Shopify configurada — pra criar outra, basta o service
-    # e uma entrada aqui; o agendamento do Sidekiq não muda.
+    # Rotinas sob medida que rodam sozinhas: cada uma é um service com
+    # `new(client, **options).call`, ligada aos clientes de client_keys, e
+    # aparece na tela de Automações personalizadas desses clientes. O
+    # CustomAutomations::RoutineJob (Heroku Scheduler, a cada 10 min) roda
+    # todas — pra criar outra, basta o service e uma entrada aqui.
     ROUTINES = {
       'oneway_address_number_fix' => {
-        title: 'Número do endereço no lugar certo',
-        description: 'Move o número da casa do complemento para a rua nos pedidos ainda não enviados ' \
-                     '("Rua Pio IV" / "210" → "Rua Pio IV, 210").',
+        title: 'Correção de endereço de entrega',
+        description: 'Nos pedidos ainda não enviados: leva o número da casa do complemento para a rua, ' \
+                     'remove número e complemento repetidos e corrige acento maiúsculo ("SÃo Paulo").',
+        icon: 'fa-solid fa-location-dot',
+        frequency: 'A cada 10 minutos',
         service: 'CustomAutomations::OnewayAddressNumberFix',
         options: { lookback_hours: 72 },
         client_keys: %w[oneway]

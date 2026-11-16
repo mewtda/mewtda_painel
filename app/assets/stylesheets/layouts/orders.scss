@@ -465,3 +465,12 @@
   font-size: 0.75rem;
   opacity: 0.75;
 }
+
+@media (max-width: 640px) {
+  .order-modal-overlay { padding: 16px; }
+  .order-modal { max-height: calc(100vh - 32px); border-radius: 12px; }
+  .order-modal__header { padding-left: 16px; padding-right: 16px; }
+  .order-modal__body { padding: 16px; }
+  .order-modal__meta { padding: 0.9rem 1rem; }
+  .order-modal__meta-group { min-width: 100%; }
+}

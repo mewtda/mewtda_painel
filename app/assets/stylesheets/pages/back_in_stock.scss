@@ -255,3 +255,15 @@
 }
 .bis-active-filters__chip:hover { filter: brightness(0.95); }
 .bis-active-filters__clear { font-size: 0.8rem; color: var(--fg-alt); }
+
+@media (max-width: 700px) {
+  .bis-filter__panel {
+    position: fixed; z-index: 60; top: auto; right: 0; bottom: 0; left: 0; width: auto; max-width: none; max-height: 85vh;
+    overflow-y: auto; margin: 0; padding: 1rem 1rem 0; border-radius: 16px 16px 0 0; box-shadow: 0 -12px 40px rgba(15, 18, 40, 0.28);
+  }
+  .bis-filter__row { grid-template-columns: 1fr; }
+  .bis-filter__field .crm-select { width: 100%; }
+  .bis-filter__suffix .crm-input { flex: 1; width: 100%; }
+  .bis-filter__actions { position: sticky; bottom: 0; margin: 0 -1rem; padding: 0.75rem 1rem 1rem; background: var(--bg); }
+  .bis-filter__actions .crm-btn { flex: 1; justify-content: center; margin-top: 0; }
+}

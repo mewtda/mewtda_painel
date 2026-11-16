@@ -66,3 +66,14 @@
 .scr-sticky { position: fixed; right: 32px; bottom: 32px; z-index: 50; display: flex; gap: 8px; }
 .scr-sticky .crm-btn { height: 48px; padding: 0 24px; border-radius: 16px; box-shadow: var(--shadow-lg); }
 .scr-sticky[hidden] { display: none; }
+
+@media (max-width: 700px) {
+  .scr-header h1 { font-size: 20px; line-height: 28px; gap: 8px; }
+  .scr-header p { font-size: 13px; }
+  .scr-tabs { scrollbar-width: none; margin-top: 4px; }
+  .scr-tabs::-webkit-scrollbar { display: none; }
+  .scr-tab { flex: none; gap: 6px; padding: 10px 12px; font-size: 13px; white-space: nowrap; }
+  .scr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .scr-kpi { padding: 12px 14px; }
+  .scr-kpi strong { font-size: 19px; line-height: 26px; }
+}

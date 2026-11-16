@@ -45,13 +45,12 @@
           <td class="invoice-table__amount"><%= brl.call(@invoice.emails_amount) %></td>
         </tr>
       </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="3">Total</td>
-          <td class="invoice-table__amount"><%= brl.call(@invoice.total) %></td>
-        </tr>
-      </tfoot>
     </table>
+
+    <div class="invoice-total">
+      <span>Total</span>
+      <strong><%= brl.call(@invoice.total) %></strong>
+    </div>
 
     <% if @charge %>
       <div class="invoice-card__charge">

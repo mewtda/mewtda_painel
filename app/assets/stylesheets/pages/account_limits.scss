@@ -66,12 +66,17 @@
 .invoice-table td { padding: 0.85rem 0; border-bottom: 1px solid var(--outline); color: var(--fg); vertical-align: top; }
 .invoice-table td small { display: block; color: var(--fg-alt); font-size: 0.78rem; margin-top: 0.15rem; }
 .invoice-table__amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.invoice-table tfoot td { border-top: 1rem solid transparent; border-bottom: 0; background: var(--hover); background-clip: padding-box; font-size: 1.15rem; font-weight: 700; padding: 1rem; }
+.invoice-total { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding: 1rem; border-radius: var(--radius); background: var(--hover); font-size: 1.15rem; font-weight: 700; color: var(--fg); }
+.invoice-total strong { font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .invoice-table__hide-sm { display: none; } }
-.invoice-table tfoot td:first-child { border-radius: var(--radius) 0 0 var(--radius); }
-.invoice-table tfoot td:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
 .invoice-card__note { margin: 1.25rem 0 0; font-size: 0.8rem; color: var(--fg-alt); }
 .invoice-card__note i { color: #16a34a; margin-right: 0.3rem; }
+
+@media (max-width: 700px) {
+  .limit-card { gap: 0.75rem; padding: 1rem; }
+  .limit-chart { height: 64px; }
+  .limit-card__value strong { font-size: 1.4rem; }
+}
 .invoice-card__charge { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1.25rem; font-size: 0.85rem; color: var(--fg-alt); }
 .invoice-card__charge .crm-btn { margin-left: auto; }
 .invoice-secure { display: flex; align-items: center; gap: 0.9rem; margin-top: 1.25rem; padding: 0.85rem 1rem; border: 1px solid var(--border, #e5e7eb); border-radius: 10px; }

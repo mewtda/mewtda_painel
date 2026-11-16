@@ -98,7 +98,8 @@
     list.replaceChildren(...data.missing.map((text) => Object.assign(document.createElement("li"), { textContent: text })));
     $("#ec-missing").hidden = !data.missing.length;
 
-    $("#ec-template-subject").textContent = data.template_subject ? `Assunto: ${data.template_subject}` : "";
+    const subject = $("#ec-template-subject");
+    if (subject) subject.textContent = data.template_subject ? `Assunto: ${data.template_subject}` : "";
 
     if (String(data.template_id || "") !== currentTemplate) {
       currentTemplate = String(data.template_id || "");

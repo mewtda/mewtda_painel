@@ -30,10 +30,25 @@
     wrapper.append(button, menu, select);
 
     let active = -1;
-    const items = () => Array.from(menu.children);
+    const items = () => Array.from(menu.querySelectorAll(".crm-select__option"));
+
+    const groupHeader = (label) => {
+      const header = document.createElement("li");
+      header.className = "crm-select__group";
+      header.setAttribute("role", "presentation");
+      header.textContent = label;
+      return header;
+    };
 
     const render = () => {
-      menu.replaceChildren(...Array.from(select.options).map((option, index) => {
+      let currentGroup = null;
+      const nodes = [];
+      Array.from(select.options).forEach((option, index) => {
+        const group = option.parentElement.tagName === "OPTGROUP" ? option.parentElement.label : null;
+        if (group !== currentGroup) {
+          currentGroup = group;
+          if (group) nodes.push(groupHeader(group));
+        }
         const item = document.createElement("li");
         item.className = "crm-select__option";
         item.setAttribute("role", "option");
@@ -41,10 +56,12 @@
         item.setAttribute("aria-selected", String(option.selected));
         item.classList.toggle("is-selected", option.selected);
         item.classList.toggle("is-disabled", option.disabled);
+        item.classList.toggle("is-grouped", Boolean(group));
         item.append(Object.assign(document.createElement("span"), { textContent: option.textContent }));
         if (option.selected && option.value) item.append(Object.assign(document.createElement("i"), { className: "fa-solid fa-check" }));
-        return item;
-      }));
+        nodes.push(item);
+      });
+      menu.replaceChildren(...nodes);
       label.textContent = select.selectedOptions[0]?.textContent || "";
       label.classList.toggle("is-placeholder", !select.value);
     };

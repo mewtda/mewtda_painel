@@ -42,7 +42,7 @@
 
   // ---------------------------------------------------------- campos --
   const fieldSelect = (cond, onChange) => {
-    const select = el("select", { class: "crm-input sg-field", "aria-label": "Critério" });
+    const select = el("select", { class: "crm-input sg-field", "aria-label": "Critério", "data-custom-select": "true" });
     select.appendChild(option("", "Selecione o critério…", !cond.field));
     const groups = {};
     schema.fields.forEach((f) => {
@@ -55,7 +55,7 @@
   };
 
   const opSelect = (cond, type) => {
-    const select = el("select", { class: "crm-input sg-op", "aria-label": "Operador" });
+    const select = el("select", { class: "crm-input sg-op", "aria-label": "Operador", "data-custom-select": "true" });
     schema.ops[type].forEach((op) => select.appendChild(option(op.key, op.label, cond.op === op.key)));
     if (!cond.op) cond.op = schema.ops[type][0].key;
     select.addEventListener("change", () => {
@@ -153,7 +153,7 @@
           row.appendChild(opSelect(cond, field.type));
           valueControls(cond, field.type).forEach((c) => row.appendChild(c));
         } else {
-          row.appendChild(el("span", { class: "sg-tip", text: "💡 Primeiro selecione o critério para iniciar a segmentação." }));
+          row.appendChild(el("span", { class: "sg-tip" }, [el("i", { class: "fa-regular fa-lightbulb" }), document.createTextNode(" Primeiro selecione o critério para iniciar a segmentação.")]));
         }
         row.appendChild(el("button", {
           type: "button", class: "cx-icon-btn sg-cond__remove", title: "Remover condição",

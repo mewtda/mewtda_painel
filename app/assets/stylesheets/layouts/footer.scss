@@ -56,22 +56,28 @@
 .crm-footer__right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 
 .crm-footer__badge {
-  height: 32px;
+  height: 28px;
   width: auto;
+}
+
+.crm-footer__copy {
+  white-space: nowrap;
 }
 
 .crm-footer__support {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 5px 12px;
+  padding: 5px 14px;
   border: 1px solid var(--outline-strong);
   border-radius: 99px;
   color: var(--fg);
+  white-space: nowrap;
   transition: border-color .15s;
 }
 
@@ -90,6 +96,26 @@
 
 @media (max-width: 900px) {
   .crm-footer {
-    padding: 14px 16px;
+    gap: 8px 12px;
+    padding: 10px 16px;
+    justify-content: center;
+  }
+
+  .crm-footer__brand {
+    gap: 6px;
+  }
+
+  .crm-footer__right {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 12px;
+  }
+
+  .crm-footer__badge {
+    height: 24px;
+  }
+
+  .crm-footer__support {
+    padding: 4px 12px;
   }
 }

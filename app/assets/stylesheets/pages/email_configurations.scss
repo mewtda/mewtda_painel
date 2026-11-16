@@ -20,3 +20,23 @@
 .email-config-notice i { margin-top: 0.15rem; color: var(--primary); }
 .email-config-notice p { margin: 0; }
 .email-config-notice strong { font: inherit; font-weight: 700; }
+
+@media (max-width: 700px) {
+  .email-config-footer { padding: 0 1rem 1rem; }
+  .email-config-footer .crm-btn { width: 100%; justify-content: center; white-space: nowrap; }
+  .users-form-page__card > .users-form-page__section { margin: 0.5rem 1rem 1rem; }
+  .email-config-dns__verify { width: 100%; justify-content: center; }
+
+  .email-config-dns-table-wrap .crm-table thead { display: none; }
+  .email-config-dns-table-wrap .crm-table,
+  .email-config-dns-table-wrap .crm-table tbody,
+  .email-config-dns-table-wrap .crm-table tr,
+  .email-config-dns-table-wrap .crm-table td { display: block; width: 100%; }
+  .email-config-dns-table-wrap .crm-table tr { padding: 0.75rem 0; border-bottom: 1px solid var(--outline); }
+  .email-config-dns-table-wrap .crm-table td { padding: 0.3rem 0; border: 0; }
+  .email-config-dns-table-wrap .crm-table td::before {
+    content: attr(data-label); display: block; margin-bottom: 0.15rem; font-family: inherit; font-size: 0.7rem; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase; color: var(--fg-alt);
+  }
+  .email-config-dns-copy { align-items: flex-start; justify-content: space-between; }
+}

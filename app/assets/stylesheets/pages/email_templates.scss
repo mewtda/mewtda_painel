@@ -307,3 +307,33 @@
 .suppressions-toolbar__add .crm-input { max-width: 260px; }
 .suppressions-pager { display: flex; justify-content: center; gap: 0.5rem; padding: 1rem; }
 .suppressions-origin { margin-left: 0.5rem; color: var(--fg-alt); font-size: 0.85rem; }
+
+@media (max-width: 700px) {
+  .clients-table-header { flex-wrap: wrap; gap: 0.75rem; padding: 0.9rem 1rem; }
+  .clients-table-header__title { width: 100%; }
+  .clients-table-header > .crm-btn, .clients-table-header > a.crm-btn { width: 100%; justify-content: center; white-space: nowrap; }
+}
+
+@media (max-width: 700px) {
+  .suppressions-intro { gap: 0.75rem; padding: 1rem; }
+  .suppressions-toolbar__search { flex: 1 1 100%; max-width: none; }
+  .suppressions-toolbar__search .crm-input { width: 100%; }
+  .suppressions-toolbar__add { flex: 1 1 100%; flex-direction: column; justify-content: stretch; }
+  .suppressions-toolbar__add .crm-input { max-width: none; width: 100%; }
+  .suppressions-toolbar__add .crm-btn { width: 100%; justify-content: center; white-space: nowrap; }
+}
+
+@media (max-width: 700px) {
+  .email-templates-gallery { margin: 1rem 0; }
+  .email-templates-gallery__grid {
+    flex-wrap: nowrap; overflow-x: auto; gap: 0.6rem; padding-bottom: 0.5rem; scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+  }
+  .email-templates-gallery__card { flex: none; width: 96px; padding: 0.5rem 0.4rem; font-size: 0.75rem; scroll-snap-align: start; }
+  .email-templates-gallery__card .eb-thumb { width: 52px; height: 62px; }
+  .eb-topbar__actions { width: 100%; }
+  .eb-topbar__actions > .crm-btn { flex: 1; justify-content: center; white-space: nowrap; }
+  .eb-test { flex: 1 1 100%; width: 100%; }
+  .eb-test__input { flex: 1; width: auto; min-width: 0; padding: 0.55rem 0.7rem; font-size: 0.85rem; }
+  .eb-test .crm-btn { padding: 0.55rem 0.9rem; font-size: 0.85rem; }
+}

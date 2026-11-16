@@ -137,6 +137,24 @@ class SalesDashboardController < ApplicationController
     render json: { error: 'Dia inválido.' }, status: :unprocessable_entity
   end
 
+  # Configuração "Canais considerados": quais canais de venda da Shopify entram
+  # nos números. Marcar todos (ou nenhum) = todos os canais.
+  def update_channels
+    return redirect_to sales_dashboard_path, alert: 'Nenhum cliente selecionado.' unless @client
+
+    available = Sales::ShopifyReport.new(client: @client).sales_channels
+    if available.nil?
+      return redirect_to sales_dashboard_path(year: requested_year, month: requested_month),
+                         alert: 'Relatório da Shopify indisponível para este cliente.'
+    end
+
+    chosen = available & Array(params[:sales_channels]).map(&:to_s)
+    chosen = [] if chosen.size == available.size
+    @client.update!(sales_channels: chosen)
+    redirect_to sales_dashboard_path(year: requested_year, month: requested_month),
+                notice: chosen.empty? ? 'Considerando todos os canais de venda.' : "Considerando: #{chosen.join(', ')}."
+  end
+
   # Pedidos com devolução no mês (relatório da Shopify), para o modal do "− Devoluções".
   def returns
     return render json: { error: 'Nenhum cliente selecionado.' }, status: :unprocessable_entity unless @client
@@ -169,6 +187,7 @@ class SalesDashboardController < ApplicationController
     @month = requested_month
     @tag = params[:tag].presence
 
+    @available_channels = (Sales::ShopifyReport.new(client: @client).sales_channels || []) | @client.sales_channels
     @metrics = Sales::MonthlyMetrics.new(client: @client, year: @year, month: @month, tag: @tag).call
     @daily = Sales::DailyBreakdown.new(client: @client, year: @year, month: @month).call
     @goal_daily = Sales::GoalDailyBreakdown.new(

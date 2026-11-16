@@ -3,6 +3,7 @@ module Sales
   # o que a loja mostra (vendas totais, fuso de São Paulo, em BRL).
   class ShopifyTaggedSales
     def initialize(client:, from:, to:, tags:, runner: nil)
+      @client = client
       @from = from
       @to = to
       @tags = ShopifyReport.tags(tags)
@@ -23,7 +24,8 @@ module Sales
 
     def shopifyql
       list = @tags.map { |t| "'#{t}'" }.join(', ')
-      "FROM sales SHOW total_sales, orders WHERE #{ShopifyReport.tag_condition(@tags)} " \
+      where = ShopifyReport.where(ShopifyReport.tag_condition(@tags), ShopifyReport.channel_condition(@client.sales_channels))
+      "FROM sales SHOW total_sales, orders #{where}" \
         "GROUP BY order_tag WITH TOTALS, #{ShopifyReport::WITH_OPTIONS} HAVING order_tag IN (#{list}) " \
         "#{ShopifyReport.range(@from, @to)}"
     end

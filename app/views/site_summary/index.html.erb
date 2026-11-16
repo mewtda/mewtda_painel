@@ -40,6 +40,9 @@
       <% end %>
       <span class="ss-range__label">
         <%= l(@summary.from, format: '%d/%m/%Y') %> a <%= l(@summary.to, format: '%d/%m/%Y') %> · <%= pluralize(@summary.days.size, 'dia', plural: 'dias') %>
+        <% if @client.sales_channels.any? && @summary.shopify_report? %>
+          · <%= link_to "Canais: #{@client.sales_channels.join(', ')}", sales_dashboard_path(canais: 1) %>
+        <% end %>
       </span>
     </div>
 

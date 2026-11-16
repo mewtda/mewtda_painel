@@ -26,11 +26,9 @@ module Sales
 
     def shopifyql
       @shopifyql ||= begin
-        where = ''
-        if @tag.present?
-          tags = ShopifyReport.tags(@tag)
-          where = "WHERE #{ShopifyReport.tag_condition(tags)} " if tags.any?
-        end
+        tags = @tag.present? ? ShopifyReport.tags(@tag) : []
+        where = ShopifyReport.where((ShopifyReport.tag_condition(tags) if tags.any?),
+                                    ShopifyReport.channel_condition(@client.sales_channels))
         "FROM sales SHOW returns #{where}GROUP BY order_id, order_name WITH #{ShopifyReport::WITH_OPTIONS} " \
           "HAVING returns < 0 #{ShopifyReport.range(@from, @to)} ORDER BY returns ASC LIMIT #{LIMIT}"
       end

@@ -428,3 +428,13 @@ $sd-header-blue: var(--chrome-bg);
   .fa-up-right-from-square { font-size: 10px; margin-left: 4px; opacity: .6; }
 }
 .sd-order-row--total { font-weight: 700; border-top: 2px solid var(--outline); }
+
+// Configuração "Canais considerados"
+.sd-channels { margin: 0 0 1rem; padding: 0.7rem 1rem; border: 1px solid var(--outline, #e5e7eb); border-radius: 10px; background: var(--surface, #fff); }
+.sd-channels summary { cursor: pointer; font-size: 0.85rem; color: var(--fg-alt); }
+.sd-channels summary strong { color: var(--fg); }
+.sd-channels summary i { margin-right: 0.35rem; }
+.sd-channels__form { margin-top: 0.75rem; }
+.sd-channels__hint { margin: 0 0 0.75rem; font-size: 0.8rem; line-height: 1.45; color: var(--fg-alt); }
+.sd-channels__options { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-bottom: 0.85rem; }
+.sd-channels__option { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; cursor: pointer; }

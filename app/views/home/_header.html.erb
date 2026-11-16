@@ -10,7 +10,7 @@
 %>
 <header class="mwtda-lp-header" data-lp-header>
   <div class="mwtda-lp-header__inner">
-    <a href="<%= root_path %>" class="mwtda-lp-header__logo" data-turbo="false" aria-label="Mewtda — <%= t('home.nav.inicio') %>">
+    <a href="<%= landing_path %>" class="mwtda-lp-header__logo" data-turbo="false" aria-label="Mewtda — <%= t('home.nav.inicio') %>">
       <%= image_tag 'admin/logonovo.png', alt: 'Mewtda' %>
     </a>
 
@@ -22,7 +22,7 @@
         <div class="mwtda-lp-header__dropdown">
           <% landing_products.each do |product| %>
             <% page = product_page_path(product[:key]) %>
-            <a href="<%= page || "#{root_path}##{product[:anchor]}" %>" class="mwtda-lp-header__option" data-turbo="false">
+            <a href="<%= page || "#{landing_path}##{product[:anchor]}" %>" class="mwtda-lp-header__option" data-turbo="false">
               <%= render 'home/product_logo', product: product %>
               <small><%= t("home.products.#{product[:key]}.tagline") %></small>
             </a>

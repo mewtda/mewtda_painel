@@ -361,7 +361,7 @@
       <div class="mwtda-sl-eco__grid" data-reveal>
         <% %w[crm trocas app].each do |key| %>
           <% product = landing_product(key) %>
-          <a class="mwtda-sl-eco__card" href="<%= root_path %>##{product[:anchor]}" data-turbo="false">
+          <a class="mwtda-sl-eco__card" href="<%= landing_path %>##{product[:anchor]}" data-turbo="false">
             <%= render 'home/product_logo', product: product %>
             <p><%= t("home.products.#{product[:key]}.tagline") %></p>
             <em><%= t("#{sp}.eco.open") %> <i class="fa-solid fa-arrow-right"></i></em>

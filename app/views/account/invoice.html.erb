@@ -53,6 +53,18 @@
       </tfoot>
     </table>
 
+    <% if @charge %>
+      <div class="invoice-card__charge">
+        <span class="crm-tag <%= @charge.status == 'created' ? 'crm-tag--info' : 'crm-tag--warning' %>"><%= @charge.status_label %></span>
+        <% if @charge.due_date %>
+          <span>Vencimento <%= l(@charge.due_date, format: '%d/%m/%Y') %></span>
+        <% end %>
+        <% if @charge.invoice_url.present? %>
+          <%= link_to 'Pagar fatura', @charge.invoice_url, class: 'crm-btn crm-btn--primary', target: '_blank', rel: 'noopener' %>
+        <% end %>
+      </div>
+    <% end %>
+
     <p class="invoice-card__note">
       <i class="fa-brands fa-whatsapp"></i>
       As mensagens de WhatsApp são cobradas diretamente pela Meta na sua conta e não entram nesta fatura.

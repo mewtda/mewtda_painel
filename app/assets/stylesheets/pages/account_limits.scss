@@ -72,3 +72,5 @@
 .invoice-table tfoot td:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
 .invoice-card__note { margin: 1.25rem 0 0; font-size: 0.8rem; color: var(--fg-alt); }
 .invoice-card__note i { color: #16a34a; margin-right: 0.3rem; }
+.invoice-card__charge { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1.25rem; font-size: 0.85rem; color: var(--fg-alt); }
+.invoice-card__charge .crm-btn { margin-left: auto; }

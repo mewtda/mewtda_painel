@@ -99,6 +99,13 @@
                                     value: (number_with_precision(client.plan_price, precision: 2, separator: ',', delimiter: '') if client.plan_price) %>
               </div>
             </div>
+            <div class="cform-row">
+              <div class="cform-field">
+                <%= form.label :billing_document, 'CPF/CNPJ para cobrança', class: 'crm-label' %>
+                <%= form.text_field :billing_document, class: 'crm-input', placeholder: 'Ex.: 12.345.678/0001-90', disabled: read_only %>
+                <span class="cform-field__hint">Com CPF/CNPJ preenchido, a Fatura do mês fechado vira uma cobrança no Asaas (Pix, boleto ou cartão), com vencimento em 5 dias.</span>
+              </div>
+            </div>
           </div>
           <div class="cform-section">
             <div class="cform-section__header"><i class="fa-solid fa-gauge-high"></i> Limites diários de envio</div>

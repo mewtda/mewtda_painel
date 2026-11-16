@@ -105,8 +105,8 @@
               <tbody>
                 <% current_client.ses_dns_records.each do |record| %>
                   <tr>
-                    <td><%= record[:type] %></td>
-                    <td class="email-config-dns-table__mono">
+                    <td data-label="Tipo"><%= record[:type] %></td>
+                    <td class="email-config-dns-table__mono" data-label="Nome">
                       <span class="email-config-dns-copy">
                         <span><%= record[:name] %></span>
                         <button type="button" class="email-config-dns-copy__btn" data-copy-value="<%= record[:name] %>" aria-label="Copiar nome" title="Copiar nome">
@@ -114,7 +114,7 @@
                         </button>
                       </span>
                     </td>
-                    <td class="email-config-dns-table__mono">
+                    <td class="email-config-dns-table__mono" data-label="Valor">
                       <span class="email-config-dns-copy">
                         <span><%= record[:value] %></span>
                         <button type="button" class="email-config-dns-copy__btn" data-copy-value="<%= record[:value] %>" aria-label="Copiar valor" title="Copiar valor">

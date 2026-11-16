@@ -81,7 +81,7 @@
 .cx-name { display: flex; align-items: center; gap: 0.55rem; font-weight: 600; }
 .cx-email { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .cx-row small.cx-muted { margin-left: 0.3rem; }
-.cx-sort { color: inherit; text-decoration: none; display: inline-flex; gap: 0.3rem; align-items: center; }
+.cx-sort { color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-decoration: none; display: inline-flex; gap: 0.3rem; align-items: center; }
 .cx-sort i { font-size: 0.65rem; opacity: 0.45; }
 .cx-sort.is-active { color: var(--primary); }
 .cx-sort.is-active i { opacity: 1; }
@@ -206,6 +206,7 @@
 .sg-field { min-width: 240px !important; }
 .sg-value { max-width: 180px; }
 .sg-cond__remove { margin-left: auto; }
+.sg-tip i { margin-right: 0.2rem; }
 .sg-tip { flex: 1; padding: 0.55rem 0.8rem; border: 1px solid var(--primary); border-radius: var(--radius); color: var(--primary); font-size: 0.8rem; background: var(--primary-tint); }
 .sg-and, .sg-or { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; color: var(--fg-alt); margin: 0.45rem 0; }
 .sg-or { text-align: center; margin: 0.6rem 0; color: var(--primary); }
@@ -237,3 +238,26 @@
 .sg-steps { margin: 0.5rem 0 0; padding-left: 1.2rem; color: var(--fg-alt); font-size: 0.85rem; line-height: 1.7; }
 .sg-steps a { font-size: inherit; }
 .sg-steps strong { color: var(--fg); font-size: inherit; }
+
+@media (max-width: 700px) {
+  .cx-page .clients-table-header { flex-wrap: wrap; gap: 0.75rem; padding: 0.9rem 1rem; }
+  .cx-page .clients-table-header__title { width: 100%; }
+  .cx-page .sg-header-actions { width: 100%; flex-wrap: wrap; }
+  .cx-page .sg-header-actions { gap: 0.75rem; }
+  .cx-page .sg-header-actions .cx-search { flex: 1 1 100%; min-width: 0; }
+  .cx-page .sg-header-actions .sg-create { flex: 1 1 100%; }
+  .cx-page .sg-header-actions .sg-create summary { width: 100%; justify-content: center; }
+  .cx-page .sg-header-actions .cx-search .crm-input { width: 100%; }
+  .cx-page .sg-create__menu { width: min-content; min-width: 16rem; max-width: calc(100vw - 2rem); }
+  .sg-tip { order: 3; flex: 1 1 100%; }
+  .sg-cond__remove { order: 2; }
+  .sg-topbar { flex-wrap: wrap; gap: 0.75rem; }
+  .sg-topbar__left { width: 100%; justify-content: space-between; gap: 0.5rem; }
+  .sg-back { padding: 0.45rem 0.8rem; font-size: 0.85rem; white-space: nowrap; }
+  .sg-topbar > .crm-btn { width: 100%; justify-content: center; white-space: nowrap; }
+  .sg-templates-head { flex-wrap: wrap; gap: 0.6rem 1rem; }
+  .sg-templates-head h2 { order: -1; flex: 1 1 100%; font-size: 1.15rem; }
+  .sg-templates-head .crm-btn { margin-left: auto; }
+  .cx-page #sg-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .cx-page #sg-table .crm-table { min-width: 40rem; }
+}

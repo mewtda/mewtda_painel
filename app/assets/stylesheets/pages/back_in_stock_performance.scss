@@ -34,3 +34,11 @@ a.scr-tab { text-decoration: none; }
 .bp-product { display: flex; align-items: center; gap: 0.7rem; }
 .bp-product__img { width: 2.4rem; height: 2.4rem; border-radius: 8px; object-fit: cover; }
 .bp-product small, .bp-phone { display: block; color: var(--fg-alt); }
+
+@media (max-width: 700px) {
+  .bp-export { margin-left: 0; width: 100%; justify-content: center; }
+  .bp-charts { grid-template-columns: 1fr; }
+  .bp-legend { gap: 0.3rem 0.9rem; }
+  .bp-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 0.25rem; }
+  .bp-tabs .cp-chip { flex: none; white-space: nowrap; }
+}

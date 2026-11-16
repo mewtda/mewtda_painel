@@ -47,17 +47,21 @@
               <% end %>
               <% if campaign.email_template %><small class="cx-muted ec-sub"><%= campaign.email_template.name %></small><% end %>
             </td>
-            <td><span class="crm-tag crm-tag--info"><i class="fa-solid fa-envelope"></i> <%= campaign.channel_label %></span></td>
-            <td><%= campaign_status_tag(campaign) %></td>
-            <td class="cx-muted"><%= campaign.segment&.name || '—' %></td>
-            <td class="cx-muted">
-              <%= campaign.timing_summary %>
-              <% if campaign.progress_label %><small class="ec-sub"><%= campaign.progress_label %></small><% end %>
-              <% if campaign.status_note %><small class="ec-sub"><%= campaign.status_note %></small><% end %>
+            <td data-label="Canal de envio"><span class="crm-tag crm-tag--info"><i class="fa-solid fa-envelope"></i> <%= campaign.channel_label %></span></td>
+            <td data-label="Status"><%= campaign_status_tag(campaign) %></td>
+            <td class="cx-muted" data-label="Para quem"><%= campaign.segment&.name || '—' %></td>
+            <td class="cx-muted" data-label="Envio">
+              <span class="ec-cell">
+                <%= campaign.timing_summary %>
+                <% if campaign.progress_label %><small class="ec-sub"><%= campaign.progress_label %></small><% end %>
+                <% if campaign.status_note %><small class="ec-sub"><%= campaign.status_note %></small><% end %>
+              </span>
             </td>
-            <td class="cx-nowrap">
-              <%= campaign.created_by&.name || '—' %>
-              <small class="cx-muted ec-sub"><%= l(campaign.created_at, format: '%d/%m/%Y às %H:%M') %></small>
+            <td class="cx-nowrap" data-label="Criada por">
+              <span class="ec-cell">
+                <%= campaign.created_by&.name || '—' %>
+                <small class="cx-muted ec-sub"><%= l(campaign.created_at, format: '%d/%m/%Y às %H:%M') %></small>
+              </span>
             </td>
             <td class="text-center">
               <div class="clients-table__actions">

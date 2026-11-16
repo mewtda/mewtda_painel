@@ -16,12 +16,13 @@
 
     chartRendered = true;
     const style = getComputedStyle(document.documentElement);
+    const values = JSON.parse(chartElement.dataset.values);
 
     new ApexCharts(chartElement, {
       chart: { type: "bar", height: 260, toolbar: { show: false }, fontFamily: "inherit" },
-      series: [{ name: "E-mails enviados", data: JSON.parse(chartElement.dataset.values) }],
-      xaxis: { categories: JSON.parse(chartElement.dataset.labels) },
-      yaxis: { min: 0, forceNiceScale: true, labels: { formatter: (value) => Math.round(value) } },
+      series: [{ name: "E-mails enviados", data: values }],
+      xaxis: { categories: JSON.parse(chartElement.dataset.labels), labels: { rotate: 0, hideOverlappingLabels: true, style: { fontSize: "11px" } } },
+      yaxis: { min: 0, max: values.some((value) => value > 0) ? undefined : 1, forceNiceScale: true, labels: { formatter: (value) => Math.round(value) } },
       colors: [style.getPropertyValue("--primary").trim()],
       plotOptions: { bar: { borderRadius: 4, columnWidth: "45%" } },
       dataLabels: { enabled: false },
@@ -37,6 +38,7 @@
       const active = tab.dataset.tab === current;
       tab.classList.toggle("is-active", active);
       tab.setAttribute("aria-selected", active);
+      if (active) tab.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
     });
 
     panels.forEach((panel) => (panel.hidden = panel.dataset.panel !== current));

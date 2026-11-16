@@ -24,6 +24,7 @@ class AccountController < ApplicationController
     @months = (0...INVOICE_MONTHS).map { |i| Time.zone.today.beginning_of_month << i }
     month = @months.find { |m| m.strftime('%Y-%m') == params[:mes] } || @months.first
     @invoice = Billing::Invoice.new(@client, month)
+    @charge = @client.billing_charges.find_by(month: @invoice.month)
   end
 
   def update

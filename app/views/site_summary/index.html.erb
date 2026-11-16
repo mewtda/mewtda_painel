@@ -1,0 +1,199 @@
+<% title 'Resumo do site' %>
+
+<div class="ss-page">
+  <div class="ss-header">
+    <div>
+      <div class="ss-header__crumb"><%= @client&.name %></div>
+      <h1 class="ss-header__title">Resumo do site</h1>
+    </div>
+  </div>
+
+  <% if @summary.nil? %>
+    <div class="crm-card ss-empty"><%= @empty_message %></div>
+  <% else %>
+    <%
+      brl = ->(v) { v.nil? ? '–' : number_to_currency(v, unit: 'R$', separator: ',', delimiter: '.', precision: 2) }
+      brl_short = lambda do |v|
+        next '–' if v.nil?
+        v.abs >= 1000 ? "R$ #{number_with_precision(v / 1000.0, precision: 1, separator: ',')} mil" : brl.call(v)
+      end
+      change_tag = lambda do |change, inverse: false|
+        next content_tag(:span, 'sem base anterior', class: 'ss-kpi__change ss-kpi__change--neutral') if change.nil?
+        good = inverse ? change.negative? : change.positive?
+        css = change.zero? ? 'neutral' : (good ? 'up' : 'down')
+        content_tag(:span, "#{change.positive? ? '+' : ''}#{number_with_precision(change, precision: 1, separator: ',')}% vs. período anterior", class: "ss-kpi__change ss-kpi__change--#{css}")
+      end
+      k = @summary.kpis
+    %>
+
+    <div class="ss-filters">
+      <div class="ss-presets">
+        <% Sales::SiteSummary::PRESETS.each do |key, label| %>
+          <%= link_to label, crm_path(p: key), class: "ss-preset #{'ss-preset--active' if @summary.preset == key}" %>
+        <% end %>
+      </div>
+      <%= form_with url: crm_path, method: :get, class: 'ss-range' do %>
+        <%= date_field_tag :de, @summary.from, class: 'crm-input' %>
+        <span>até</span>
+        <%= date_field_tag :ate, @summary.to, class: 'crm-input' %>
+        <button type="submit" class="crm-btn crm-btn--secondary">Aplicar</button>
+      <% end %>
+      <span class="ss-range__label">
+        <%= l(@summary.from, format: '%d/%m/%Y') %> a <%= l(@summary.to, format: '%d/%m/%Y') %> · <%= pluralize(@summary.days.size, 'dia', plural: 'dias') %>
+        <% if @client.sales_channels.any? && @summary.shopify_report? %>
+          · <%= link_to "Canais: #{@client.sales_channels.join(', ')}", sales_dashboard_path(canais: 1) %>
+        <% end %>
+      </span>
+    </div>
+
+    <div class="ss-kpis">
+      <div class="ss-kpi ss-kpi--main">
+        <div class="ss-kpi__label">Faturamento</div>
+        <div class="ss-kpi__value"><%= brl_short.call(k[:revenue][:value]) %></div>
+        <%= change_tag.call(k[:revenue][:change]) %>
+      </div>
+      <div class="ss-kpi">
+        <div class="ss-kpi__label">Pedidos</div>
+        <div class="ss-kpi__value"><%= number_with_delimiter(k[:orders][:value], delimiter: '.') %></div>
+        <%= change_tag.call(k[:orders][:change]) %>
+      </div>
+      <div class="ss-kpi">
+        <div class="ss-kpi__label">Ticket médio</div>
+        <div class="ss-kpi__value"><%= brl.call(k[:average_ticket][:value]) %></div>
+        <%= change_tag.call(k[:average_ticket][:change]) %>
+      </div>
+      <div class="ss-kpi">
+        <div class="ss-kpi__label">Investimento em anúncios</div>
+        <div class="ss-kpi__value"><%= brl_short.call(k[:ad_cost][:value]) %></div>
+        <%= change_tag.call(k[:ad_cost][:change], inverse: true) %>
+      </div>
+      <div class="ss-kpi">
+        <div class="ss-kpi__label">ROAS</div>
+        <div class="ss-kpi__value"><%= k[:roas][:value] ? "#{number_with_precision(k[:roas][:value], precision: 2, separator: ',')}x" : '–' %></div>
+        <%= change_tag.call(k[:roas][:change]) %>
+      </div>
+      <div class="ss-kpi">
+        <div class="ss-kpi__label">Custo por pedido (CPA)</div>
+        <div class="ss-kpi__value"><%= brl.call(k[:cpa][:value]) %></div>
+        <%= change_tag.call(k[:cpa][:change], inverse: true) %>
+      </div>
+    </div>
+
+    <div class="ss-grid">
+      <div class="crm-card ss-card">
+        <div class="ss-card__title">Faturamento × investimento por dia</div>
+        <p class="ss-card__hint">
+          <% if @summary.shopify_report? %>
+            Vendas totais do relatório da Shopify (já sem descontos e devoluções, com frete) e gasto em anúncios no mesmo dia.
+          <% else %>
+            Valor dos pedidos (com frete, sem cancelados) e gasto em anúncios no mesmo dia.
+          <% end %>
+        </p>
+        <div id="ss-revenue-chart"></div>
+        <details class="ss-table-toggle">
+          <summary>Ver como tabela</summary>
+          <table class="crm-table">
+            <thead><tr><th>Dia</th><th class="text-right">Pedidos</th><th class="text-right">Faturamento</th><th class="text-right">Anúncios</th></tr></thead>
+            <tbody>
+              <% @summary.daily.each do |d| %>
+                <tr><td><%= l(d[:date], format: '%d/%m') %></td><td class="text-right"><%= d[:orders] %></td><td class="text-right"><%= brl.call(d[:revenue]) %></td><td class="text-right"><%= brl.call(d[:ad_cost]) %></td></tr>
+              <% end %>
+            </tbody>
+          </table>
+        </details>
+      </div>
+
+      <div class="crm-card ss-card">
+        <div class="ss-card__title">Resultado do período</div>
+        <dl class="ss-result">
+          <% if (b = @summary.revenue_breakdown) %>
+            <div><dt>Bruto</dt><dd><%= brl.call(b[:gross]) %></dd></div>
+            <div><dt>Descontos</dt><dd>− <%= brl.call(b[:discounts]) %></dd></div>
+            <div><dt>Devoluções</dt><dd>− <%= brl.call(b[:returns]) %></dd></div>
+            <div><dt>Frete</dt><dd>+ <%= brl.call(b[:shipping]) %></dd></div>
+            <% if b[:taxes].positive? %><div><dt>Impostos</dt><dd>+ <%= brl.call(b[:taxes]) %></dd></div><% end %>
+          <% end %>
+          <div class="ss-result__total"><dt>Faturamento</dt><dd><%= brl.call(k[:revenue][:value]) %></dd></div>
+          <% @summary.ad_cost_by_platform.each do |platform, cost| %>
+            <div><dt>Anúncios · <%= platform %></dt><dd>− <%= brl.call(cost) %></dd></div>
+          <% end %>
+          <% if @summary.ad_cost_by_platform.empty? %>
+            <div><dt>Anúncios</dt><dd>− <%= brl.call(0) %></dd></div>
+          <% end %>
+          <div class="ss-result__total"><dt>Faturamento − anúncios</dt><dd><%= brl.call(k[:revenue][:value] - k[:ad_cost][:value]) %></dd></div>
+          <div><dt>Anúncios / faturamento</dt><dd><%= k[:revenue][:value].positive? ? "#{number_with_precision(k[:ad_cost][:value] / k[:revenue][:value] * 100, precision: 1, separator: ',')}%" : '–' %></dd></div>
+          <div><dt>Pedidos cancelados</dt><dd><%= @summary.cancelled_orders %></dd></div>
+        </dl>
+        <p class="ss-card__hint">Custo dos produtos e taxas (imposto, frete, gateway) entram aqui na próxima etapa, com a tela de taxas e markup.</p>
+      </div>
+    </div>
+
+    <div class="ss-grid">
+      <div class="crm-card ss-card">
+        <div class="ss-card__title">Pedidos por dia</div>
+        <div id="ss-orders-chart"></div>
+      </div>
+
+      <div class="crm-card ss-card">
+        <div class="ss-card__title">Produtos mais vendidos</div>
+        <% if @summary.top_products.empty? %>
+          <p class="ss-card__hint">Nenhum produto vendido no período.</p>
+        <% else %>
+          <div class="ss-table-wrap">
+            <table class="crm-table">
+              <thead><tr><th>Produto</th><th class="text-right">Unidades</th><th class="text-right">Pedidos</th><th class="text-right">Faturado</th></tr></thead>
+              <tbody>
+                <% @summary.top_products.each do |p| %>
+                  <tr><td><%= p[:name] %></td><td class="text-right"><%= p[:units] %></td><td class="text-right"><%= p[:orders] %></td><td class="text-right"><%= brl.call(p[:revenue]) %></td></tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <script type="application/json" id="ss-chart-data"><%= raw({
+      labels: @summary.daily.map { |d| l(d[:date], format: '%d/%m') },
+      revenue: @summary.daily.map { |d| d[:revenue] },
+      ad_cost: @summary.daily.map { |d| d[:ad_cost] },
+      orders: @summary.daily.map { |d| d[:orders] }
+    }.to_json.gsub('</', '<\\/')) %></script>
+
+    <script>
+      (function () {
+        var el = document.getElementById('ss-chart-data');
+        if (!el || typeof ApexCharts === 'undefined') return;
+        var d = JSON.parse(el.textContent);
+        var money = function (v) { return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+        var styles = getComputedStyle(document.documentElement);
+        var fg = styles.getPropertyValue('--fg-alt').trim() || '#64748b';
+        var grid = styles.getPropertyValue('--outline').trim() || '#e5e7eb';
+        var base = { toolbar: { show: false }, fontFamily: 'inherit', foreColor: fg };
+
+        new ApexCharts(document.getElementById('ss-revenue-chart'), {
+          chart: Object.assign({ type: 'line', height: 280 }, base),
+          series: [{ name: 'Faturamento', data: d.revenue }, { name: 'Investimento em anúncios', data: d.ad_cost }],
+          xaxis: { categories: d.labels },
+          yaxis: { labels: { formatter: function (v) { return v >= 1000 ? 'R$ ' + (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : money(v); } } },
+          colors: ['#7c3aed', '#f59e0b'],
+          stroke: { width: [3, 2], curve: 'smooth' },
+          grid: { borderColor: grid },
+          tooltip: { y: { formatter: money } },
+          legend: { position: 'top', horizontalAlign: 'left' },
+          dataLabels: { enabled: false }
+        }).render();
+
+        new ApexCharts(document.getElementById('ss-orders-chart'), {
+          chart: Object.assign({ type: 'bar', height: 260 }, base),
+          series: [{ name: 'Pedidos', data: d.orders }],
+          xaxis: { categories: d.labels },
+          colors: ['#7c3aed'],
+          plotOptions: { bar: { borderRadius: 4, columnWidth: '55%' } },
+          grid: { borderColor: grid },
+          dataLabels: { enabled: false }
+        }).render();
+      })();
+    </script>
+  <% end %>
+</div>

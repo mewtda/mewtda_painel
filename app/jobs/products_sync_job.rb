@@ -1,6 +1,8 @@
 class ProductsSyncJob < ApplicationJob
   queue_as :default
 
+  API_TRIES = 10
+
   def perform(action:, client_id:)
     @client = Client.find_by(id: client_id)
 
@@ -36,9 +38,12 @@ class ProductsSyncJob < ApplicationJob
 
     client = client_shopify_rest
 
+    # tries: a Shopify devolve 429 quando outro sync da mesma loja está usando
+    # a cota da API REST (2 chamadas/s); o client espera e tenta de novo.
     response = client.get(
       path: 'products',
-      query: { limit: 250 }
+      query: { limit: 250 },
+      tries: API_TRIES
     )
 
     process_products(response.body['products'])
@@ -52,7 +57,8 @@ class ProductsSyncJob < ApplicationJob
         query: {
           limit: 250,
           page_info: next_page_info
-        }
+        },
+        tries: API_TRIES
       )
 
       process_products(response.body['products'])

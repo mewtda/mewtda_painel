@@ -24,30 +24,30 @@ class HeaderHelperTest < ActionView::TestCase
     assert_equal ['Meus Eventos'], items.map { |i| i[:label] }
   end
 
-  test 'common user without a client does not see Vendas' do
+  test 'common user without a client does not see Dashboard metas' do
     user = build_user
 
     labels = searchable_nav_items(user).map { |i| i[:label] }
 
-    refute_includes labels, 'Vendas'
+    refute_includes labels, 'Dashboard metas'
     assert_includes labels, 'Trackeamento site'
     assert_includes labels, 'Pedidos'
     assert_includes labels, 'Configurações'
   end
 
-  test 'common user with a client sees Vendas' do
+  test 'common user with a client sees Dashboard metas' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
     user = build_user(client: client)
 
-    assert_includes searchable_nav_items(user).map { |i| i[:label] }, 'Vendas'
+    assert_includes searchable_nav_items(user).map { |i| i[:label] }, 'Dashboard metas'
   end
 
-  test 'admin sees admin-only items and Vendas even without a client' do
+  test 'admin sees admin-only items and Dashboard metas even without a client' do
     admin = build_user(admin: true)
 
     labels = searchable_nav_items(admin).map { |i| i[:label] }
 
-    assert_includes labels, 'Vendas'
+    assert_includes labels, 'Dashboard metas'
     assert_includes labels, 'Usuários'
     assert_includes labels, 'Perfis'
     assert_includes labels, 'Sidekiq'

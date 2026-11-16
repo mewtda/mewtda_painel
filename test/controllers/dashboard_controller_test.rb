@@ -11,7 +11,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'opens without a period and asks the user to pick one' do
-    get crm_path
+    get tracking_dashboard_path
 
     assert_response :success
     assert_match 'Escolha um período', response.body
@@ -19,7 +19,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'with a period, renders the loading state with a signed token instead of querying' do
-    get crm_path(period: '1')
+    get tracking_dashboard_path(period: '1')
 
     assert_response :success
     token = response.body[/data-report-token="([^"]+)"/, 1]

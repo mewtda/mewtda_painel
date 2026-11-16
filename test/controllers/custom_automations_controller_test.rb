@@ -40,6 +40,30 @@ class CustomAutomationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'shows the routines registered for the client and runs one on demand' do
+    client = sign_in_client_user('OneWay')
+    get custom_automations_path
+
+    assert_response :success
+    assert_includes response.body, 'Correção de endereço de entrega'
+    assert_not_includes response.body, 'Nenhuma automação personalizada'
+    assert_not_includes response.body, 'Nota de transferência mensal'
+
+    assert_enqueued_with(job: CustomAutomations::RoutineJob, args: ['oneway_address_number_fix', client.id]) do
+      post run_routine_custom_automations_path(kind: 'oneway_address_number_fix')
+    end
+    assert_redirected_to custom_automations_path
+  end
+
+  test 'does not run a routine for a client it is not registered for' do
+    sign_in_client_user('Fernanda Farah')
+
+    assert_no_enqueued_jobs only: CustomAutomations::RoutineJob do
+      post run_routine_custom_automations_path(kind: 'oneway_address_number_fix')
+    end
+    assert_redirected_to custom_automations_path
+  end
+
   test 'creating a run enqueues the build job' do
     sign_in_client_user('Fernanda Farah')
 

@@ -17,7 +17,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'shows the institutional page to a signed-out visitor' do
-    get root_path
+    get landing_path
 
     assert_response :success
     assert_match 'Soluções para e-commerce', response.body
@@ -28,7 +28,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     user = build_user(client: client)
     sign_in user
 
-    get root_path
+    get landing_path
 
     assert_response :success
     assert_match "Olá, #{user.name}", response.body
@@ -40,7 +40,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     admin = build_user(admin: true, client: client)
     sign_in admin
 
-    get root_path
+    get landing_path
 
     assert_response :success
     assert_match "Olá, #{admin.name}", response.body
@@ -50,7 +50,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     admin = build_user(admin: true, client: nil)
     sign_in admin
 
-    get root_path
+    get landing_path
 
     assert_response :success
     assert_match 'Nenhum cliente selecionado', response.body
@@ -61,7 +61,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     affiliate = build_user(affiliate: true, client: client)
     sign_in affiliate
 
-    get root_path
+    get landing_path
 
     assert_redirected_to events_path(utm_code: affiliate.utm_code)
   end
@@ -71,7 +71,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     user = build_user(client: client)
     sign_in user
 
-    get root_path
+    get landing_path
 
     assert_response :success
     assert_match 'esse gráfico ganha vida', response.body
@@ -86,7 +86,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     )
     sign_in user
 
-    get root_path
+    get landing_path
 
     assert_response :success
     assert_match 'R$ 250,00', response.body

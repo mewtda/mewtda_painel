@@ -43,6 +43,33 @@ module Sales
       tags.map { |t| "order_tags CONTAINS '#{t}'" }.join(' OR ')
     end
 
+    CHANNEL_FORMAT = /\A[\p{L}\p{N} ._&()-]+\z/
+
+    # Filtro dos canais de venda escolhidos na configuração do cliente (nil = todos).
+    def self.channel_condition(channels)
+      list = Array(channels).map(&:to_s).select { |c| c.match?(CHANNEL_FORMAT) }.uniq
+      return if list.empty?
+
+      "sales_channel IN (#{list.map { |c| "'#{c}'" }.join(', ')})"
+    end
+
+    # "WHERE (a) AND (b) " com as condições que existirem, ou "".
+    def self.where(*conditions)
+      conditions = conditions.compact_blank
+      return '' if conditions.empty?
+
+      return "WHERE #{conditions.first} " if conditions.one?
+
+      "WHERE #{conditions.map { |c| "(#{c})" }.join(' AND ')} "
+    end
+
+    # Canais de venda com pedidos no último ano, do que mais vende pro que menos vende.
+    def sales_channels
+      rows("FROM sales SHOW orders GROUP BY sales_channel WITH #{WITH_OPTIONS} SINCE -365d UNTIL today")
+        &.sort_by { |row| -row['orders'].to_i }
+        &.filter_map { |row| row['sales_channel'].presence }
+    end
+
     private
 
     def fetch(shopifyql)

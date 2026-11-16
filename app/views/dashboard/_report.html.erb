@@ -9,140 +9,98 @@
   </div>
 <% else %>
     <%
-      def calc_change(current, previous)
-        return { value: 0, direction: 'neutral' } if previous.zero?
-        change = ((current - previous).to_f / previous * 100).round(1)
-        { value: change.abs, direction: change > 0 ? 'up' : (change < 0 ? 'down' : 'neutral') }
+      brl = ->(value) { number_to_currency(value, unit: 'R$', separator: ',', delimiter: '.', precision: 2) }
+      pct = ->(value) { "#{number_with_precision(value, precision: value.to_f < 10 ? 2 : 1, separator: ',')}%" }
+      delta = lambda do |value, inverse: false|
+        next '' if value.nil?
+        good = inverse ? value.negative? : value.positive?
+        variant = value.zero? ? 'neutral' : (good ? 'success' : 'danger')
+        %(<span class="db-kpi__change crm-tag crm-tag--#{variant}">#{value.positive? ? '+' : ''}#{number_with_precision(value, precision: 1, separator: ',')}% vs período anterior</span>).html_safe
       end
-
-      def tag_variant(direction)
-        { 'up' => 'success', 'down' => 'danger', 'neutral' => 'neutral' }[direction]
-      end
-
-      sessions_change = calc_change(@unique_sessions, @prev_unique_sessions)
-      checkout_change = calc_change(@counts[:checkout_completed], @prev_counts[:checkout_completed])
+      purchase = @funnel.last
+      conversion_change = @prev_conversion_rate.positive? ? ((@conversion_rate - @prev_conversion_rate) / @prev_conversion_rate * 100).round(1) : nil
+      worst = @funnel.drop(1).min_by { |step| step[:pct_step] }
+      step_colors = %w[#3b82f6 #22c55e #f59e0b #8b5cf6 #ec4899]
     %>
 
     <div class="db-kpi-grid">
       <div class="db-kpi db-kpi--blue">
-        <div class="db-kpi__label">Sessoes Unicas</div>
-        <div class="db-kpi__value"><%= number_with_delimiter(@unique_sessions) %></div>
-        <span class="db-kpi__change crm-tag crm-tag--<%= tag_variant(sessions_change[:direction]) %>">
-          <% if sessions_change[:direction] == 'up' %>+<% elsif sessions_change[:direction] == 'down' %>-<% end %><%= sessions_change[:value] %>%
-        </span>
+        <div class="db-kpi__label">Sessões</div>
+        <div class="db-kpi__value"><%= number_with_delimiter(@unique_sessions, delimiter: '.') %></div>
+        <%= delta.call(@funnel.first[:change]) %>
       </div>
 
       <div class="db-kpi db-kpi--green">
-        <div class="db-kpi__label">Checkouts</div>
-        <div class="db-kpi__value"><%= number_with_delimiter(@counts[:checkout_completed]) %></div>
-        <span class="db-kpi__change crm-tag crm-tag--<%= tag_variant(checkout_change[:direction]) %>">
-          <% if checkout_change[:direction] == 'up' %>+<% elsif checkout_change[:direction] == 'down' %>-<% end %><%= checkout_change[:value] %>%
-        </span>
+        <div class="db-kpi__label">Compraram</div>
+        <div class="db-kpi__value"><%= number_with_delimiter(purchase[:count], delimiter: '.') %></div>
+        <%= delta.call(purchase[:change]) %>
       </div>
 
       <div class="db-kpi db-kpi--amber">
-        <div class="db-kpi__label">Taxa Conversao</div>
-        <div class="db-kpi__value"><%= @conversion[:checkout_completed] %>%</div>
-        <span class="db-kpi__change crm-tag crm-tag--neutral">do total</span>
+        <div class="db-kpi__label">Taxa de conversão</div>
+        <div class="db-kpi__value"><%= pct.call(@conversion_rate) %></div>
+        <%= delta.call(conversion_change) %>
+        <span class="db-kpi__hint">compras ÷ sessões</span>
       </div>
 
       <div class="db-kpi db-kpi--rose">
-        <div class="db-kpi__label">Nao Convertidos</div>
-        <div class="db-kpi__value"><%= @abandoned_carts %></div>
-        <span class="db-kpi__change crm-tag crm-tag--danger"><%= @abandoned_rate %>% taxa</span>
+        <div class="db-kpi__label">Abandono de carrinho</div>
+        <div class="db-kpi__value"><%= pct.call(@abandoned_rate) %></div>
+        <span class="db-kpi__hint"><%= number_with_delimiter(@abandoned_carts, delimiter: '.') %> sessões puseram no carrinho e não compraram</span>
       </div>
 
       <div class="db-kpi db-kpi--purple">
-        <div class="db-kpi__label">Total Eventos</div>
-        <div class="db-kpi__value"><%= number_with_delimiter(@counts.values.sum) %></div>
-        <span class="db-kpi__change crm-tag crm-tag--neutral">no periodo</span>
+        <div class="db-kpi__label">Receita por sessão</div>
+        <div class="db-kpi__value"><%= brl.call(@orders_summary[:revenue_per_session]) %></div>
+        <span class="db-kpi__hint"><%= number_with_delimiter(@orders_summary[:count], delimiter: '.') %> pedidos · <%= brl.call(@orders_summary[:revenue]) %> · ticket <%= brl.call(@orders_summary[:average_ticket]) %></span>
       </div>
     </div>
-
 
     <div class="db-funnel-section">
       <div class="db-funnel-section__header">
         <div class="db-funnel-section__title">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
-          Funil de Conversao
+          Funil de conversão por sessão
         </div>
         <div class="db-funnel-section__period">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <% period_label = { "1" => "Hoje", "7" => "Ultimos 7 dias", "15" => "Ultimos 15 dias", "30" => "Ultimos 30 dias" }[@period] || "Hoje" %>
+          <% period_label = { "1" => "Hoje", "7" => "Últimos 7 dias", "15" => "Últimos 15 dias", "30" => "Últimos 30 dias" }[@period] || "Hoje" %>
           <%= period_label %>
         </div>
       </div>
 
       <div class="db-funnel">
-        <div class="db-funnel__step">
-          <div class="db-funnel__icon" style="background:rgba(59,130,246,.15)">
-            <svg width="20" height="20" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg>
-          </div>
-          <div class="db-funnel__count"><%= number_with_delimiter(@counts[:page_viewed]) %></div>
-          <div class="db-funnel__name">Paginas Vistas</div>
-          <div class="db-funnel__bar">
-            <div class="db-funnel__bar-fill" style="width:100%; background:#3b82f6"></div>
-          </div>
-          <div class="db-funnel__rate">100%</div>
-        </div>
-
-        <div class="db-funnel__step">
-          <div class="db-funnel__icon" style="background:rgba(34,197,94,.15)">
-            <svg width="20" height="20" fill="none" stroke="#22c55e" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-          </div>
-          <div class="db-funnel__count"><%= number_with_delimiter(@counts[:product_viewed]) %></div>
-          <div class="db-funnel__name">Produtos Vistos</div>
-          <div class="db-funnel__bar">
-            <div class="db-funnel__bar-fill" style="width:<%= @conversion[:product_viewed] %>%; background:#22c55e"></div>
-          </div>
-          <div class="db-funnel__rate"><%= @conversion[:product_viewed] %>%</div>
-          <div class="db-funnel__dropoff"><%= @dropoff[:page_to_product] %>% saiu</div>
-          <% if @avg_times[:page_to_product] > 0 %>
-            <div class="db-funnel__time">
-              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              <%= @avg_times[:page_to_product] %> min
+        <% @funnel.each_with_index do |step, index| %>
+          <div class="db-funnel__step <%= 'db-funnel__step--worst' if step.equal?(worst) && step[:lost].positive? %>">
+            <div class="db-funnel__count"><%= number_with_delimiter(step[:count], delimiter: '.') %></div>
+            <div class="db-funnel__name"><%= step[:label] %></div>
+            <div class="db-funnel__bar">
+              <div class="db-funnel__bar-fill" style="width:<%= [step[:pct_total], 100].min %>%; background:<%= step_colors[index] %>"></div>
             </div>
-          <% end %>
-        </div>
-
-        <div class="db-funnel__step">
-          <div class="db-funnel__icon" style="background:rgba(245,158,11,.15)">
-            <svg width="20" height="20" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.35 2.7A1 1 0 007 17h11M7 13l-.4-2M17 17a2 2 0 100 4 2 2 0 000-4zm-8 0a2 2 0 100 4 2 2 0 000-4z"/></svg>
+            <div class="db-funnel__rate"><%= pct.call(step[:pct_total]) %> das sessões</div>
+            <% if index.positive? %>
+              <div class="db-funnel__step-rate"><%= pct.call(step[:pct_step]) %> da etapa anterior</div>
+              <div class="db-funnel__dropoff">−<%= number_with_delimiter(step[:lost], delimiter: '.') %> sessões pararam aqui</div>
+            <% end %>
+            <% unless step[:change].nil? %>
+              <div class="db-funnel__change db-funnel__change--<%= step[:change].negative? ? 'down' : 'up' %>">
+                <%= step[:change].positive? ? '+' : '' %><%= number_with_precision(step[:change], precision: 1, separator: ',') %>% vs período anterior
+              </div>
+            <% end %>
           </div>
-          <div class="db-funnel__count"><%= number_with_delimiter(@counts[:added_to_cart]) %></div>
-          <div class="db-funnel__name">Add ao Carrinho</div>
-          <div class="db-funnel__bar">
-            <div class="db-funnel__bar-fill" style="width:<%= @conversion[:added_to_cart] %>%; background:#f59e0b"></div>
-          </div>
-          <div class="db-funnel__rate"><%= @conversion[:added_to_cart] %>%</div>
-          <div class="db-funnel__dropoff"><%= @dropoff[:product_to_cart] %>% saiu</div>
-          <% if @avg_times[:product_to_cart] > 0 %>
-            <div class="db-funnel__time">
-              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              <%= @avg_times[:product_to_cart] %> min
-            </div>
-          <% end %>
-        </div>
-
-        <div class="db-funnel__step">
-          <div class="db-funnel__icon" style="background:rgba(236,72,153,.15)">
-            <svg width="20" height="20" fill="none" stroke="#ec4899" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          </div>
-          <div class="db-funnel__count"><%= number_with_delimiter(@counts[:checkout_completed]) %></div>
-          <div class="db-funnel__name">Checkout</div>
-          <div class="db-funnel__bar">
-            <div class="db-funnel__bar-fill" style="width:<%= @conversion[:checkout_completed] %>%; background:#ec4899"></div>
-          </div>
-          <div class="db-funnel__rate"><%= @conversion[:checkout_completed] %>%</div>
-          <div class="db-funnel__dropoff"><%= @dropoff[:cart_to_checkout] %>% nao converteu</div>
-          <% if @avg_times[:cart_to_checkout] > 0 %>
-            <div class="db-funnel__time">
-              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              <%= @avg_times[:cart_to_checkout] %> min
-            </div>
-          <% end %>
-        </div>
+        <% end %>
       </div>
+
+      <% if worst && worst[:lost].positive? %>
+        <p class="db-funnel__insight">
+          Maior perda: <strong><%= worst[:label].downcase %></strong>. Só <%= pct.call(worst[:pct_step]) %>
+          das sessões da etapa anterior chegaram aqui (<%= number_with_delimiter(worst[:lost], delimiter: '.') %> sessões).
+          <% if @orders_summary[:count].positive? %>
+            No mesmo período a Shopify registrou <%= number_with_delimiter(@orders_summary[:count], delimiter: '.') %> pedidos
+            (<%= brl.call(@orders_summary[:revenue]) %>), incluindo canais fora do site.
+          <% end %>
+        </p>
+      <% end %>
     </div>
 
 
@@ -406,6 +364,6 @@
     devices: [@devices[:desktop], @devices[:mobile], @devices[:tablet]],
     referrers: { labels: @referrers.keys, values: @referrers.values },
     weekday: { labels: @weekday_events.map { |d| d[:day] }, values: @weekday_events.map { |d| d[:count] } },
-    funnel: [@counts[:page_viewed], @counts[:product_viewed], @counts[:added_to_cart], @counts[:checkout_completed]]
+    funnel: @funnel.map { |step| step[:count] }
   }.to_json.gsub('</', '<\\/')) %></script>
 <% end %>

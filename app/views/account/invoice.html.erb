@@ -52,6 +52,33 @@
       <strong><%= brl.call(@invoice.total) %></strong>
     </div>
 
+    <% if @charge %>
+      <div class="invoice-card__charge">
+        <span class="crm-tag <%= @charge.status == 'created' ? 'crm-tag--info' : 'crm-tag--warning' %>"><%= @charge.status_label %></span>
+        <% if @charge.due_date %>
+          <span>Vencimento <%= l(@charge.due_date, format: '%d/%m/%Y') %></span>
+        <% end %>
+        <% if @charge.invoice_url.present? %>
+          <%= link_to 'Pagar fatura', @charge.invoice_url, class: 'crm-btn crm-btn--primary', target: '_blank', rel: 'noopener' %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="invoice-secure">
+      <span class="invoice-secure__brand">
+        <% if landing_image?('logos/asaas.svg') %>
+          <%= image_tag 'logos/asaas.svg', alt: '', class: 'invoice-secure__logo' %>
+        <% end %>
+        asaas
+      </span>
+      <p class="invoice-secure__text">
+        <i class="fa-solid fa-lock"></i>
+        A cobrança desta fatura é gerada e processada com segurança pelo <strong>Asaas</strong>.
+        O pagamento por Pix, boleto ou cartão acontece no ambiente do Asaas: a Mewtda não vê nem guarda
+        os dados do seu cartão ou da sua conta.
+      </p>
+    </div>
+
     <p class="invoice-card__note">
       <i class="fa-brands fa-whatsapp"></i>
       As mensagens de WhatsApp são cobradas diretamente pela Meta na sua conta e não entram nesta fatura.

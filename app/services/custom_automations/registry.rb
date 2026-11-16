@@ -14,7 +14,36 @@ module CustomAutomations
       }
     }.freeze
 
+    # Rotinas sob medida que rodam sozinhas: cada uma é um service com
+    # `new(client, **options).call`, ligada aos clientes de client_keys, e
+    # aparece na tela de Automações personalizadas desses clientes. O
+    # CustomAutomations::RoutineJob (Heroku Scheduler, a cada 10 min) roda
+    # todas — pra criar outra, basta o service e uma entrada aqui.
+    ROUTINES = {
+      'oneway_address_number_fix' => {
+        title: 'Correção de endereço de entrega',
+        description: 'Nos pedidos ainda não enviados: leva o número da casa do complemento para a rua, ' \
+                     'remove número e complemento repetidos e corrige acento maiúsculo ("SÃo Paulo").',
+        icon: 'fa-solid fa-location-dot',
+        frequency: 'A cada 10 minutos',
+        service: 'CustomAutomations::OnewayAddressNumberFix',
+        options: { lookback_hours: 72 },
+        client_keys: %w[oneway]
+      }
+    }.freeze
+
     module_function
+
+    def routine(kind)
+      ROUTINES[kind.to_s]
+    end
+
+    def routines_for(client)
+      return {} if client.nil?
+
+      key = normalize(client.name)
+      ROUTINES.select { |_kind, config| config[:client_keys].include?(key) }
+    end
 
     def kinds
       AUTOMATIONS.keys

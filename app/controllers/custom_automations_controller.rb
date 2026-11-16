@@ -7,7 +7,20 @@ class CustomAutomationsController < ApplicationController
   before_action :set_run, only: [:show, :spreadsheet, :emit, :discard]
 
   def index
+    @routines = CustomAutomations::Registry.routines_for(@client)
     @runs = CustomAutomationRun.where(client: @client).recent.limit(50)
+  end
+
+  # Rotinas automáticas já rodam pelo Scheduler; aqui só adianta a próxima.
+  def run_routine
+    kind = params[:kind].to_s
+    unless CustomAutomations::Registry.routines_for(@client).key?(kind)
+      return redirect_to(custom_automations_path,
+                         alert: 'Rotina indisponível para este cliente.')
+    end
+
+    CustomAutomations::RoutineJob.perform_later(kind, @client.id)
+    redirect_to custom_automations_path, notice: 'Rotina enfileirada — roda em instantes.'
   end
 
   def new

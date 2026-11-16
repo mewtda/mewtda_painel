@@ -75,7 +75,7 @@
       <% if home_link %>
         <%# volta pra home de verdade (link, não canal): o JS do controle só
             intercepta [data-remote-channel], então navega normal %>
-        <%= link_to root_path, class: 'mwtda-lp-remote__mini', data: { tip: t('home.nav.inicio'), turbo: false }, 'aria-label': t('home.nav.inicio') do %>
+        <%= link_to landing_path, class: 'mwtda-lp-remote__mini', data: { tip: t('home.nav.inicio'), turbo: false }, 'aria-label': t('home.nav.inicio') do %>
           <i class="fa-solid fa-house"></i>
         <% end %>
       <% end %>

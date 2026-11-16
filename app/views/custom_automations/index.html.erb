@@ -10,12 +10,33 @@
     </p>
   </div>
 
-  <% if @automations.empty? %>
+  <% if @routines.any? %>
+    <div class="automations-grid">
+      <% @routines.each do |kind, routine| %>
+        <div class="automations-card">
+          <div class="automations-card__icon">
+            <i class="<%= routine[:icon] %>"></i>
+          </div>
+          <div class="automations-card__body">
+            <div class="automations-card__title"><%= routine[:title] %></div>
+            <p class="automations-card__description"><%= routine[:description] %></p>
+            <span class="crm-tag crm-tag--success">Ativa · <%= routine[:frequency] %></span>
+          </div>
+          <div class="automations-card__cta-row">
+            <%= button_to 'Rodar agora', run_routine_custom_automations_path(kind: kind),
+                          class: 'crm-btn crm-btn--secondary automations-card__cta' %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @automations.empty? && @routines.empty? %>
     <div class="crm-card custom-automations-empty">
       <i class="fa-solid fa-wand-magic-sparkles"></i>
       <p>Nenhuma automação personalizada disponível para <strong><%= @client.name %></strong> ainda.</p>
     </div>
-  <% else %>
+  <% elsif @automations.any? %>
     <div class="automations-grid">
       <% @automations.each do |kind, automation| %>
         <div class="automations-card">

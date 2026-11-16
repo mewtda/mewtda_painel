@@ -79,7 +79,13 @@
     <div class="ss-grid">
       <div class="crm-card ss-card">
         <div class="ss-card__title">Faturamento × investimento por dia</div>
-        <p class="ss-card__hint">Valor dos pedidos (com frete, sem cancelados) e gasto em anúncios no mesmo dia.</p>
+        <p class="ss-card__hint">
+          <% if @summary.shopify_report? %>
+            Vendas totais do relatório da Shopify (já sem descontos e devoluções, com frete) e gasto em anúncios no mesmo dia.
+          <% else %>
+            Valor dos pedidos (com frete, sem cancelados) e gasto em anúncios no mesmo dia.
+          <% end %>
+        </p>
         <div id="ss-revenue-chart"></div>
         <details class="ss-table-toggle">
           <summary>Ver como tabela</summary>
@@ -97,7 +103,14 @@
       <div class="crm-card ss-card">
         <div class="ss-card__title">Resultado do período</div>
         <dl class="ss-result">
-          <div><dt>Faturamento</dt><dd><%= brl.call(k[:revenue][:value]) %></dd></div>
+          <% if (b = @summary.revenue_breakdown) %>
+            <div><dt>Bruto</dt><dd><%= brl.call(b[:gross]) %></dd></div>
+            <div><dt>Descontos</dt><dd>− <%= brl.call(b[:discounts]) %></dd></div>
+            <div><dt>Devoluções</dt><dd>− <%= brl.call(b[:returns]) %></dd></div>
+            <div><dt>Frete</dt><dd>+ <%= brl.call(b[:shipping]) %></dd></div>
+            <% if b[:taxes].positive? %><div><dt>Impostos</dt><dd>+ <%= brl.call(b[:taxes]) %></dd></div><% end %>
+          <% end %>
+          <div class="ss-result__total"><dt>Faturamento</dt><dd><%= brl.call(k[:revenue][:value]) %></dd></div>
           <% @summary.ad_cost_by_platform.each do |platform, cost| %>
             <div><dt>Anúncios · <%= platform %></dt><dd>− <%= brl.call(cost) %></dd></div>
           <% end %>

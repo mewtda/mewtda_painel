@@ -33,6 +33,30 @@ class Sales::SiteSummaryTest < ActiveSupport::TestCase
     assert_in_delta 10.0, summary.daily.last[:ad_cost]
   end
 
+  test 'uses the Shopify sales report (with returns) when available' do
+    fake = Object.new
+    def fake.rows(query)
+      if query.include?('GROUP BY day')
+        [{ 'day' => '2026-10-02', 'total_sales' => '120.5', 'orders' => '2' }]
+      elsif query.include?('SINCE 2026-10-01')
+        [{ 'total_sales' => '373854.23', 'gross_sales' => '490593.9', 'discounts' => '-61126.01',
+           'returns' => '-66092.24', 'shipping_charges' => '10478.58', 'taxes' => '0', 'orders' => '805' }]
+      else
+        []
+      end
+    end
+    order(at: Time.zone.local(2026, 10, 5, 12), subtotal: 999)
+
+    summary = Sales::SiteSummary.new(client: @client, from: '2026-10-01', to: '2026-10-31', report: fake)
+
+    assert summary.shopify_report?
+    assert_in_delta 373_854.23, summary.kpis[:revenue][:value]
+    assert_equal 805, summary.kpis[:orders][:value]
+    assert_in_delta 66_092.24, summary.revenue_breakdown[:returns]
+    assert_in_delta 120.5, summary.daily.find { |d| d[:date] == Date.new(2026, 10, 2) }[:revenue]
+    assert_equal 0, summary.daily.find { |d| d[:date] == Date.new(2026, 10, 5) }[:orders]
+  end
+
   test 'accepts a custom range and ignores invalid dates' do
     summary = Sales::SiteSummary.new(client: @client, from: (@today - 2).iso8601, to: @today.iso8601)
     assert_equal 3, summary.days.size

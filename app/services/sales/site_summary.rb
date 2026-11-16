@@ -1,9 +1,11 @@
 module Sales
   # Resumo do site (tela inicial do CRM): vendas da Shopify x investimento em
   # anúncios num período, comparado com o período anterior de mesmo tamanho.
-  # Mesmas bases do Dashboard metas: faturamento = subtotal (já com descontos)
-  # + frete dos pedidos não cancelados; investimento = custos de anúncio
-  # cadastrados/sincronizados, distribuídos igualmente pelos dias que cobrem.
+  # Mesmas bases do Dashboard metas: com o relatório da Shopify, faturamento =
+  # vendas totais (bruto − descontos − devoluções + frete + impostos), igual ao
+  # admin da loja; sem ele, subtotal (já com descontos) + frete dos pedidos não
+  # cancelados. Investimento = custos de anúncio cadastrados/sincronizados,
+  # distribuídos igualmente pelos dias que cobrem.
   class SiteSummary
     PRESETS = {
       'hoje' => 'Hoje', 'ontem' => 'Ontem', '7' => '7 dias', '14' => '14 dias', '30' => '30 dias',
@@ -35,9 +37,25 @@ module Sales
       nil
     end
 
-    def initialize(client:, preset: nil, from: nil, to: nil)
+    def initialize(client:, preset: nil, from: nil, to: nil, report: nil)
       @client = client
       @from, @to, @preset = self.class.period_for(preset, from: from, to: to)
+      @report = report || ShopifyReport.new(client: client)
+    end
+
+    # true quando os números vieram do relatório da Shopify.
+    def shopify_report?
+      !report_totals(from..to).nil?
+    end
+
+    # Caminho do faturamento como no admin da Shopify, ou nil sem o relatório.
+    def revenue_breakdown
+      row = report_totals(from..to)
+      return unless row
+
+      { gross: money(row['gross_sales']), discounts: money(row['discounts']).abs,
+        returns: money(row['returns']).abs, shipping: money(row['shipping_charges']),
+        taxes: money(row['taxes']), total: money(row['total_sales']) }
     end
 
     def days
@@ -61,7 +79,7 @@ module Sales
 
     def daily
       @daily ||= begin
-        orders = order_totals_by_day(from..to)
+        orders = report_daily(from..to) || order_totals_by_day(from..to)
         ads = ad_cost_by_day(from..to)
         days.map do |day|
           entry = orders[day] || { revenue: 0.0, orders: 0 }
@@ -101,9 +119,14 @@ module Sales
     private
 
     def totals(range)
-      scope = orders_scope(range)
-      revenue = scope.sum(Arel.sql('COALESCE(subtotal_price, 0) + COALESCE(total_shipping_price, 0)')).to_f.round(2)
-      orders = scope.count
+      if (row = report_totals(range))
+        revenue = money(row['total_sales']).round(2)
+        orders = row['orders'].to_i
+      else
+        scope = orders_scope(range)
+        revenue = scope.sum(Arel.sql('COALESCE(subtotal_price, 0) + COALESCE(total_shipping_price, 0)')).to_f.round(2)
+        orders = scope.count
+      end
       ad_cost = ad_cost_by_day(range).values.sum.round(2)
 
       { revenue: revenue, orders: orders,
@@ -111,6 +134,32 @@ module Sales
         ad_cost: ad_cost,
         roas: ad_cost.positive? ? (revenue / ad_cost).round(2) : nil,
         cpa: ad_cost.positive? && orders.positive? ? (ad_cost / orders).round(2) : nil }
+    end
+
+    def report_totals(range)
+      @report_totals ||= {}
+      return @report_totals[range] if @report_totals.key?(range)
+
+      @report_totals[range] = @report.rows(
+        'FROM sales SHOW total_sales, gross_sales, discounts, returns, shipping_charges, taxes, orders ' \
+        "WITH #{ShopifyReport::WITH_OPTIONS} #{ShopifyReport.range(range.first, range.last)}"
+      )&.first
+    end
+
+    def report_daily(range)
+      rows = @report.rows(
+        "FROM sales SHOW total_sales, orders GROUP BY day WITH #{ShopifyReport::WITH_OPTIONS} " \
+        "#{ShopifyReport.range(range.first, range.last)} ORDER BY day ASC"
+      )
+      return if rows.nil?
+
+      rows.to_h { |row| [Date.iso8601(row['day'].to_s[0, 10]), { revenue: money(row['total_sales']), orders: row['orders'].to_i }] }
+    rescue ArgumentError
+      nil
+    end
+
+    def money(value)
+      BigDecimal(value.to_s.presence || '0').to_f
     end
 
     def orders_scope(range)

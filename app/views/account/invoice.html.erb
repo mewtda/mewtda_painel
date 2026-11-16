@@ -65,6 +65,20 @@
       </div>
     <% end %>
 
+    <div class="invoice-secure">
+      <% if landing_image?('logos/asaas.svg') %>
+        <%= image_tag 'logos/asaas.svg', alt: 'Asaas', class: 'invoice-secure__logo' %>
+      <% else %>
+        <span class="invoice-secure__brand">asaas</span>
+      <% end %>
+      <p class="invoice-secure__text">
+        <i class="fa-solid fa-lock"></i>
+        A cobrança desta fatura é gerada e processada com segurança pelo <strong>Asaas</strong>.
+        O pagamento por Pix, boleto ou cartão acontece no ambiente do Asaas: a Mewtda não vê nem guarda
+        os dados do seu cartão ou da sua conta.
+      </p>
+    </div>
+
     <p class="invoice-card__note">
       <i class="fa-brands fa-whatsapp"></i>
       As mensagens de WhatsApp são cobradas diretamente pela Meta na sua conta e não entram nesta fatura.

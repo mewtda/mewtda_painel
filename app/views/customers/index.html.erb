@@ -104,7 +104,7 @@
                 <%= avatar_tag(p.name, class: 'customers-avatar') %>
                 <span><%= p.name.presence || 'Sem nome' %></span>
               </td>
-              <td class="cx-nowrap"><%= format_phone(p.phone) %></td>
+              <td class="cx-nowrap"><%= phone_link(p.phone) %></td>
               <td class="cx-nowrap">
                 <%= p.last_order_at ? l(p.last_order_at.to_date, format: '%d/%m/%Y') : '—' %>
                 <% if (days = p.days_since_last_order) %><small class="cx-muted">há <%= days %>d</small><% end %>

@@ -25,6 +25,8 @@
   background: var(--primary-tint);
 }
 
+.crm-table tbody tr:hover:has(> td[colspan]) { background: transparent; }
+
 .crm-table tbody tr:hover .crm-btn:not(:hover):not(.crm-btn--primary):not(.crm-btn--danger):not(.clients-btn--danger):not(.clients-btn--success):not(.orders-btn--export) {
   background: var(--bg);
   border-color: var(--outline-strong);

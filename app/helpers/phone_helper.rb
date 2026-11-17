@@ -9,4 +9,12 @@ module PhoneHelper
 
     "(#{digits[0, 2]}) #{digits[2...-4]}-#{digits[-4..]}"
   end
+
+  def phone_link(phone)
+    return tag.span('—', class: 'cx-muted') if phone.blank?
+
+    link_to "tel:#{phone}", class: 'phone-link' do
+      safe_join([tag.i(class: 'fa-solid fa-phone'), format_phone(phone)], ' ')
+    end
+  end
 end

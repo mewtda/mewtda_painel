@@ -20,8 +20,4 @@
 .profiles-page__empty { text-align: center; color: var(--fg-alt); padding: 3rem !important; }
 .profiles-page__table-wrap tfoot td { color: var(--fg-alt); font-size: 0.8rem; }
 
-.profiles-page__pagination { display: flex; list-style: none; gap: 0.4rem; padding: 1rem 1.5rem; margin: 0; justify-content: center; }
-.profiles-page__pagination li a, .profiles-page__pagination li span { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 0.5rem; border-radius: var(--radius); font-size: 0.82rem; font-weight: 500; border: 1px solid var(--outline); color: var(--fg); text-decoration: none; transition: all 0.15s; }
-.profiles-page__pagination li.current span { background: var(--primary); color: #fff; border-color: var(--primary); }
-.profiles-page__pagination li a:hover { background: var(--primary-tint); border-color: var(--primary); }
 

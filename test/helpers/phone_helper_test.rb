@@ -13,4 +13,14 @@ class PhoneHelperTest < ActionView::TestCase
     assert_equal '—', format_phone(nil)
     assert_equal '—', format_phone('')
   end
+
+  test 'phone_link renders a tel link with the mask and a muted dash when blank' do
+    link = phone_link('+5531994250086')
+
+    assert_includes link, 'href="tel:+5531994250086"'
+    assert_includes link, '(31) 99425-0086'
+    assert_includes link, 'fa-phone'
+    assert_includes phone_link(nil), 'cx-muted'
+    assert_not_includes phone_link(''), '<a'
+  end
 end

@@ -57,7 +57,7 @@
                 </div>
               </div>
             </td>
-            <td><%= format_phone(checkout.phone) %></td>
+            <td><%= phone_link(checkout.phone) %></td>
             <td><%= checkout.total_price.present? ? currency(checkout.total_price) : '—' %></td>
             <td>
               <% if checkout.checkout_created_at.present? %>
@@ -129,7 +129,7 @@
       <% end %>
     </table>
 
-    <%= will_paginate @checkouts, list_classes: %w[campaign-show-pagination] rescue nil %>
+    <%= will_paginate @checkouts rescue nil %>
   </div>
 
 </div>

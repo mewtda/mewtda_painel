@@ -54,7 +54,7 @@
           <tr>
             <td><%= submission.name %></td>
             <td><%= submission.email %></td>
-            <td><%= format_phone(submission.phone) %></td>
+            <td><%= phone_link(submission.phone) %></td>
             <td>
               <% if submission.status == 'success' %>
                 <span class="crm-tag crm-tag--success">Sucesso</span>

@@ -57,7 +57,7 @@
                 </div>
               </div>
             </td>
-            <td><%= checkout.phone %></td>
+            <td><%= format_phone(checkout.phone) %></td>
             <td><%= checkout.total_price.present? ? currency(checkout.total_price) : '—' %></td>
             <td>
               <% if checkout.checkout_created_at.present? %>

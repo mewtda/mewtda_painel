@@ -34,8 +34,8 @@
 .orders-btn--export:hover { opacity: 0.88; }
 
 .orders-btn-detail {
-  background: transparent;
-  border-color: var(--outline);
+  background: var(--bg);
+  border-color: var(--outline-strong);
   color: var(--primary);
 }
 

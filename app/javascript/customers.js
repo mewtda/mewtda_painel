@@ -62,7 +62,7 @@
         number.target = "_blank";
         number.rel = "noopener";
       }
-      summary.append(number, el("span", "cx-muted", order.date || "—"), el("span", "cx-muted", `${order.items_count} item(s)`));
+      summary.append(el("i", "fa-solid fa-chevron-right cx-order__arrow"), number, el("span", "cx-muted", order.date || "—"), el("span", "cx-muted", `${order.items_count} item(s)`));
       if (order.coupon) summary.append(el("span", "crm-tag crm-tag--warning", order.coupon));
       summary.append(el("strong", "cx-order__total", brl(order.total)));
       card.appendChild(summary);
@@ -86,21 +86,30 @@
     });
   };
 
+  const setLoading = (node, text, spinning) => {
+    node.replaceChildren();
+    if (spinning) node.append(el("i", "fa-solid fa-circle-notch fa-spin"), " ");
+    node.append(text);
+  };
+
   const open = async (id) => {
     drawer.classList.add("is-open");
     drawer.setAttribute("aria-hidden", "false");
     overlay.hidden = false;
     const loading = $("[data-loading]", drawer);
     loading.hidden = false;
-    loading.textContent = "Carregando…";
+    setLoading(loading, "Carregando…", true);
     $("[data-content]", drawer).hidden = true;
+    field("initials").textContent = "";
     field("name").textContent = "";
     field("rfm").replaceChildren();
     try {
       const response = await fetch(`/crm/customers/${encodeURIComponent(id)}/details`, { headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error("load");
       const { customer: c, orders, shopify_store: store } = await response.json();
-      field("initials").textContent = (c.name || "?").split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase();
+      const avatar = field("initials");
+      avatar.className = `customers-avatar cx-drawer__avatar avatar avatar--tone-${c.avatar_tone}`;
+      avatar.textContent = c.initials;
       field("name").textContent = c.name || "Sem nome";
       if (c.rfm) {
         const tag = el("span", "rfm-tag", c.rfm);
@@ -122,7 +131,7 @@
       loading.hidden = true;
       $("[data-content]", drawer).hidden = false;
     } catch (error) {
-      loading.textContent = "Não foi possível carregar o cliente.";
+      setLoading(loading, "Não foi possível carregar o cliente.", false);
     }
   };
 

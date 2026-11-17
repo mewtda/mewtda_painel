@@ -47,7 +47,7 @@
     <div class="aff-info-card__meta">
       <div class="aff-info-card__meta-item">
         <span class="aff-info-card__meta-label">Telefone</span>
-        <span class="aff-info-card__meta-value"><%= @affiliate.phone.presence || '-' %></span>
+        <span class="aff-info-card__meta-value"><%= format_phone(@affiliate.phone) %></span>
       </div>
       <div class="aff-info-card__meta-item">
         <span class="aff-info-card__meta-label">Cadastrado em</span>

@@ -65,7 +65,8 @@ class CustomersController < ApplicationController
     render json: {
       shopify_store: @client.shopify_admin_handle,
       customer: {
-        id: customer.id, name: profile.name || 'Sem nome', email: profile.email, phone: profile.phone,
+        id: customer.id, name: profile.name || 'Sem nome', email: profile.email, phone: helpers.format_phone(profile.phone),
+        initials: helpers.avatar_initials(profile.name), avatar_tone: helpers.avatar_tone(profile.name),
         shopify_id: customer.shopify_customer_id, city: [profile.city, profile.state].compact.join(' / ').presence,
         created_at: customer.created_at.strftime('%d/%m/%Y %H:%M'),
         rfm: profile.rfm_label, rfm_color: profile.rfm_color,

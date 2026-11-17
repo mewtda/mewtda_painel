@@ -5,9 +5,10 @@
   font-weight: 600;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
+  white-space: nowrap;
 }
 
-.crm-tag > i:first-child { margin-right: 0.35rem; }
+.crm-tag > i:first-child, .crm-tag > svg:first-child { margin-right: 0.35rem; }
 
 .crm-tag--success { background: var(--success-bg); color: var(--success-fg); }
 .crm-tag--danger  { background: var(--danger-bg); color: var(--danger-fg); }

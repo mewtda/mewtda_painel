@@ -1,5 +1,5 @@
 // Resumo do site (tela inicial do CRM).
-.ss-page { display: flex; flex-direction: column; gap: 20px; }
+.ss-page { display: flex; flex-direction: column; gap: 20px; padding: 24px 28px; }
 .ss-header__crumb { font-size: 12px; color: var(--fg-alt); }
 .ss-header__title { margin: 2px 0 0; font-size: 22px; font-weight: 700; color: var(--fg); }
 .ss-empty { padding: 24px; color: var(--fg-alt); }

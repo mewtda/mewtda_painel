@@ -37,12 +37,7 @@ module BackInStockHelper
     number_to_currency(value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n')
   end
 
-  def back_in_stock_phone(phone)
-    return '—' if phone.blank?
-    return phone unless phone.start_with?('+55')
-
-    number_to_phone(phone.delete_prefix('+55'), area_code: true, pattern: /(\d{2})(\d{4,5})(\d{4})$/)
-  end
+  def back_in_stock_phone(phone) = format_phone(phone)
 
   def back_in_stock_product_url(client, handle)
     "#{client.storefront_url}/products/#{handle}"

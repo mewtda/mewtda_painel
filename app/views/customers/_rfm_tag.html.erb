@@ -1,5 +1,5 @@
 <% if segment.present? %>
   <span class="rfm-tag" style="--rfm: <%= CustomerProfile::RFM_SEGMENTS.dig(segment, :color) %>"><%= CustomerProfile.rfm_label(segment) %></span>
 <% else %>
-  <span class="crm-tag crm-tag--neutral">—</span>
+  <span class="cx-muted">—</span>
 <% end %>

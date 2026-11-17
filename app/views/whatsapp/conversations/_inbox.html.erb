@@ -29,7 +29,7 @@
       <button type="button" role="tab" class="wa-number-tab" data-id="<%= c.id %>" aria-selected="false">
         <span class="wa-number-dot<%= ' is-on' if c.connected? %>" title="<%= c.connected? ? 'Conectado' : 'Desconectado' %>"></span>
         <span class="wa-number-name"><i class="fab fa-whatsapp"></i><%= c.name %></span>
-        <small><%= c.phone.presence || 'sem telefone' %></small>
+        <small><%= c.phone.present? ? format_phone(c.phone) : 'sem telefone' %></small>
         <span class="wa-number-count" hidden></span>
       </button>
     <% end %>

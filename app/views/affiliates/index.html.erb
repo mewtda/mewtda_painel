@@ -29,7 +29,7 @@
           <label class="crm-label">Status</label>
           <%= select_tag :status,
               options_for_select([['Todos', ''], ['Ativos', 'active'], ['Inativos', 'inactive']], params[:status]),
-              class: 'crm-input affiliates-filters__input--select' %>
+              class: 'crm-input', data: { custom_select: true } %>
         </div>
         <div class="affiliates-filters__actions">
           <%= button_tag class: 'crm-btn crm-btn--primary', name: '' do %>
@@ -107,7 +107,7 @@
               <span class="affiliates-table__email"><%= affiliate.email %></span>
             </td>
             <td>
-              <span class="affiliates-table__phone"><%= affiliate.phone.present? ? affiliate.phone : '-' %></span>
+              <span class="affiliates-table__phone"><%= format_phone(affiliate.phone) %></span>
             </td>
             <td>
               <% if affiliate.utm_code.present? %>

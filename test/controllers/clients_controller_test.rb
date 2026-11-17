@@ -13,6 +13,27 @@ class ClientsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test 'the new client page opens and asks to save before adding WhatsApp numbers' do
+    sign_in build_admin
+
+    get new_client_path
+
+    assert_response :success
+    assert_select '#wan-section[data-base=""]'
+    assert_match 'Salve o cliente para adicionar números', response.body
+  end
+
+  test 'the edit page points the WhatsApp numbers to the client connections' do
+    client = Client.create!(name: 'Loja Teste', email: "loja-#{SecureRandom.hex(4)}@example.com")
+    sign_in build_admin
+
+    get edit_client_path(client)
+
+    assert_response :success
+    assert_select "#wan-section[data-base='#{client_whatsapp_connections_path(client)}']"
+    assert_select '#wan-add'
+  end
+
   test 'admin can set Meta/Google Ads fields' do
     admin = build_admin
     client = Client.create!(name: 'Loja Teste', email: "loja-#{SecureRandom.hex(4)}@example.com")

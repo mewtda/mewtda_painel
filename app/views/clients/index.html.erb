@@ -14,13 +14,11 @@
           <label class="crm-label">Status</label>
           <%= select_tag :status,
               options_for_select([['Todos', ''], ['Ativos', 'active'], ['Inativos', 'inactive']], params[:status]),
-              class: 'crm-input clients-filters__input--select' %>
+              class: 'crm-input', data: { custom_select: true } %>
         </div>
         <div class="clients-filters__actions">
           <%= button_tag class: 'crm-btn crm-btn--primary', name: '' do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
+            <i class="fa-solid fa-magnifying-glass"></i>
             Filtrar
           <% end %>
           <%= link_to clients_path, class: 'crm-btn crm-btn--secondary' do %>
@@ -142,7 +140,7 @@
       </tfoot>
     </table>
 
-    <%= will_paginate @clients, list_classes: %w[clients-pagination] rescue nil %>
+    <%= will_paginate @clients rescue nil %>
   </div>
 
 </div>

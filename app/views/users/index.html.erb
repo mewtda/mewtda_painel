@@ -12,9 +12,7 @@
         </div>
         <div class="users-page__filters-actions">
           <%= button_tag class: 'crm-btn crm-btn--secondary', name: '' do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
+            <i class="fa-solid fa-magnifying-glass"></i>
             Filtrar
           <% end %>
           <%= link_to users_path, class: 'crm-btn crm-btn--secondary' do %>
@@ -60,11 +58,10 @@
       </thead>
       <tbody>
         <% @users.each do |user| %>
-          <% initials = user.name.to_s.split(' ').first(2).map { |w| w[0] }.join.upcase %>
           <tr>
             <td>
               <div class="users-page__user">
-                <div class="users-page__avatar"><%= initials.presence || '?' %></div>
+                <%= avatar_tag(user.name, class: 'users-page__avatar') %>
                 <div>
                   <div class="users-page__name"><%= user.name %></div>
                   <div class="users-page__id">ID #<%= user.id %></div>
@@ -126,7 +123,7 @@
       </tfoot>
     </table>
 
-    <%= will_paginate @users, list_classes: %w[users-page__pagination] %>
+    <%= will_paginate @users %>
   </div>
 
 </div>

@@ -29,13 +29,11 @@
           <label class="crm-label">Status</label>
           <%= select_tag :status,
               options_for_select([['Todos', ''], ['Ativos', 'active'], ['Inativos', 'inactive']], params[:status]),
-              class: 'crm-input affiliates-filters__input--select' %>
+              class: 'crm-input', data: { custom_select: true } %>
         </div>
         <div class="affiliates-filters__actions">
-          <%= button_tag class: 'crm-btn crm-btn--primary', name: '' do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
+          <%= button_tag class: 'crm-btn crm-btn--secondary', name: '' do %>
+            <i class="fa-solid fa-magnifying-glass"></i>
             Filtrar
           <% end %>
           <%= link_to affiliates_path, class: 'crm-btn crm-btn--secondary' do %>
@@ -51,7 +49,7 @@
             </svg>
             Configurar Afiliados
           <% end %>
-          <%= link_to new_affiliate_path, class: 'crm-btn affiliates-btn--success' do %>
+          <%= link_to new_affiliate_path, class: 'crm-btn crm-btn--primary' do %>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
@@ -61,12 +59,6 @@
       </div>
     </div>
   <% end %>
-
-  <%# Info do Cliente %>
-  <div class="affiliates-client-info">
-    <span class="affiliates-client-info__label">Cliente:</span>
-    <span class="affiliates-client-info__name"><%= current_client.name %></span>
-  </div>
 
   <%# Tabela %>
   <div class="affiliates-table-wrap">
@@ -107,7 +99,7 @@
               <span class="affiliates-table__email"><%= affiliate.email %></span>
             </td>
             <td>
-              <span class="affiliates-table__phone"><%= affiliate.phone.present? ? affiliate.phone : '-' %></span>
+              <%= phone_link(affiliate.phone) %>
             </td>
             <td>
               <% if affiliate.utm_code.present? %>
@@ -179,15 +171,7 @@
         <% if @affiliates.empty? %>
           <tr>
             <td colspan="9" class="affiliates-table__empty">
-              <div class="affiliates-table__empty-content">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                </svg>
-                <p>Nenhum afiliado encontrado.</p>
-                <%= link_to new_affiliate_path, class: 'crm-btn crm-btn--primary' do %>
-                  Cadastrar primeiro afiliado
-                <% end %>
-              </div>
+              Nenhum afiliado encontrado.
             </td>
           </tr>
         <% end %>
@@ -201,7 +185,7 @@
       <% end %>
     </table>
 
-    <%= will_paginate @affiliates, list_classes: %w[affiliates-pagination] rescue nil %>
+    <%= will_paginate @affiliates rescue nil %>
   </div>
 
 </div>

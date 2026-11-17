@@ -1,7 +1,7 @@
 <div class="cx-drawer-overlay" id="cx-drawer-overlay" hidden></div>
 <aside class="cx-drawer" id="cx-drawer" aria-hidden="true" aria-label="Detalhes do cliente">
   <div class="cx-drawer__head">
-    <div class="customers-avatar cx-drawer__avatar" data-field="initials"></div>
+    <div class="customers-avatar cx-drawer__avatar avatar" data-field="initials"></div>
     <div class="cx-drawer__title">
       <h2 data-field="name"></h2>
       <div class="cx-drawer__rfm" data-field="rfm"></div>
@@ -19,11 +19,11 @@
         <div><span>Última compra</span><strong data-field="last_order_at"></strong><small data-field="days_since"></small></div>
       </div>
       <dl class="cx-drawer__info">
-        <dt>E-mail</dt><dd data-field="email"></dd>
-        <dt>Telefone</dt><dd data-field="phone"></dd>
-        <dt>Cidade</dt><dd data-field="city"></dd>
-        <dt>Primeira compra</dt><dd data-field="first_order_at"></dd>
-        <dt>Listas</dt><dd data-field="lists"></dd>
+        <div><dt>E-mail</dt><dd data-field="email"></dd></div>
+        <div><dt>Telefone</dt><dd data-field="phone"></dd></div>
+        <div><dt>Cidade</dt><dd data-field="city"></dd></div>
+        <div><dt>Primeira compra</dt><dd data-field="first_order_at"></dd></div>
+        <div><dt>Listas</dt><dd data-field="lists"></dd></div>
       </dl>
       <h3 class="cx-drawer__section">Pedidos</h3>
       <div class="cx-drawer__orders" data-orders></div>

@@ -23,7 +23,7 @@
           <label class="crm-label">Status</label>
           <%= select_tag :status,
               options_for_select([['Todos', ''], ['Sucesso', 'success'], ['Erro Shopify', 'shopify_error']], @status_filter),
-              class: 'crm-input clients-filters__input--select' %>
+              class: 'crm-input', data: { custom_select: true } %>
         </div>
         <div class="clients-filters__actions">
           <%= button_tag class: 'crm-btn crm-btn--primary', name: '' do %>
@@ -54,7 +54,7 @@
           <tr>
             <td><%= submission.name %></td>
             <td><%= submission.email %></td>
-            <td><%= submission.phone.presence || '—' %></td>
+            <td><%= phone_link(submission.phone) %></td>
             <td>
               <% if submission.status == 'success' %>
                 <span class="crm-tag crm-tag--success">Sucesso</span>

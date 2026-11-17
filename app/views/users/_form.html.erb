@@ -4,11 +4,15 @@
     <div class="crm-card users-form-page__card">
 
       <div class="users-form-page__header">
+        <% if user.persisted? %>
+          <%= avatar_tag(user.name, class: 'users-form-page__avatar') %>
+        <% else %>
         <div class="users-form-page__header-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
           </svg>
         </div>
+        <% end %>
         <div>
           <h2 class="users-form-page__title"><%= user.new_record? ? 'Criar Usuário' : 'Editar Usuário' %></h2>
           <p class="users-form-page__subtitle">Informações do usuário</p>
@@ -63,13 +67,13 @@
             <%= form.label :profile_id, 'Perfil', class: 'crm-label' %>
             <%= form.collection_select :profile_id, @profiles || [], :id, :name,
                 { include_blank: 'Selecione um perfil' },
-                { class: 'crm-input users-form-page__select' } %>
+                { class: 'crm-input crm-select-block', data: { custom_select: true } } %>
           </div>
           <div class="users-form-page__field">
             <%= form.label :client_id, 'Cliente', class: 'crm-label' %>
             <%= form.collection_select :client_id, @clients || [], :id, :name,
                 { include_blank: 'Selecione um cliente' },
-                { class: 'crm-input users-form-page__select' } %>
+                { class: 'crm-input crm-select-block', data: { custom_select: true } } %>
           </div>
         </div>
 

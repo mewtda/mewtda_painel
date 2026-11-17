@@ -21,10 +21,6 @@
 .users-page__empty-field { color: var(--fg-alt); font-size: 0.875rem; }
 .users-page__empty { text-align: center; color: var(--fg-alt); padding: 3rem !important; }
 
-.users-page__pagination { display: flex; list-style: none; gap: 0.4rem; padding: 1rem 1.5rem; margin: 0; justify-content: center; }
-.users-page__pagination li a, .users-page__pagination li span { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 0.5rem; border-radius: var(--radius); font-size: 0.82rem; font-weight: 500; border: 1px solid var(--outline); color: var(--fg); text-decoration: none; transition: all 0.15s; }
-.users-page__pagination li.current span { background: var(--primary); color: #fff; border-color: var(--primary); }
-.users-page__pagination li a:hover { background: var(--primary-tint); border-color: var(--primary); }
 
 .text-center { text-align: center; }
 
@@ -71,3 +67,15 @@
   .users-form-page__section { margin-top: 0; padding: 1rem; }
   .users-form-page__footer { padding: 1rem; }
 }
+
+.users-reset__hint { margin: 0; font-size: 0.85rem; }
+.users-reset__result p { margin: 0 0 0.75rem; font-size: 0.85rem; color: var(--fg-alt); }
+.users-reset__result strong { font-size: inherit; color: var(--fg); }
+.users-reset__code { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 1rem; border: 1px dashed var(--primary); border-radius: var(--radius); background: var(--primary-tint); }
+.users-reset__code code { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.04em; color: var(--fg); user-select: all; }
+.users-form-page__avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; flex-shrink: 0; }
+
+.users-form-page__hint { margin: 0; font-size: 0.78rem; color: var(--fg-alt); }
+.users-form-page__hint code { padding: 0.1rem 0.4rem; border-radius: 4px; background: var(--primary-tint); color: var(--primary); font-family: monospace; }
+.users-form-page__body > .users-form-page__section { margin-top: 0; display: flex; flex-direction: column; gap: 1rem; }
+.users-form-page__body > .users-form-page__section > .users-form-page__section-header { margin-bottom: 0; }

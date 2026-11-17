@@ -34,8 +34,8 @@
 .orders-btn--export:hover { opacity: 0.88; }
 
 .orders-btn-detail {
-  background: transparent;
-  border-color: var(--outline);
+  background: var(--bg);
+  border-color: var(--outline-strong);
   color: var(--primary);
 }
 
@@ -104,18 +104,6 @@
 }
 
 /* Telefone */
-.orders-table__phone {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  color: var(--fg-alt);
-  text-decoration: none;
-  font-size: 0.85rem;
-  white-space: nowrap;
-  transition: color 0.15s ease;
-}
-
-.orders-table__phone:hover { color: var(--primary); }
 
 /* Total */
 .orders-table__total {

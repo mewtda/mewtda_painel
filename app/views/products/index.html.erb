@@ -55,13 +55,13 @@
     <table class="crm-table">
       <thead>
         <tr>
-          <th>SKU</th>
+          <th class="text-center">SKU</th>
           <th>Nome do Produto</th>
           <th>Fornecedor</th>
           <th class="text-center">Variação 1</th>
           <th class="text-center">Variação 2</th>
-          <th class="text-right">Preço</th>
-          <th class="text-right">Preço Comparativo</th>
+          <th class="text-center">Preço</th>
+          <th class="text-center">Preço Comparativo</th>
           <th class="text-center">ID Shopify</th>
           <th class="text-center">Criado em</th>
         </tr>
@@ -74,7 +74,13 @@
         <% else %>
           <% @products.each do |product| %>
             <tr>
-              <td><span class="products-badge products-badge--sku"><%= product.sku %></span></td>
+              <td class="text-center">
+                <% if product.sku.present? %>
+                  <span class="products-badge products-badge--sku"><%= product.sku %></span>
+                <% else %>
+                  <span class="cx-muted">—</span>
+                <% end %>
+              </td>
               <td class="products-table__name">
                 <% if product.image_url.present? %>
                   <%= image_tag product.image_url, class: 'products-table__thumb', alt: product.shopify_product_name %>
@@ -87,38 +93,40 @@
                 <% end %>
                 <%= product.shopify_product_name %>
               </td>
-              <td><%= product.vendor %></td>
+              <td><%= product.vendor.presence || raw('<span class="cx-muted">—</span>') %></td>
               <td class="text-center">
                 <% if product.option1.present? %>
                   <span class="crm-tag crm-tag--success"><%= product.option1 %></span>
                 <% else %>
-                  <span class="crm-tag crm-tag--neutral">—</span>
+                  <span class="cx-muted">—</span>
                 <% end %>
               </td>
               <td class="text-center">
                 <% if product.option2.present? %>
                   <span class="crm-tag crm-tag--success"><%= product.option2 %></span>
                 <% else %>
-                  <span class="crm-tag crm-tag--neutral">—</span>
+                  <span class="cx-muted">—</span>
                 <% end %>
               </td>
-              <td class="text-right">
+              <td class="text-center">
                 <% if product.price.present? %>
                   R$ <%= number_with_precision(product.price, precision: 2, delimiter: '.', separator: ',') %>
                 <% else %>
-                  <span class="crm-tag crm-tag--neutral">—</span>
+                  <span class="cx-muted">—</span>
                 <% end %>
               </td>
-              <td class="text-right">
+              <td class="text-center">
                 <% if product.compare_at_price.present? %>
                   R$ <%= number_with_precision(product.compare_at_price, precision: 2, delimiter: '.', separator: ',') %>
                 <% else %>
-                  <span class="crm-tag crm-tag--neutral">—</span>
+                  <span class="cx-muted">—</span>
                 <% end %>
               </td>
               <td class="text-center">
                 <% if product.shopify_product_id.present? %>
                   <span class="products-badge products-badge--id"><%= product.shopify_product_id %></span>
+                <% else %>
+                  <span class="cx-muted">—</span>
                 <% end %>
               </td>
               <td class="text-center"><%= product.created_at.strftime('%d/%m/%Y %H:%M') %></td>

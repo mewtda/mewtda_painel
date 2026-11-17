@@ -79,13 +79,13 @@
                   ['Imagem à direita', 'template_3'],
                   ['Banner sem imagem', 'template_4']
                 ], form.object.template),
-                {}, class: 'crm-input' %>
+                {}, class: 'crm-input crm-select-block', data: { custom_select: true } %>
           </div>
           <div class="users-form-page__field">
             <%= form.label :size, 'Tamanho', class: 'crm-label' %>
             <%= form.select :size,
                 options_for_select([['Pequeno', 'small'], ['Médio', 'medium'], ['Grande', 'large']], form.object.size),
-                {}, class: 'crm-input' %>
+                {}, class: 'crm-input crm-select-block', data: { custom_select: true } %>
           </div>
         </div>
 

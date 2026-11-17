@@ -138,13 +138,11 @@
         <label>Status</label>
         <%= select_tag :action_status,
             options_for_select([['Todos', ''], ['Pendente', 'pending'], ['Enviado', 'sent'], ['Falhou', 'failed'], ['Cancelado', 'cancelled']], params[:action_status]),
-            class: 'campaign-show-filters__input campaign-show-filters__input--select' %>
+            class: 'crm-input', data: { custom_select: true } %>
       </div>
       <div class="campaign-show-filters__actions">
         <%= button_tag class: 'campaign-show-btn campaign-show-btn--primary', name: '' do %>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
+          <i class="fa-solid fa-magnifying-glass"></i>
           Filtrar
         <% end %>
         <%= link_to automation_actions_path(@automation), class: 'campaign-show-btn campaign-show-btn--secondary' do %>
@@ -291,7 +289,7 @@
       <% end %>
     </table>
 
-    <%= will_paginate @automation_actions, list_classes: %w[campaign-show-pagination] rescue nil %>
+    <%= will_paginate @automation_actions rescue nil %>
   </div>
 
 </div>

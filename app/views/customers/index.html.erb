@@ -101,10 +101,10 @@
             <tr class="cx-row" data-customer-id="<%= p.customer_id %>">
               <td class="cx-check"><input type="checkbox" name="customer_ids[]" value="<%= p.customer_id %>" form="cx-bulk-form" class="cx-row-check" aria-label="Selecionar"></td>
               <td class="cx-name">
-                <span class="customers-avatar"><%= p.name.to_s.split.first(2).map { |w| w[0] }.join.upcase.presence || '?' %></span>
+                <%= avatar_tag(p.name, class: 'customers-avatar') %>
                 <span><%= p.name.presence || 'Sem nome' %></span>
               </td>
-              <td class="cx-nowrap"><%= p.phone.presence || '—' %></td>
+              <td class="cx-nowrap"><%= phone_link(p.phone) %></td>
               <td class="cx-nowrap">
                 <%= p.last_order_at ? l(p.last_order_at.to_date, format: '%d/%m/%Y') : '—' %>
                 <% if (days = p.days_since_last_order) %><small class="cx-muted">há <%= days %>d</small><% end %>
@@ -119,7 +119,7 @@
                 <% if p.email.present? && @popup_emails.include?(p.email) %>
                   <span class="crm-tag crm-tag--success">Cadastrado</span>
                 <% else %>
-                  <span class="crm-tag crm-tag--neutral">—</span>
+                  <span class="cx-muted">—</span>
                 <% end %>
               </td>
             </tr>

@@ -1,102 +1,101 @@
-<%= form_for @affiliate, url: form_url, html: { class: 'affiliates-form', method: form_method } do |f| %>
+<%= form_for @affiliate, url: form_url, html: { autocomplete: 'off', method: form_method } do |f| %>
+  <div class="users-form-page">
+    <div class="crm-card users-form-page__card">
 
-  <div class="affiliates-form__card-header">
-    <div class="affiliates-form__card-header-icon">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-      </svg>
-    </div>
-    <div>
-      <h2 class="affiliates-form__card-title"><%= @affiliate.new_record? ? 'Novo Afiliado' : 'Editar Afiliado' %></h2>
-      <p class="affiliates-form__card-subtitle">Cliente: <%= current_client.name %></p>
-    </div>
-  </div>
-
-  <% if @affiliate.errors.any? %>
-    <div class="affiliates-form__errors">
-      <strong>Erros encontrados:</strong>
-      <ul>
-        <% @affiliate.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
+      <div class="users-form-page__header">
+        <% if @affiliate.persisted? %>
+          <%= avatar_tag(@affiliate.name, class: 'users-form-page__avatar') %>
+        <% else %>
+          <div class="users-form-page__header-icon"><i class="fa-solid fa-user-plus"></i></div>
         <% end %>
-      </ul>
-    </div>
-  <% end %>
-
-  <div class="affiliates-form__section">
-    <h2 class="affiliates-form__section-title">Informações Básicas</h2>
-    
-    <div class="affiliates-form__row">
-      <div class="affiliates-form__field">
-        <label for="user_name" class="crm-label">Nome *</label>
-        <%= f.text_field :name, class: 'crm-input', placeholder: 'Nome completo do afiliado', required: true %>
+        <div>
+          <h2 class="users-form-page__title"><%= @affiliate.new_record? ? 'Novo Afiliado' : 'Editar Afiliado' %></h2>
+          <p class="users-form-page__subtitle">Cliente: <%= current_client.name %><%= " · ID ##{@affiliate.id}" if @affiliate.persisted? %></p>
+        </div>
       </div>
-    </div>
 
-    <div class="affiliates-form__row affiliates-form__row--two">
-      <div class="affiliates-form__field">
-        <label for="user_email" class="crm-label">E-mail *</label>
-        <%= f.email_field :email, class: 'crm-input', placeholder: 'email@exemplo.com', required: true %>
-      </div>
-      <div class="affiliates-form__field">
-        <label for="user_phone" class="crm-label">Telefone</label>
-        <%= f.text_field :phone, class: 'crm-input', placeholder: '(00) 00000-0000' %>
-      </div>
-    </div>
-  </div>
-
-  <div class="affiliates-form__section">
-    <h2 class="affiliates-form__section-title">Código de Rastreamento</h2>
-    
-    <div class="affiliates-form__row">
-      <div class="affiliates-form__field">
-        <label for="user_utm_code" class="crm-label">Código UTM *</label>
-        <%= f.text_field :utm_code, class: 'crm-input', placeholder: 'codigo-unico-afiliado', required: true %>
-        <span class="affiliates-form__hint">
-          Este código será usado para rastrear as vendas do afiliado via <code>utm_affiliate=<%= @affiliate.utm_code.presence || 'codigo' %></code>. 
-          Use apenas letras minúsculas, números e hífens.
-        </span>
-      </div>
-    </div>
-
-    <div class="affiliates-form__row">
-      <div class="affiliates-form__field">
-        <label for="user_discount_code" class="crm-label">Cupom de Desconto</label>
-        <%= f.text_field :discount_code, class: 'crm-input', placeholder: 'Ex: AFILIADO10' %>
-        <span class="affiliates-form__hint">
-          Código de cupom exclusivo do afiliado. Será exibido no painel e pode ser divulgado pelo afiliado para seus clientes.
-          Use letras maiúsculas, números e hífens (ex: <code>JOAO10</code>, <code>PARCEIRO-20</code>).
-        </span>
-      </div>
-    </div>
-  </div>
-
-  <div class="affiliates-form__section">
-    <h2 class="affiliates-form__section-title"><%= @affiliate.new_record? ? 'Senha de Acesso' : 'Alterar Senha' %></h2>
-    <p class="affiliates-form__section-desc">
-      <% if @affiliate.new_record? %>
-        Defina uma senha para o afiliado acessar o sistema. Se deixar em branco, uma senha temporária será gerada.
-      <% else %>
-        Deixe em branco se não quiser alterar a senha.
+      <% if @affiliate.errors.any? %>
+        <div class="users-form-page__errors">
+          <div class="users-form-page__errors-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div>
+            <strong>Corrija os erros abaixo:</strong>
+            <ul>
+              <% @affiliate.errors.full_messages.each do |msg| %>
+                <li><%= msg %></li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
       <% end %>
-    </p>
-    
-    <div class="affiliates-form__row affiliates-form__row--two">
-      <div class="affiliates-form__field">
-        <label for="user_password" class="crm-label"><%= @affiliate.new_record? ? 'Senha' : 'Nova Senha' %></label>
-        <%= f.password_field :password, class: 'crm-input', placeholder: 'Mínimo 6 caracteres' %>
-      </div>
-      <div class="affiliates-form__field">
-        <label for="user_password_confirmation" class="crm-label">Confirmar Senha</label>
-        <%= f.password_field :password_confirmation, class: 'crm-input', placeholder: 'Repita a senha' %>
-      </div>
-    </div>
-  </div>
 
-  <div class="affiliates-form__actions">
-    <%= link_to affiliates_path, class: 'crm-btn crm-btn--secondary' do %>
-      Cancelar
-    <% end %>
-    <%= f.submit (@affiliate.new_record? ? 'Criar Afiliado' : 'Salvar Alterações'), class: "crm-btn #{@affiliate.new_record? ? 'affiliates-btn--success' : 'crm-btn--primary'}" %>
+      <div class="users-form-page__body">
+        <div class="users-form-page__section">
+          <div class="users-form-page__section-header"><i class="fa-solid fa-circle-info"></i> Informações básicas</div>
+          <div class="users-form-page__field">
+            <%= f.label :name, 'Nome *', class: 'crm-label' %>
+            <%= f.text_field :name, class: 'crm-input', placeholder: 'Nome completo do afiliado', required: true %>
+          </div>
+          <div class="users-form-page__row">
+            <div class="users-form-page__field">
+              <%= f.label :email, 'E-mail *', class: 'crm-label' %>
+              <%= f.email_field :email, class: 'crm-input', placeholder: 'email@exemplo.com', required: true %>
+            </div>
+            <div class="users-form-page__field">
+              <%= f.label :phone, 'Telefone', class: 'crm-label' %>
+              <%= f.telephone_field :phone, class: 'crm-input', placeholder: '(00) 00000-0000' %>
+            </div>
+          </div>
+        </div>
+        <div class="users-form-page__section">
+          <div class="users-form-page__section-header"><i class="fa-solid fa-link"></i> Código de rastreamento</div>
+          <div class="users-form-page__field">
+            <%= f.label :utm_code, 'Código UTM *', class: 'crm-label' %>
+            <%= f.text_field :utm_code, class: 'crm-input', placeholder: 'codigo-unico-afiliado', required: true %>
+            <span class="users-form-page__hint">
+              Este código será usado para rastrear as vendas do afiliado via <code>utm_affiliate=<%= @affiliate.utm_code.presence || 'codigo' %></code>.
+              Use apenas letras minúsculas, números e hífens.
+            </span>
+          </div>
+          <div class="users-form-page__field">
+            <%= f.label :discount_code, 'Cupom de desconto', class: 'crm-label' %>
+            <%= f.text_field :discount_code, class: 'crm-input', placeholder: 'Ex: AFILIADO10' %>
+            <span class="users-form-page__hint">
+              Código de cupom exclusivo do afiliado. Será exibido no painel e pode ser divulgado pelo afiliado para seus clientes.
+              Use letras maiúsculas, números e hífens (ex: <code>JOAO10</code>, <code>PARCEIRO-20</code>).
+            </span>
+          </div>
+        </div>
+        <div class="users-form-page__section">
+          <div class="users-form-page__section-header"><i class="fa-solid fa-lock"></i> <%= @affiliate.new_record? ? 'Senha de acesso' : 'Alterar senha' %></div>
+          <p class="users-form-page__hint">
+            <% if @affiliate.new_record? %>
+              Defina uma senha para o afiliado acessar o sistema. Se deixar em branco, uma senha temporária será gerada.
+            <% else %>
+              Deixe em branco se não quiser alterar a senha.
+            <% end %>
+          </p>
+          <div class="users-form-page__row">
+            <div class="users-form-page__field">
+              <%= f.label :password, (@affiliate.new_record? ? 'Senha' : 'Nova senha'), class: 'crm-label' %>
+              <%= f.password_field :password, class: 'crm-input', placeholder: 'Mínimo 6 caracteres', autocomplete: 'new-password' %>
+            </div>
+            <div class="users-form-page__field">
+              <%= f.label :password_confirmation, 'Confirmar senha', class: 'crm-label' %>
+              <%= f.password_field :password_confirmation, class: 'crm-input', placeholder: 'Repita a senha', autocomplete: 'new-password' %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="users-form-page__footer">
+        <%= link_to affiliates_path, class: 'crm-btn crm-btn--secondary' do %>
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        <% end %>
+        <%= f.button class: 'crm-btn crm-btn--primary', data: { disable_with: (@affiliate.new_record? ? 'Criando...' : 'Salvando...') } do %>
+          <i class="fa-solid fa-circle-check"></i> <%= @affiliate.new_record? ? 'Criar afiliado' : 'Salvar alterações' %>
+        <% end %>
+      </div>
+
+    </div>
   </div>
 <% end %>

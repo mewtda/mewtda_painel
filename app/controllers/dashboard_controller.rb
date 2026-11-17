@@ -7,7 +7,9 @@ class DashboardController < ApplicationController
   before_action :set_client
   before_action :load_form_references, only: [:index]
 
-  def index; end
+  def index
+    @insight = @client&.conversion_insights&.latest_first&.first
+  end
 
   def session_detail
     return render json: { error: 'Sem cliente' }, status: :unprocessable_entity unless @client

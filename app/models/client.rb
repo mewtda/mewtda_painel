@@ -16,6 +16,7 @@ class Client < ApplicationRecord
   has_many :segments, dependent: :destroy
   has_many :landing_pages, dependent: :destroy
   has_many :billing_charges, dependent: :destroy
+  has_many :conversion_insights, dependent: :destroy
   has_many :whatsapp_connections, class_name: 'Whatsapp::Connection', dependent: :restrict_with_exception
   has_one_attached :logo
 

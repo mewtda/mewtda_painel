@@ -1,9 +1,9 @@
 require 'sidekiq/web'
 
 Rails.application.routes.draw do
-  # A raiz abre o painel; a landing pública fica em /site.
-  root to: redirect('/crm')
-  get 'site', to: 'home#index', as: :landing
+  # A raiz abre a landing pública; o painel fica em /crm.
+  root to: 'home#index'
+  get 'site', to: redirect('/')
 
   # Páginas públicas de produto (mesma família visual da landing)
   get 'sua-loja',     to: 'home#sites', as: :sua_loja

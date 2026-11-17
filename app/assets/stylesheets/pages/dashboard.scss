@@ -692,3 +692,9 @@
 .db-funnel__step--worst { outline: 1px solid rgba(248, 113, 113, .5); border-radius: 12px; }
 .db-funnel__insight { margin: 18px 0 0; font-size: 13px; line-height: 1.5; opacity: .85; }
 
+// Insight semanal do Claude no topo do dashboard.
+.db-insight { margin: 0 0 20px; padding: 16px 20px; border-radius: 14px; border: 1px solid var(--border, #e5e7eb); background: var(--surface, #fff); }
+.db-insight__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+.db-insight__head i { color: #7c3aed; }
+.db-insight__date { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--fg-alt); }
+.db-insight__body { margin: 10px 0 0; font-size: 14px; line-height: 1.55; }

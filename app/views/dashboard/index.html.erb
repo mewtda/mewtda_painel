@@ -63,6 +63,16 @@
   </div>
 </div>
 
+<% if @insight %>
+  <div class="db-insight">
+    <div class="db-insight__head">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      Insight da semana · conversão do site
+      <span class="db-insight__date">semana de <%= l(@insight.week_start, format: '%d/%m') %> · últimos 7 dias do pixel</span>
+    </div>
+    <p class="db-insight__body"><%= @insight.body %></p>
+  </div>
+<% end %>
 
   <% if @empty_state %>
     <div class="db-card">

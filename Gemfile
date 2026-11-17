@@ -137,3 +137,5 @@ group :test do
   gem 'selenium-webdriver'
   gem 'webdrivers'
 end
+
+gem "anthropic", "~> 2.8"

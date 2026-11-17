@@ -57,17 +57,19 @@ class Sales::SiteSummaryTest < ActiveSupport::TestCase
     assert_equal 0, summary.daily.find { |d| d[:date] == Date.new(2026, 10, 5) }[:orders]
   end
 
-  test 'filters the Shopify report by the chosen sales channels' do
-    @client.update!(sales_channels: ['iGlu POS'])
+  test 'filters the Shopify report by the chosen locations' do
+    @client.update!(sales_locations: ['Atacado', 'Divinópolis'])
     queries = []
     fake = Object.new
     fake.define_singleton_method(:rows) { |q| queries << q; [] }
 
     Sales::SiteSummary.new(client: @client, preset: '7', report: fake).kpis
 
-    assert(queries.all? { |q| q.include?("WHERE sales_channel IN ('iGlu POS')") })
+    assert(queries.all? { |q| q.include?("WHERE pos_location_name IN ('Atacado', 'Divinópolis')") })
     assert_equal "WHERE (a) AND (b) ", Sales::ShopifyReport.where('a', nil, 'b')
-    assert_nil Sales::ShopifyReport.channel_condition(["x' OR 1"])
+    assert_nil Sales::ShopifyReport.location_condition(["x' OR 1"])
+    assert_equal "pos_location_name IN ('Dunas') OR pos_location_name IS NULL",
+                 Sales::ShopifyReport.location_condition(['Dunas', Sales::ShopifyReport::NO_LOCATION])
   end
 
   test 'accepts a custom range and ignores invalid dates' do

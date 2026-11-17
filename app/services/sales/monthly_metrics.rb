@@ -238,7 +238,7 @@ module Sales
 
         tag_condition = Sales::ShopifyReport.tag_condition(tags)
       end
-      where = Sales::ShopifyReport.where(tag_condition, Sales::ShopifyReport.channel_condition(client.sales_channels))
+      where = Sales::ShopifyReport.where(tag_condition, Sales::ShopifyReport.location_condition(client.sales_locations))
       query = 'FROM sales SHOW total_sales, gross_sales, discounts, returns, net_sales, shipping_charges, taxes, ' \
               "orders, average_order_value, new_customers #{where}WITH #{Sales::ShopifyReport::WITH_OPTIONS} " \
               "#{Sales::ShopifyReport.range(period.first, period.last)}"

@@ -137,22 +137,22 @@ class SalesDashboardController < ApplicationController
     render json: { error: 'Dia inválido.' }, status: :unprocessable_entity
   end
 
-  # Configuração "Canais considerados": quais canais de venda da Shopify entram
-  # nos números. Marcar todos (ou nenhum) = todos os canais.
-  def update_channels
+  # Configuração "Locations consideradas": de quais locations da Shopify vêm os
+  # pedidos dos números. Marcar todas (ou nenhuma) = todas as locations.
+  def update_locations
     return redirect_to sales_dashboard_path, alert: 'Nenhum cliente selecionado.' unless @client
 
-    available = Sales::ShopifyReport.new(client: @client).sales_channels
+    available = Sales::ShopifyReport.new(client: @client).sales_locations
     if available.nil?
       return redirect_to sales_dashboard_path(year: requested_year, month: requested_month),
                          alert: 'Relatório da Shopify indisponível para este cliente.'
     end
 
-    chosen = available & Array(params[:sales_channels]).map(&:to_s)
+    chosen = available & Array(params[:sales_locations]).map(&:to_s)
     chosen = [] if chosen.size == available.size
-    @client.update!(sales_channels: chosen)
+    @client.update!(sales_locations: chosen)
     redirect_to sales_dashboard_path(year: requested_year, month: requested_month),
-                notice: chosen.empty? ? 'Considerando todos os canais de venda.' : "Considerando: #{chosen.join(', ')}."
+                notice: chosen.empty? ? 'Considerando todas as locations.' : "Considerando: #{chosen.join(', ')}."
   end
 
   # Pedidos com devolução no mês (relatório da Shopify), para o modal do "− Devoluções".
@@ -187,7 +187,7 @@ class SalesDashboardController < ApplicationController
     @month = requested_month
     @tag = params[:tag].presence
 
-    @available_channels = (Sales::ShopifyReport.new(client: @client).sales_channels || []) | @client.sales_channels
+    @available_locations = (Sales::ShopifyReport.new(client: @client).sales_locations || []) | @client.sales_locations
     @metrics = Sales::MonthlyMetrics.new(client: @client, year: @year, month: @month, tag: @tag).call
     @daily = Sales::DailyBreakdown.new(client: @client, year: @year, month: @month).call
     @goal_daily = Sales::GoalDailyBreakdown.new(

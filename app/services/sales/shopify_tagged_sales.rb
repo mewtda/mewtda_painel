@@ -24,7 +24,7 @@ module Sales
 
     def shopifyql
       list = @tags.map { |t| "'#{t}'" }.join(', ')
-      where = ShopifyReport.where(ShopifyReport.tag_condition(@tags), ShopifyReport.channel_condition(@client.sales_channels))
+      where = ShopifyReport.where(ShopifyReport.tag_condition(@tags), ShopifyReport.location_condition(@client.sales_locations))
       "FROM sales SHOW total_sales, orders #{where}" \
         "GROUP BY order_tag WITH TOTALS, #{ShopifyReport::WITH_OPTIONS} HAVING order_tag IN (#{list}) " \
         "#{ShopifyReport.range(@from, @to)}"

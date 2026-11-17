@@ -142,13 +142,13 @@ module Sales
 
       @report_totals[range] = @report.rows(
         'FROM sales SHOW total_sales, gross_sales, discounts, returns, shipping_charges, taxes, orders ' \
-        "#{channel_where}WITH #{ShopifyReport::WITH_OPTIONS} #{ShopifyReport.range(range.first, range.last)}"
+        "#{location_where}WITH #{ShopifyReport::WITH_OPTIONS} #{ShopifyReport.range(range.first, range.last)}"
       )&.first
     end
 
     def report_daily(range)
       rows = @report.rows(
-        "FROM sales SHOW total_sales, orders #{channel_where}GROUP BY day WITH #{ShopifyReport::WITH_OPTIONS} " \
+        "FROM sales SHOW total_sales, orders #{location_where}GROUP BY day WITH #{ShopifyReport::WITH_OPTIONS} " \
         "#{ShopifyReport.range(range.first, range.last)} ORDER BY day ASC"
       )
       return if rows.nil?
@@ -162,8 +162,8 @@ module Sales
       BigDecimal(value.to_s.presence || '0').to_f
     end
 
-    def channel_where
-      ShopifyReport.where(ShopifyReport.channel_condition(client.sales_channels))
+    def location_where
+      ShopifyReport.where(ShopifyReport.location_condition(client.sales_locations))
     end
 
     def orders_scope(range)

@@ -46,24 +46,23 @@
     <% end %>
   </div>
 
-  <% if @client && !@empty_state && @available_channels.present? %>
-    <details class="sd-channels" <%= 'open' if params[:canais] %>>
+  <% if @client && !@empty_state && @available_locations.present? %>
+    <details class="sd-channels" <%= 'open' if params[:locations] %>>
       <summary>
         <i class="fa-solid fa-sliders"></i>
-        Canais considerados:
-        <strong><%= @client.sales_channels.empty? ? 'todos' : @client.sales_channels.join(', ') %></strong>
+        Locations consideradas:
+        <strong><%= @client.sales_locations.empty? ? 'todas' : @client.sales_locations.join(', ') %></strong>
       </summary>
-      <%= form_with url: channels_sales_dashboard_path(year: @year, month: @month), method: :patch, class: 'sd-channels__form', data: { turbo: false } do %>
+      <%= form_with url: locations_sales_dashboard_path(year: @year, month: @month), method: :patch, class: 'sd-channels__form', data: { turbo: false } do %>
         <p class="sd-channels__hint">
-          Escolha de quais canais de venda da Shopify (loja online, PDV, pedidos preliminares...) vêm os pedidos
-          deste painel e do Resumo do site. Os pedidos da Shopify não informam a location; o canal é o que separa,
-          por exemplo, a venda da loja física (PDV) da loja online.
+          Escolha de quais locations da Shopify (Dunas, Atacado, Divinópolis...) vêm os pedidos deste painel e do
+          Resumo do site. "<%= Sales::ShopifyReport::NO_LOCATION %>" são os pedidos sem location de PDV, como os da loja online.
         </p>
         <div class="sd-channels__options">
-          <% @available_channels.each do |channel| %>
+          <% @available_locations.each do |location| %>
             <label class="sd-channels__option">
-              <%= check_box_tag 'sales_channels[]', channel, @client.sales_channels.empty? || @client.sales_channels.include?(channel), id: "channel-#{channel.parameterize}" %>
-              <%= channel %>
+              <%= check_box_tag 'sales_locations[]', location, @client.sales_locations.empty? || @client.sales_locations.include?(location), id: "location-#{location.parameterize}" %>
+              <%= location %>
             </label>
           <% end %>
         </div>

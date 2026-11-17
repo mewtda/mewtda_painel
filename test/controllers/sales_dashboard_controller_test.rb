@@ -146,8 +146,8 @@ class SalesDashboardControllerTest < ActionDispatch::IntegrationTest
     def report.rows(query)
       query.start_with?('FROM sessions') ? [{ 'conversion_rate' => '0.01' }] : [{ 'total_sales' => '100', 'orders' => '1' }]
     end
-    def report.sales_channels
-      ['Online Store']
+    def report.sales_locations
+      ['Dunas']
     end
 
     Sales::ShopifyReport.stub(:new, report) do
@@ -186,18 +186,18 @@ class SalesDashboardControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_gateway
   end
 
-  test 'saves the sales channels considered, and all channels means no filter' do
+  test 'saves the locations considered, and all locations means no filter' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
     sign_in build_user(client: client)
-    channels = ['Online Store', 'iGlu POS']
+    locations = ['Dunas', 'Atacado', Sales::ShopifyReport::NO_LOCATION]
 
-    report = Struct.new(:sales_channels).new(channels)
+    report = Struct.new(:sales_locations).new(locations)
     Sales::ShopifyReport.stub(:new, report) do
-      patch channels_sales_dashboard_path, params: { sales_channels: ['iGlu POS', 'Hack\' OR 1'] }
-      assert_equal ['iGlu POS'], client.reload.sales_channels
+      patch locations_sales_dashboard_path, params: { sales_locations: ['Atacado', 'Hack\' OR 1'] }
+      assert_equal ['Atacado'], client.reload.sales_locations
 
-      patch channels_sales_dashboard_path, params: { sales_channels: channels }
-      assert_equal [], client.reload.sales_channels
+      patch locations_sales_dashboard_path, params: { sales_locations: locations }
+      assert_equal [], client.reload.sales_locations
     end
   end
 end

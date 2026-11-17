@@ -43,14 +43,20 @@ module Sales
       tags.map { |t| "order_tags CONTAINS '#{t}'" }.join(' OR ')
     end
 
-    CHANNEL_FORMAT = /\A[\p{L}\p{N} ._&()-]+\z/
+    LOCATION_FORMAT = /\A[\p{L}\p{N} ._&()\/-]+\z/
+    # Pedidos sem location de PDV (loja online, pedidos preliminares...).
+    NO_LOCATION = 'Sem location (loja online)'.freeze
 
-    # Filtro dos canais de venda escolhidos na configuração do cliente (nil = todos).
-    def self.channel_condition(channels)
-      list = Array(channels).map(&:to_s).select { |c| c.match?(CHANNEL_FORMAT) }.uniq
-      return if list.empty?
+    # Filtro das locations escolhidas na configuração do cliente (nil = todas).
+    def self.location_condition(locations)
+      list = Array(locations).map(&:to_s).uniq
+      named = list.select { |l| l != NO_LOCATION && l.match?(LOCATION_FORMAT) }
+      conditions = []
+      conditions << "pos_location_name IN (#{named.map { |l| "'#{l}'" }.join(', ')})" if named.any?
+      conditions << 'pos_location_name IS NULL' if list.include?(NO_LOCATION)
+      return if conditions.empty?
 
-      "sales_channel IN (#{list.map { |c| "'#{c}'" }.join(', ')})"
+      conditions.join(' OR ')
     end
 
     # "WHERE (a) AND (b) " com as condições que existirem, ou "".
@@ -63,11 +69,13 @@ module Sales
       "WHERE #{conditions.map { |c| "(#{c})" }.join(' AND ')} "
     end
 
-    # Canais de venda com pedidos no último ano, do que mais vende pro que menos vende.
-    def sales_channels
-      rows("FROM sales SHOW orders GROUP BY sales_channel WITH #{WITH_OPTIONS} SINCE -365d UNTIL today")
+    # Locations com pedidos no último ano, da que mais vende pra que menos vende.
+    # Pedidos sem location aparecem como NO_LOCATION.
+    def sales_locations
+      rows("FROM sales SHOW orders GROUP BY pos_location_name WITH #{WITH_OPTIONS} SINCE -365d UNTIL today")
         &.sort_by { |row| -row['orders'].to_i }
-        &.filter_map { |row| row['sales_channel'].presence }
+        &.map { |row| row['pos_location_name'].presence || NO_LOCATION }
+        &.uniq
     end
 
     private

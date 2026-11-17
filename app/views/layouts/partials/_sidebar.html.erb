@@ -279,7 +279,7 @@
     <%# Menu do usuário: abre pra cima, a partir do rodapé da sidebar %>
     <div class="crm-user" id="crm-user-menu">
       <button type="button" class="crm-user__btn" id="crm-user-toggle" aria-haspopup="true" aria-expanded="false">
-        <span class="crm-user__avatar"><%= current_user.name.first.upcase %></span>
+        <%= avatar_tag(current_user.name, class: 'crm-user__avatar') %>
         <span class="crm-user__text">
           <span class="crm-user__name"><%= current_user.name %></span>
           <span class="crm-user__role"><%= current_user.admin? ? 'Administrador' : 'Usuário' %></span>

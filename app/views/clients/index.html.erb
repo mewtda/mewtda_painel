@@ -14,7 +14,7 @@
           <label class="crm-label">Status</label>
           <%= select_tag :status,
               options_for_select([['Todos', ''], ['Ativos', 'active'], ['Inativos', 'inactive']], params[:status]),
-              class: 'crm-input clients-filters__input--select' %>
+              class: 'crm-input', data: { custom_select: true } %>
         </div>
         <div class="clients-filters__actions">
           <%= button_tag class: 'crm-btn crm-btn--primary', name: '' do %>

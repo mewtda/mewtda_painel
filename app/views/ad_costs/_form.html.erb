@@ -40,7 +40,7 @@
           <%= form.select :platform,
               AdCost::PLATFORMS.map { |p| [AdCost::PLATFORM_LABELS[p], p] },
               { include_blank: 'Selecione a plataforma' },
-              { class: 'crm-input', required: true } %>
+              { class: 'crm-input crm-select-block', required: true, data: { custom_select: true } } %>
         </div>
 
         <div class="users-form-page__field">

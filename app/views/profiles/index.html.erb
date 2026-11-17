@@ -62,11 +62,7 @@
           <tr>
             <td>
               <div class="profiles-page__profile">
-                <div class="profiles-page__icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
+                <div class="profiles-page__icon"><%= profile_icon(profile) %></div>
                 <div>
                   <div class="profiles-page__name"><%= profile.name %></div>
                   <% if profile.id == 1 %>

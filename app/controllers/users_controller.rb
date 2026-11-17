@@ -1,5 +1,5 @@
 class UsersController < ApplicationController
-  DEFAULT_RESET_PASSWORD = 'mudar@123'.freeze
+  TEMPORARY_PASSWORD_LENGTH = 12
 
   before_action :authenticate_user!
   before_action :set_user, only: %i[show edit update destroy reset_password]
@@ -43,8 +43,13 @@ class UsersController < ApplicationController
   end
 
   def reset_password
-    @user.update!(password: DEFAULT_RESET_PASSWORD, password_confirmation: DEFAULT_RESET_PASSWORD)
-    redirect_to users_path, notice: "Senha de #{@user.name} resetada para o padrão (#{DEFAULT_RESET_PASSWORD})."
+    return redirect_to(edit_user_path(@user), alert: 'Para trocar a sua própria senha, use Minha conta.') if @user == current_user
+
+    @temporary_password = SecureRandom.base58(TEMPORARY_PASSWORD_LENGTH)
+    @user.update!(password: @temporary_password, password_confirmation: @temporary_password)
+    response.headers['Cache-Control'] = 'no-store'
+    load_refferences
+    render :edit
   end
 
   private

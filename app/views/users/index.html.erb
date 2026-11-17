@@ -60,11 +60,10 @@
       </thead>
       <tbody>
         <% @users.each do |user| %>
-          <% initials = user.name.to_s.split(' ').first(2).map { |w| w[0] }.join.upcase %>
           <tr>
             <td>
               <div class="users-page__user">
-                <div class="users-page__avatar"><%= initials.presence || '?' %></div>
+                <%= avatar_tag(user.name, class: 'users-page__avatar') %>
                 <div>
                   <div class="users-page__name"><%= user.name %></div>
                   <div class="users-page__id">ID #<%= user.id %></div>

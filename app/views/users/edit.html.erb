@@ -2,16 +2,43 @@
 
 <%= render 'users/form', user: @user, read_only: false %>
 
-<div class="users-form-page">
-  <div class="crm-card users-form-page__card" style="margin-top: 16px;">
-    <div class="users-form-page__section-header">
-      Resetar Senha
+<% unless @user == current_user %>
+  <div class="users-form-page">
+    <div class="crm-card users-form-page__card">
+      <div class="users-form-page__header">
+        <div class="users-form-page__header-icon"><i class="fa-solid fa-key"></i></div>
+        <div>
+          <h2 class="users-form-page__title">Redefinir senha</h2>
+          <p class="users-form-page__subtitle">Para quando o usuário perdeu o acesso</p>
+        </div>
+      </div>
+
+      <div class="users-form-page__body">
+        <% if @temporary_password %>
+          <div class="users-reset__result">
+            <p>Senha temporária de <strong><%= @user.name %></strong>. Ela aparece <strong>só agora</strong>: copie e envie ao usuário.</p>
+            <div class="users-reset__code">
+              <code><%= @temporary_password %></code>
+              <button type="button" class="crm-btn crm-btn--secondary" data-copy-text="<%= @temporary_password %>">
+                <i class="fa-regular fa-copy"></i> <span>Copiar</span>
+              </button>
+            </div>
+          </div>
+        <% else %>
+          <p class="users-form-page__section-hint users-reset__hint">
+            Gera uma senha temporária única para este usuário. Ela é mostrada uma vez só, para você repassar.
+            Depois ele pode trocá-la em "Minha conta".
+          </p>
+        <% end %>
+      </div>
+
+      <div class="users-form-page__footer">
+        <%= button_to @temporary_password ? 'Gerar outra senha' : 'Redefinir senha', reset_password_user_path(@user), method: :patch,
+            class: 'crm-btn crm-btn--secondary',
+            form: { data: { confirm: "Gerar uma nova senha temporária para #{@user.name}? A senha atual deixa de funcionar.", confirm_label: 'Redefinir' } } %>
+      </div>
     </div>
-    <p class="users-form-page__section-hint">
-      Define a senha deste usuário como <strong><%= UsersController::DEFAULT_RESET_PASSWORD %></strong>. O usuário poderá trocá-la depois em "Minha Conta".
-    </p>
-    <%= button_to 'Resetar Senha', reset_password_user_path(@user), method: :patch,
-        class: 'crm-btn crm-btn--secondary',
-        form: { data: { confirm: "Resetar a senha de #{@user.name} para a senha padrão?", confirm_label: 'Resetar' } } %>
   </div>
-</div>
+
+  <%= javascript_include_tag 'copy_text', defer: true if @temporary_password %>
+<% end %>

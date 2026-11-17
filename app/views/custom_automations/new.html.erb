@@ -52,7 +52,7 @@
 
           <div class="cpform-field">
             <%= form.label :order_filter, 'Quais pedidos entram', class: 'crm-label' %>
-            <%= form.select :order_filter, CustomAutomationRun::ORDER_FILTERS.invert, {}, class: 'crm-input' %>
+            <%= form.select :order_filter, CustomAutomationRun::ORDER_FILTERS.invert, {}, class: 'crm-input crm-select-block', data: { custom_select: true } %>
           </div>
         </div>
 

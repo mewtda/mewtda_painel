@@ -138,7 +138,7 @@
         <label>Status</label>
         <%= select_tag :action_status,
             options_for_select([['Todos', ''], ['Pendente', 'pending'], ['Enviado', 'sent'], ['Falhou', 'failed'], ['Cancelado', 'cancelled']], params[:action_status]),
-            class: 'campaign-show-filters__input campaign-show-filters__input--select' %>
+            class: 'crm-input', data: { custom_select: true } %>
       </div>
       <div class="campaign-show-filters__actions">
         <%= button_tag class: 'campaign-show-btn campaign-show-btn--primary', name: '' do %>

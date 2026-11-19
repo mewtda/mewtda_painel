@@ -42,6 +42,7 @@ module Campaigns
       note, retry_at = sender.blocker
       return message.update!(status: 'paused', next_run_at: retry_at, note:) if note
 
+      message.update_columns(note: nil) if message.note
       freeze_audience unless message.audience_frozen_at
       send_batch
       finish_run
@@ -51,6 +52,7 @@ module Campaigns
       now = Time.current
       claimed = CampaignMessage.where(id: message_id, status: CampaignMessage::RUNNABLE).where(next_run_at: ..now)
                                .update_all(status: 'sending', next_run_at: now + LEASE, updated_at: now)
+      @leased_at = now
       CampaignMessage.find(message_id) if claimed == 1
     end
 
@@ -91,9 +93,10 @@ module Campaigns
       catch(:stop) do
         message.recipients.where(status: 'pending').order(:id).limit(batch_size).each_with_index do |recipient, index|
           stop_for(nil, :cancelled) if (index % CHECK_EVERY).zero? && !still_running?
+          renew_lease
           check_limit
           result = sender.deliver(recipient)
-          stop_for(result.last, result.first) if result.is_a?(Array)
+          stop_for(result[1], result[0], result[2]) if result.is_a?(Array)
           sleep(throttle)
         end
       end
@@ -103,13 +106,25 @@ module Campaigns
       stop_for(message.resume_at, :pause) if Billing::Usage.new(client).limit_reached?(message.channel)
     end
 
+    # Renova a reserva enquanto o lote ainda está enviando (a Meta pode demorar até 15 s por chamada),
+    # para o TickJob não entregar a mesma mensagem a outro job no meio do caminho.
+    def renew_lease
+      now = Time.current
+      return if now - @leased_at < LEASE / 5
+
+      renewed = CampaignMessage.where(id: message.id, status: 'sending').update_all(next_run_at: now + LEASE)
+      stop_for(nil, :cancelled) if renewed.zero?
+      @leased_at = now
+    end
+
     def still_running?
       CampaignMessage.where(id: message.id, status: CampaignMessage::RUNNABLE).exists?
     end
 
-    def stop_for(next_run, reason)
+    def stop_for(next_run, reason, note = nil)
       @next_run = next_run
       @reason = reason
+      @note = note
       throw :stop
     end
 
@@ -120,7 +135,7 @@ module Campaigns
       return message.update!(status: 'sent', finished_at: Time.current, next_run_at: nil) unless pending?
 
       case @reason
-      when :pause, :wait then message.update!(status: 'paused', next_run_at: @next_run)
+      when :pause, :wait then message.update!(status: 'paused', next_run_at: @next_run, note: @note)
       else continue_now
       end
     end

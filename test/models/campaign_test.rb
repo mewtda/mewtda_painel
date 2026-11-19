@@ -146,4 +146,30 @@ class CampaignTest < ActiveSupport::TestCase
     assert_not @client.campaigns.new(status: 'draft').cancelable?
     assert_not @client.campaigns.new(status: 'sent').cancelable?
   end
+
+  test 'refresh_from_messages! runs under a row lock' do
+    campaign = ready_campaign(status: 'scheduled')
+    campaign.messages.first.update!(status: 'scheduled', next_run_at: NOW)
+    locked = false
+    campaign.stub(:with_lock, ->(&block) { locked = true and block.call }) { campaign.refresh_from_messages! }
+    assert locked
+  end
+
+  test 'a cancelled campaign stays cancelled even if a message had already been sent' do
+    campaign = ready_campaign(status: 'sending')
+    campaign.messages.first.update!(status: 'sent')
+    campaign.messages.create!(channel: 'email', email_template: template, status: 'scheduled', send_at: 1.day.from_now)
+    campaign.cancel!
+    campaign.refresh_from_messages!
+    assert_equal 'cancelled', campaign.reload.status
+  end
+
+  test 'choosing "date and time" without filling them is a missing step' do
+    campaign = ready_campaign
+    message = campaign.messages.to_a.first
+    message.assign_attributes(send_now: '0', send_on: '', send_time: '')
+    message.valid?
+    assert_nil message.send_at
+    assert(campaign.missing_steps.any? { |s| s.include?('data e a hora') })
+  end
 end

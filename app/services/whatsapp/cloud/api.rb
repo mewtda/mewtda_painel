@@ -7,6 +7,10 @@ module Whatsapp
       TIMEOUT = 15
       BLOCKED_CODES = [131_049, 131_050, 131_047].freeze
       RATE_LIMIT_CODES = [130_429].freeze
+      # Problema do modelo (pausado, desativado, excluído) ou da conta (token, bloqueio, pagamento):
+      # vale para todo mundo, então o envio deve pausar em vez de marcar cada pessoa como falha.
+      TEMPLATE_CODES = (132_000..132_016).to_a.freeze
+      PAUSE_CODES = (TEMPLATE_CODES + [190, 10, 131_031, 131_042, 131_053, 368]).freeze
 
       class Error < StandardError
         attr_reader :code
@@ -19,6 +23,9 @@ module Whatsapp
       class RateLimited < Error; end
       class Blocked < Error; end
       class NotConfigured < Error; end
+      class Paused < Error
+        def template_problem? = TEMPLATE_CODES.include?(code)
+      end
 
       def initialize(client)
         @client = client
@@ -41,6 +48,11 @@ module Whatsapp
 
       def create_template(payload)
         request(:post, "#{BASE_URL}/#{waba_id}/message_templates", body: payload)
+      end
+
+      # Edita um modelo já enviado (por exemplo, rejeitado) em vez de criar outro com o mesmo nome.
+      def update_template(template_id, payload)
+        request(:post, "#{BASE_URL}/#{template_id}", body: payload)
       end
 
       def templates
@@ -93,6 +105,7 @@ module Whatsapp
         message = scrub(error['error_user_msg'].presence || error['message'].presence || "Erro HTTP #{http_code} da Meta")
         klass = if RATE_LIMIT_CODES.include?(code) then RateLimited
                 elsif BLOCKED_CODES.include?(code) then Blocked
+                elsif PAUSE_CODES.include?(code) then Paused
                 else Error
                 end
         raise klass.new(message.truncate(250), code: code.zero? ? nil : code)

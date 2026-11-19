@@ -48,7 +48,13 @@ class WhatsappTemplate < ApplicationRecord
 
   # Envia para aprovação da Meta. Em erro, deixa a mensagem da Meta em errors[:base] e devolve false.
   def submit!
-    response = Whatsapp::Cloud::Api.new(client).create_template(meta_payload)
+    api = Whatsapp::Cloud::Api.new(client)
+    if meta_id.present?
+      api.update_template(meta_id, { components: meta_payload[:components] })
+      return update!(status: 'pending', rejection_reason: nil, synced_at: Time.current)
+    end
+
+    response = api.create_template(meta_payload)
     update!(meta_id: response['id'], status: response['status'].to_s.downcase.presence_in(STATUSES) || 'pending',
             rejection_reason: nil, synced_at: Time.current)
     true

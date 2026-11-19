@@ -38,12 +38,18 @@ module Campaigns
         :sent
       rescue ::Whatsapp::Cloud::Api::RateLimited
         [:wait, Time.current + RATE_LIMIT_WAIT]
+      rescue ::Whatsapp::Cloud::Api::Paused => e
+        template.update_columns(status: 'paused', updated_at: Time.current) if e.template_problem?
+        [:pause, 1.hour.from_now, "A Meta recusou o envio: #{e.message}. Tentamos de novo em 1 hora."]
       rescue ::Whatsapp::Cloud::Api::Blocked => e
         recipient.update!(status: 'blocked', error: e.message.to_s.first(250))
         :blocked
       rescue ::Whatsapp::Cloud::Api::NotConfigured
-        [:pause, 1.hour.from_now]
+        [:pause, 1.hour.from_now, 'A API Oficial do WhatsApp da loja não está configurada. Tentamos de novo em 1 hora.']
       rescue ::Whatsapp::Cloud::Api::Error => e
+        # Sem código = a Meta não respondeu (rede/timeout): espera e tenta de novo, sem marcar a pessoa.
+        return [:wait, Time.current + RATE_LIMIT_WAIT] if e.code.nil?
+
         recipient.update!(status: 'failed', error: e.message.to_s.first(250))
         :failed
       end

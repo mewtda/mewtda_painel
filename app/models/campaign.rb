@@ -73,24 +73,26 @@ class Campaign < ApplicationRecord
   end
 
   # Recalcula status, contagens e próximo envio a partir das mensagens já confirmadas.
+  # Sob trava da linha da campanha: duas mensagens terminando juntas não sobrescrevem uma à outra.
+  # Uma campanha cancelada pela loja continua cancelada.
   def refresh_from_messages!
-    list = messages.reload.reject { |message| message.status == 'draft' }
-    return if list.empty?
+    with_lock do
+      list = messages.reload.reject { |message| message.status == 'draft' }
+      next if list.empty?
 
-    statuses = list.map(&:status)
-    runnable = list.select(&:runnable?)
-    counted = list.select(&:recipients_count)
-    attrs = {
-      status: aggregate_status(statuses),
-      recipients_count: counted.any? ? counted.sum(&:recipients_count) : nil,
-      sent_count: list.sum(&:sent_count), failed_count: list.sum(&:failed_count), blocked_count: list.sum(&:blocked_count),
-      started_at: list.filter_map(&:started_at).min,
-      next_run_at: runnable.filter_map(&:next_run_at).min,
-      updated_at: Time.current
-    }
-    attrs[:finished_at] = runnable.empty? ? list.filter_map(&:finished_at).max : nil
-    attrs[:audience_frozen_at] = list.filter_map(&:audience_frozen_at).min
-    update_columns(attrs)
+      runnable = list.select(&:runnable?)
+      counted = list.select(&:recipients_count)
+      update_columns(
+        status: status == 'cancelled' ? 'cancelled' : aggregate_status(list.map(&:status)),
+        recipients_count: counted.any? ? counted.sum(&:recipients_count) : nil,
+        sent_count: list.sum(&:sent_count), failed_count: list.sum(&:failed_count), blocked_count: list.sum(&:blocked_count),
+        started_at: list.filter_map(&:started_at).min,
+        next_run_at: runnable.filter_map(&:next_run_at).min,
+        finished_at: runnable.empty? ? list.filter_map(&:finished_at).max : nil,
+        audience_frozen_at: list.filter_map(&:audience_frozen_at).min,
+        updated_at: Time.current
+      )
+    end
   end
 
   def cancel!
@@ -145,6 +147,7 @@ class Campaign < ApplicationRecord
       steps << "O modelo \"#{template.label}\" (WhatsApp #{number}) ainda não foi aprovado pela Meta"
     end
     steps << "A data da mensagem de #{label} já passou" if message.send_at && message.send_at <= now
+    steps << "Escolha a data e a hora da mensagem de #{label}" if message.send_now.to_s == '0' && message.send_at.nil?
     steps
   end
 

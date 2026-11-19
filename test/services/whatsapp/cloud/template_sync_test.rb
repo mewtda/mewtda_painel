@@ -20,4 +20,18 @@ class Whatsapp::Cloud::TemplateSyncTest < ActiveSupport::TestCase
     assert_equal 'PROMOTIONAL', bad.rejection_reason
     assert bad.synced_at
   end
+
+  test 'the sync job also checks approved templates of clients with WhatsApp messages to send' do
+    client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com",
+                            whatsapp_cloud_phone_number_id: '1', whatsapp_cloud_business_account_id: '2',
+                            whatsapp_cloud_access_token: 't')
+    template = client.whatsapp_templates.create!(label: 'Um', body: 'Oi', status: 'approved')
+    campaign = client.campaigns.create!(status: 'scheduled')
+    campaign.messages.create!(channel: 'whatsapp', whatsapp_template: template, status: 'scheduled', next_run_at: 1.day.from_now)
+    api = Object.new
+    def api.configured? = true
+    def api.templates = [{ 'name' => 'um', 'status' => 'PAUSED', 'id' => '10' }]
+    Whatsapp::Cloud::Api.stub(:new, api) { Whatsapp::TemplateSyncJob.perform_now }
+    assert_equal 'paused', template.reload.status
+  end
 end

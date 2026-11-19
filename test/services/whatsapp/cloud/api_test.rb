@@ -88,4 +88,22 @@ class Whatsapp::Cloud::ApiTest < ActiveSupport::TestCase
     refute Whatsapp::Cloud::Api.new(@client).configured?
     assert_raises(Whatsapp::Cloud::Api::NotConfigured) { Whatsapp::Cloud::Api.new(@client).templates }
   end
+
+  test 'template and account level errors raise Paused' do
+    [132_015, 132_001, 190, 131_031].each do |code|
+      HTTParty.stub(:post, ->(*) { error(code) }) do
+        err = assert_raises(Whatsapp::Cloud::Api::Paused) { @api.send_template(to: '16992375432', name: 'a', language: 'pt_BR') }
+        assert_equal code, err.code
+      end
+    end
+  end
+
+  test 'update_template edits an existing template by id' do
+    seen = nil
+    HTTParty.stub(:post, ->(url, opts) { seen = [url, JSON.parse(opts[:body])] and ok(success: true) }) do
+      @api.update_template('987', components: [{ type: 'BODY', text: 'Oi' }])
+    end
+    assert_equal 'https://graph.facebook.com/v26.0/987', seen[0]
+    assert_equal [{ 'type' => 'BODY', 'text' => 'Oi' }], seen[1]['components']
+  end
 end

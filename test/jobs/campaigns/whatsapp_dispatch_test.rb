@@ -151,4 +151,61 @@ class WhatsappDispatchTest < ActiveJob::TestCase
       assert_equal 2, Billing::Usage.new(@client).today('whatsapp')
     end
   end
+
+  test 'Meta pausing the template mid-batch pauses the message without marking anyone failed' do
+    person('Ana', '16992375431')
+    person('Bia', '16992375432')
+    api = FakeApi.new(failing: { '+5516992375431' => Whatsapp::Cloud::Api::Paused.new('Modelo pausado', code: 132_015) })
+    run_job(api)
+    @message.reload
+
+    assert_equal 'paused', @message.status
+    assert @message.next_run_at > 50.minutes.from_now
+    assert_match 'Meta', @message.note
+    assert_equal %w[pending pending], @message.recipients.pluck(:status)
+    assert_equal 'paused', @template.reload.status
+  end
+
+  test 'an expired token pauses instead of failing everyone' do
+    person('Ana', '16992375431')
+    api = FakeApi.new(failing: { '+5516992375431' => Whatsapp::Cloud::Api::Paused.new('Token expirado', code: 190) })
+    run_job(api)
+    assert_equal 'paused', @message.reload.status
+    assert_equal 'approved', @template.reload.status
+    assert_equal 'pending', @message.recipients.sole.status
+  end
+
+  test 'Meta not answering waits a minute instead of failing' do
+    person('Ana', '16992375431')
+    api = FakeApi.new(failing: { '+5516992375431' => Whatsapp::Cloud::Api::Error.new('Sem resposta da Meta (ReadTimeout).') })
+    run_job(api)
+    assert_equal 'paused', @message.reload.status
+    assert_equal 'pending', @message.recipients.sole.status
+  end
+
+  test 'the lease is renewed while a slow batch is still sending' do
+    12.times { |i| person("P#{i}", "169923754#{i.to_s.rjust(2, '0')}") }
+    leases = []
+    api = FakeApi.new
+    message = @message
+    test_case = self
+    api.define_singleton_method(:send_template) do |**args|
+      test_case.travel 1.minute
+      leases << (message.reload.next_run_at > Time.current)
+      @calls << args
+      'wamid'
+    end
+    run_job(api)
+    travel_back
+
+    assert_equal 12, leases.size
+    assert leases.all?, 'the message must stay reserved for this job during the whole batch'
+  end
+
+  test 'a paused message that resumes clears the old note' do
+    person('Ana', '16992375431')
+    @message.update!(note: 'Modelo não aprovado')
+    run_job
+    assert_nil @message.reload.note
+  end
 end

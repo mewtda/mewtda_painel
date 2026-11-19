@@ -67,4 +67,14 @@ class WhatsappTemplateTest < ActiveSupport::TestCase
     assert_includes template.errors[:base], 'Nome já existe'
     assert_equal 'draft', template.reload.status
   end
+
+  test 'submit! of a rejected template edits it on Meta instead of creating a duplicate' do
+    template = build.tap(&:save!)
+    template.update!(status: 'rejected', meta_id: '555', rejection_reason: 'PROMOTIONAL')
+    api = Minitest::Mock.new
+    api.expect(:update_template, { 'success' => true }, ['555', { components: template.meta_payload[:components] }])
+    Whatsapp::Cloud::Api.stub(:new, api) { assert template.submit! }
+    api.verify
+    assert_equal ['pending', '555', nil], [template.status, template.meta_id, template.rejection_reason]
+  end
 end

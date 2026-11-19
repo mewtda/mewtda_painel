@@ -1,0 +1,66 @@
+// Comunicação > WhatsApp (modelos da API Oficial) e balão de prévia reutilizado na campanha.
+.wt-notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-left: 3px solid var(--crm-warning, #d99a00);
+
+  > i { color: var(--crm-warning, #d99a00); margin-top: 3px; }
+  p { margin: 4px 0 0; }
+
+  &--danger { border-left-color: var(--crm-danger, #d33);
+    > i { color: var(--crm-danger, #d33); } }
+}
+
+.wt-excerpt { max-width: 420px; white-space: normal; }
+
+.wt-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  align-items: start;
+  margin-top: 16px;
+
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+.wt-fields { display: flex; flex-direction: column; gap: 16px; padding: 20px; }
+.wt-field { display: flex; flex-direction: column; gap: 6px;
+  &--row { display: grid; grid-template-columns: 1fr 1.6fr; gap: 12px;
+    > div { display: flex; flex-direction: column; gap: 6px; }
+    @media (max-width: 600px) { grid-template-columns: 1fr; } }
+  &[hidden] { display: none; }
+}
+.wt-body { resize: vertical; min-height: 140px; font-family: inherit; }
+.wt-body-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wt-hint { margin: 0; font-size: 0.85rem; }
+
+.wt-preview { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 8px; }
+
+.wt-phone {
+  background: #efe7dd;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+  background-size: 14px 14px;
+  border-radius: 14px;
+  padding: 20px 14px;
+  min-height: 160px;
+}
+
+.wt-bubble {
+  position: relative;
+  max-width: 92%;
+  background: #fff;
+  color: #111b21;
+  border-radius: 0 10px 10px 10px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+  font-size: 0.9rem;
+  line-height: 1.4;
+
+  &__body { padding: 8px 10px 0; white-space: pre-wrap; word-break: break-word; min-height: 1.4em; }
+  &__footer { padding: 4px 10px 0; color: #667781; font-size: 0.8rem; }
+  &__time { padding: 2px 8px 6px; text-align: right; color: #667781; font-size: 0.7rem; }
+  &__button { border-top: 1px solid #e9edef; padding: 8px; text-align: center; color: #027eb5; font-weight: 500; }
+  [hidden] { display: none; }
+}

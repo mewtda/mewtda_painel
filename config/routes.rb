@@ -169,6 +169,12 @@ Rails.application.routes.draw do
         post :upload_image
       end
     end
+    resources :whatsapp_templates, path: 'modelos-whatsapp', except: [:show] do
+      member do
+        post :submit
+        post :duplicate
+      end
+    end
     resources :email_suppressions, path: 'lista-de-recusa', only: %i[index create destroy]
     get 'campanhas/desempenho', to: 'campaign_performance#show', as: :campaign_performance
     resources :campaigns, path: 'campanhas', only: %i[index create edit update destroy] do

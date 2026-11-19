@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_16_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -122,6 +122,60 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "automation_actions", force: :cascade do |t|
+    t.bigint "automation_id", null: false
+    t.bigint "customer_id", null: false
+    t.bigint "order_id"
+    t.integer "kind", default: 0, null: false
+    t.integer "status", default: 0, null: false
+    t.text "message_sent"
+    t.datetime "notified_at"
+    t.text "response"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "slug"
+    t.index ["automation_id", "kind"], name: "index_automation_actions_on_automation_id_and_kind"
+    t.index ["automation_id", "status"], name: "index_automation_actions_on_automation_id_and_status"
+    t.index ["automation_id"], name: "index_automation_actions_on_automation_id"
+    t.index ["customer_id"], name: "index_automation_actions_on_customer_id"
+    t.index ["notified_at"], name: "index_automation_actions_on_notified_at"
+    t.index ["order_id"], name: "index_automation_actions_on_order_id"
+    t.index ["slug"], name: "index_automation_actions_on_slug", unique: true
+  end
+
+  create_table "automations", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.string "name", null: false
+    t.integer "kind", default: 0, null: false
+    t.text "message"
+    t.integer "days_after_purchase", default: 7
+    t.date "start_date"
+    t.date "end_date"
+    t.boolean "active", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "filters", default: {}, null: false
+    t.integer "max_sends"
+    t.integer "interval_days"
+    t.integer "send_delay_minutes"
+    t.boolean "include_coupon", default: false, null: false
+    t.boolean "resend_enabled", default: false, null: false
+    t.integer "resend_delay_hours"
+    t.text "resend_message"
+    t.boolean "resend_include_coupon", default: false, null: false
+    t.string "coupon_code"
+    t.string "resend_coupon_code"
+    t.string "slug"
+    t.datetime "evolution_started_at"
+    t.string "test_phone"
+    t.index ["client_id", "kind"], name: "index_automations_on_client_id_and_kind"
+    t.index ["client_id"], name: "index_automations_on_client_id"
+    t.index ["filters"], name: "index_automations_on_filters", using: :gin
+    t.index ["slug"], name: "index_automations_on_slug", unique: true
+    t.index ["start_date", "end_date"], name: "index_automations_on_start_date_and_end_date"
+  end
+
   create_table "back_in_stock_alerts", force: :cascade do |t|
     t.bigint "client_id", null: false
     t.bigint "shopify_product_id", null: false
@@ -155,62 +209,77 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
     t.string "accent_color", default: "#111111", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "only_marked_products", default: false, null: false
+    t.bigint "email_template_id"
     t.index ["client_id"], name: "index_back_in_stock_settings_on_client_id", unique: true
+    t.index ["email_template_id"], name: "index_back_in_stock_settings_on_email_template_id"
     t.index ["public_token"], name: "index_back_in_stock_settings_on_public_token", unique: true
   end
 
-  create_table "campaign_actions", force: :cascade do |t|
-    t.bigint "campaign_id", null: false
-    t.bigint "customer_id", null: false
-    t.bigint "order_id"
-    t.integer "kind", default: 0, null: false
-    t.integer "status", default: 0, null: false
-    t.text "message_sent"
-    t.datetime "notified_at"
-    t.text "response"
+  create_table "billing_charges", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.date "month", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.date "due_date"
+    t.string "status", default: "pending", null: false
+    t.string "asaas_payment_id"
+    t.string "invoice_url"
     t.text "error_message"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "slug"
-    t.index ["campaign_id", "kind"], name: "index_campaign_actions_on_campaign_id_and_kind"
-    t.index ["campaign_id", "status"], name: "index_campaign_actions_on_campaign_id_and_status"
-    t.index ["campaign_id"], name: "index_campaign_actions_on_campaign_id"
-    t.index ["customer_id"], name: "index_campaign_actions_on_customer_id"
-    t.index ["notified_at"], name: "index_campaign_actions_on_notified_at"
-    t.index ["order_id"], name: "index_campaign_actions_on_order_id"
-    t.index ["slug"], name: "index_campaign_actions_on_slug", unique: true
+    t.index ["client_id", "month"], name: "index_billing_charges_on_client_id_and_month", unique: true
+    t.index ["client_id"], name: "index_billing_charges_on_client_id"
+  end
+
+  create_table "campaign_recipients", force: :cascade do |t|
+    t.bigint "campaign_id", null: false
+    t.bigint "customer_id"
+    t.string "email", null: false
+    t.string "name"
+    t.string "status", default: "pending", null: false
+    t.text "error"
+    t.datetime "sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id", "email"], name: "index_campaign_recipients_on_campaign_id_and_email", unique: true
+    t.index ["campaign_id", "status"], name: "index_campaign_recipients_on_campaign_id_and_status"
+    t.index ["campaign_id"], name: "index_campaign_recipients_on_campaign_id"
+    t.index ["customer_id"], name: "index_campaign_recipients_on_customer_id"
   end
 
   create_table "campaigns", force: :cascade do |t|
     t.bigint "client_id", null: false
-    t.string "name", null: false
-    t.integer "kind", default: 0, null: false
-    t.text "message"
-    t.integer "days_after_purchase", default: 7
-    t.date "start_date"
-    t.date "end_date"
-    t.boolean "active", default: true
+    t.bigint "email_template_id"
+    t.bigint "segment_id"
+    t.bigint "created_by_id"
+    t.string "name", default: "", null: false
+    t.string "status", default: "draft", null: false
+    t.string "send_mode", default: "now", null: false
+    t.datetime "scheduled_at"
+    t.integer "window_days", default: [], null: false, array: true
+    t.string "window_from", default: "08:00", null: false
+    t.string "window_to", default: "12:00", null: false
+    t.datetime "audience_frozen_at"
+    t.integer "recipients_count"
+    t.integer "sent_count", default: 0, null: false
+    t.integer "failed_count", default: 0, null: false
+    t.integer "blocked_count", default: 0, null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.jsonb "filters", default: {}, null: false
-    t.integer "max_sends"
-    t.integer "interval_days"
-    t.integer "send_delay_minutes"
-    t.boolean "include_coupon", default: false, null: false
-    t.boolean "resend_enabled", default: false, null: false
-    t.integer "resend_delay_hours"
-    t.text "resend_message"
-    t.boolean "resend_include_coupon", default: false, null: false
-    t.string "coupon_code"
-    t.string "resend_coupon_code"
-    t.string "slug"
-    t.datetime "evolution_started_at"
-    t.string "test_phone"
-    t.index ["client_id", "kind"], name: "index_campaigns_on_client_id_and_kind"
+    t.string "channel", default: "email", null: false
+    t.datetime "next_run_at"
+    t.datetime "published_at"
+    t.integer "acknowledged_not_subscribed"
+    t.bigint "published_by_id"
+    t.index ["client_id", "status"], name: "index_campaigns_on_client_id_and_status"
     t.index ["client_id"], name: "index_campaigns_on_client_id"
-    t.index ["filters"], name: "index_campaigns_on_filters", using: :gin
-    t.index ["slug"], name: "index_campaigns_on_slug", unique: true
-    t.index ["start_date", "end_date"], name: "index_campaigns_on_start_date_and_end_date"
+    t.index ["created_by_id"], name: "index_campaigns_on_created_by_id"
+    t.index ["email_template_id"], name: "index_campaigns_on_email_template_id"
+    t.index ["published_by_id"], name: "index_campaigns_on_published_by_id"
+    t.index ["segment_id"], name: "index_campaigns_on_segment_id"
+    t.index ["status", "next_run_at"], name: "index_campaigns_on_status_and_next_run_at"
   end
 
   create_table "clients", force: :cascade do |t|
@@ -248,8 +317,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
     t.text "openai_api_key"
     t.string "openai_model"
     t.text "auto_reply_instructions"
+    t.string "plan_name"
+    t.decimal "plan_price", precision: 10, scale: 2
+    t.integer "daily_whatsapp_limit"
+    t.integer "daily_email_limit"
+    t.string "billing_document"
+    t.string "asaas_customer_id"
+    t.string "sales_channels", default: [], null: false, array: true
+    t.string "sales_locations", default: [], null: false, array: true
     t.index ["shopify_shop_url"], name: "index_clients_on_shopify_shop_url", unique: true
     t.index ["slug"], name: "index_clients_on_slug", unique: true
+  end
+
+  create_table "conversion_insights", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.date "week_start", null: false
+    t.text "body", null: false
+    t.jsonb "metrics", default: {}, null: false
+    t.string "model"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id", "week_start"], name: "index_conversion_insights_on_client_id_and_week_start", unique: true
+    t.index ["client_id"], name: "index_conversion_insights_on_client_id"
   end
 
   create_table "custom_automation_runs", force: :cascade do |t|
@@ -275,6 +364,39 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
     t.index ["client_id", "kind", "created_at"], name: "idx_on_client_id_kind_created_at_22125b7406"
     t.index ["client_id"], name: "index_custom_automation_runs_on_client_id"
     t.index ["user_id"], name: "index_custom_automation_runs_on_user_id"
+  end
+
+  create_table "customer_profiles", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.bigint "customer_id", null: false
+    t.string "name"
+    t.string "email"
+    t.string "phone"
+    t.string "city"
+    t.string "state"
+    t.integer "orders_count", default: 0, null: false
+    t.decimal "total_spent", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "avg_ticket", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "last_order_total", precision: 12, scale: 2
+    t.integer "coupons_used", default: 0, null: false
+    t.datetime "first_order_at"
+    t.datetime "last_order_at"
+    t.integer "r_score"
+    t.integer "f_score"
+    t.integer "m_score"
+    t.string "rfm_segment"
+    t.datetime "refreshed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "email_marketing_state"
+    t.bigint "merged_customer_ids", default: [], null: false, array: true
+    t.index ["client_id", "customer_id"], name: "index_customer_profiles_on_client_id_and_customer_id", unique: true
+    t.index ["client_id", "email_marketing_state"], name: "index_customer_profiles_on_client_id_and_email_marketing_state"
+    t.index ["client_id", "last_order_at"], name: "index_customer_profiles_on_client_id_and_last_order_at"
+    t.index ["client_id", "rfm_segment"], name: "index_customer_profiles_on_client_id_and_rfm_segment"
+    t.index ["client_id", "total_spent"], name: "index_customer_profiles_on_client_id_and_total_spent"
+    t.index ["client_id"], name: "index_customer_profiles_on_client_id"
+    t.index ["customer_id"], name: "index_customer_profiles_on_customer_id"
   end
 
   create_table "customers", force: :cascade do |t|
@@ -306,17 +428,51 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "addresses", default: [], null: false
+    t.string "email_marketing_state"
     t.index ["email"], name: "index_customers_on_email"
     t.index ["shopify_customer_id"], name: "index_customers_on_shopify_customer_id", unique: true
+  end
+
+  create_table "email_events", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.string "source", null: false
+    t.bigint "campaign_id"
+    t.bigint "campaign_recipient_id"
+    t.bigint "back_in_stock_alert_id"
+    t.string "event_type", null: false
+    t.string "bounce_type"
+    t.text "link"
+    t.string "ses_message_id", null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "created_at", null: false
+    t.index "ses_message_id, event_type, occurred_at, COALESCE(link, ''::text)", name: "index_email_events_uniqueness", unique: true
+    t.index ["back_in_stock_alert_id"], name: "index_email_events_on_back_in_stock_alert_id"
+    t.index ["campaign_id", "event_type"], name: "index_email_events_on_campaign_id_and_event_type"
+    t.index ["campaign_id"], name: "index_email_events_on_campaign_id"
+    t.index ["campaign_recipient_id"], name: "index_email_events_on_campaign_recipient_id"
+    t.index ["client_id", "source", "event_type", "occurred_at"], name: "idx_on_client_id_source_event_type_occurred_at_7ae9f738a7"
+    t.index ["client_id"], name: "index_email_events_on_client_id"
+  end
+
+  create_table "email_suppressions", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.string "email", null: false
+    t.string "source", default: "unsubscribe_link", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "email_template_id"
+    t.index ["client_id", "email"], name: "index_email_suppressions_on_client_id_and_email", unique: true
+    t.index ["client_id"], name: "index_email_suppressions_on_client_id"
+    t.index ["email_template_id"], name: "index_email_suppressions_on_email_template_id"
   end
 
   create_table "email_templates", force: :cascade do |t|
     t.bigint "client_id", null: false
     t.string "name", null: false
     t.string "subject", null: false
-    t.string "heading", null: false
-    t.text "body", null: false
-    t.string "button_text", null: false
+    t.string "heading"
+    t.text "body"
+    t.string "button_text"
     t.string "button_url"
     t.string "coupon_code"
     t.string "accent_color", default: "#7c3aed", null: false
@@ -326,6 +482,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
     t.boolean "active", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "blocks", default: [], null: false
+    t.jsonb "design", default: {}, null: false
     t.index ["client_id"], name: "index_email_templates_on_client_id"
   end
 
@@ -408,6 +566,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
     t.index ["client_id"], name: "index_locations_on_client_id"
     t.index ["shopify_location_id"], name: "index_locations_on_shopify_location_id", unique: true
     t.index ["slug"], name: "index_locations_on_slug", unique: true
+  end
+
+  create_table "message_usages", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.string "channel", null: false
+    t.date "day", null: false
+    t.integer "count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id", "channel", "day"], name: "index_message_usages_on_client_id_and_channel_and_day", unique: true
+    t.index ["client_id"], name: "index_message_usages_on_client_id"
   end
 
   create_table "order_items", force: :cascade do |t|
@@ -536,6 +705,30 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
     t.index ["order_id"], name: "index_refunds_on_order_id"
   end
 
+  create_table "segment_memberships", force: :cascade do |t|
+    t.bigint "segment_id", null: false
+    t.bigint "customer_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_segment_memberships_on_customer_id"
+    t.index ["segment_id", "customer_id"], name: "index_segment_memberships_on_segment_id_and_customer_id", unique: true
+    t.index ["segment_id"], name: "index_segment_memberships_on_segment_id"
+  end
+
+  create_table "segments", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.string "name", null: false
+    t.string "description"
+    t.string "kind", default: "dynamic", null: false
+    t.jsonb "rules", default: {}, null: false
+    t.integer "customers_count"
+    t.datetime "counted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "subscribed_count"
+    t.index ["client_id"], name: "index_segments_on_client_id"
+  end
+
   create_table "shopify_events", force: :cascade do |t|
     t.bigint "client_id", null: false
     t.bigint "integration_user_id", null: false
@@ -601,15 +794,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
     t.index ["utm_code"], name: "index_users_on_utm_code", unique: true
   end
 
-  create_table "whatsapp_campaign_connections", force: :cascade do |t|
-    t.bigint "campaign_id", null: false
+  create_table "whatsapp_automation_connections", force: :cascade do |t|
+    t.bigint "automation_id", null: false
     t.bigint "connection_id", null: false
     t.datetime "last_assigned_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["campaign_id", "connection_id"], name: "idx_wa_campaign_connection_unique", unique: true
-    t.index ["campaign_id"], name: "index_whatsapp_campaign_connections_on_campaign_id"
-    t.index ["connection_id"], name: "index_whatsapp_campaign_connections_on_connection_id"
+    t.index ["automation_id", "connection_id"], name: "idx_wa_automation_connection_unique", unique: true
+    t.index ["automation_id"], name: "index_whatsapp_automation_connections_on_automation_id"
+    t.index ["connection_id"], name: "index_whatsapp_automation_connections_on_connection_id"
   end
 
   create_table "whatsapp_connections", force: :cascade do |t|
@@ -774,20 +967,39 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ad_cost_snapshots", "clients"
   add_foreign_key "ad_costs", "clients"
+  add_foreign_key "automation_actions", "automations"
+  add_foreign_key "automation_actions", "customers"
+  add_foreign_key "automation_actions", "orders"
+  add_foreign_key "automations", "clients"
   add_foreign_key "back_in_stock_alerts", "clients"
   add_foreign_key "back_in_stock_settings", "clients"
-  add_foreign_key "campaign_actions", "campaigns"
-  add_foreign_key "campaign_actions", "customers"
-  add_foreign_key "campaign_actions", "orders"
+  add_foreign_key "back_in_stock_settings", "email_templates", on_delete: :nullify
+  add_foreign_key "billing_charges", "clients"
+  add_foreign_key "campaign_recipients", "campaigns", on_delete: :cascade
+  add_foreign_key "campaign_recipients", "customers", on_delete: :nullify
   add_foreign_key "campaigns", "clients"
+  add_foreign_key "campaigns", "email_templates", on_delete: :nullify
+  add_foreign_key "campaigns", "segments", on_delete: :nullify
+  add_foreign_key "campaigns", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "campaigns", "users", column: "published_by_id", on_delete: :nullify
+  add_foreign_key "conversion_insights", "clients"
   add_foreign_key "custom_automation_runs", "clients"
   add_foreign_key "custom_automation_runs", "users"
+  add_foreign_key "customer_profiles", "clients"
+  add_foreign_key "customer_profiles", "customers"
+  add_foreign_key "email_events", "back_in_stock_alerts", on_delete: :cascade
+  add_foreign_key "email_events", "campaign_recipients", on_delete: :cascade
+  add_foreign_key "email_events", "campaigns", on_delete: :cascade
+  add_foreign_key "email_events", "clients"
+  add_foreign_key "email_suppressions", "clients"
+  add_foreign_key "email_suppressions", "email_templates", on_delete: :nullify
   add_foreign_key "email_templates", "clients"
   add_foreign_key "goals", "clients"
   add_foreign_key "integration_users", "clients"
   add_foreign_key "landing_page_leads", "landing_pages"
   add_foreign_key "landing_pages", "clients"
   add_foreign_key "locations", "clients"
+  add_foreign_key "message_usages", "clients"
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
   add_foreign_key "orders", "clients"
@@ -799,12 +1011,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_230000) do
   add_foreign_key "products", "clients"
   add_foreign_key "refunds", "clients"
   add_foreign_key "refunds", "orders"
+  add_foreign_key "segment_memberships", "customers"
+  add_foreign_key "segment_memberships", "segments", on_delete: :cascade
+  add_foreign_key "segments", "clients"
   add_foreign_key "shopify_events", "clients"
   add_foreign_key "shopify_events", "integration_users"
   add_foreign_key "users", "clients"
   add_foreign_key "users", "profiles"
-  add_foreign_key "whatsapp_campaign_connections", "campaigns"
-  add_foreign_key "whatsapp_campaign_connections", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_automation_connections", "automations"
+  add_foreign_key "whatsapp_automation_connections", "whatsapp_connections", column: "connection_id"
   add_foreign_key "whatsapp_connections", "clients"
   add_foreign_key "whatsapp_contact_aliases", "whatsapp_connections", column: "connection_id"
   add_foreign_key "whatsapp_contact_aliases", "whatsapp_contacts", column: "contact_id"

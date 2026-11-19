@@ -17,7 +17,7 @@ module Campaigns
     def call
       count, audience, blocked, failed, sent = totals
       purchases, revenue = sales
-      investment = sent * Billing::Invoice::EMAIL_PRICE_PER_THOUSAND / 1000
+      investment = (sent - whatsapp_sent) * Billing::Invoice::EMAIL_PRICE_PER_THOUSAND / 1000
       Result.new(campaigns_count: count, audience:, blocked:, failed:, sent:, investment:, revenue:, purchases:,
                  avg_ticket: purchases.zero? ? 0 : revenue / purchases, net: revenue - investment, **engagement)
     end
@@ -30,6 +30,11 @@ module Campaigns
       campaigns.pick(Arel.sql('COUNT(*)'), Arel.sql('COALESCE(SUM(recipients_count), 0)'),
                      Arel.sql('COALESCE(SUM(blocked_count), 0)'), Arel.sql('COALESCE(SUM(failed_count), 0)'),
                      Arel.sql('COALESCE(SUM(sent_count), 0)'))&.map(&:to_i) || Array.new(5, 0)
+    end
+
+    # O investimento é só do e-mail: o WhatsApp é cobrado pela Meta direto da loja.
+    def whatsapp_sent
+      CampaignMessage.where(campaign_id: campaigns.reorder(nil).select(:id), channel: 'whatsapp').sum(:sent_count)
     end
 
     def engagement

@@ -11,8 +11,11 @@ class CampaignsController < ApplicationController
              with: -> { render json: { error: 'Muitos testes seguidos. Aguarde um minuto.' }, status: :too_many_requests }
 
   def index
-    @campaigns = @client.campaigns.includes(:segment, :email_template).order(updated_at: :desc)
-    @campaigns = @campaigns.where(channel: params[:canal]) if params[:canal].in?(Campaign::CHANNELS.keys)
+    @campaigns = @client.campaigns.includes(:segments, :created_by, messages: %i[email_template whatsapp_template])
+                        .order(updated_at: :desc)
+    if params[:canal].in?(Campaign::CHANNELS.keys)
+      @campaigns = @campaigns.where(id: CampaignMessage.where(channel: params[:canal]).select(:campaign_id))
+    end
     @campaigns = @campaigns.where('name ILIKE ?', "%#{Campaign.sanitize_sql_like(params[:q].to_s.strip)}%") if params[:q].present?
   end
 
@@ -24,7 +27,8 @@ class CampaignsController < ApplicationController
     status = params[:status].presence_in(Spreadsheets::CampaignRecipients::STATUSES)
     return redirect_to(campaigns_path, alert: 'Lista não encontrada.') unless status
 
-    sheet = Spreadsheets::CampaignRecipients.new(@campaign, status)
+    message = @campaign.messages.find_by(id: params[:message_id]) if params[:message_id].present?
+    sheet = Spreadsheets::CampaignRecipients.new(@campaign, status, message:)
     send_data sheet.to_xlsx, filename: sheet.filename, type: sheet.content_type
   end
 

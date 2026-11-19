@@ -11,4 +11,18 @@ module CampaignsHelper
 
     number_to_currency(cost, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n')
   end
+
+  CHANNEL_ICONS = { 'email' => 'fa-solid fa-envelope', 'whatsapp' => 'fa-brands fa-whatsapp' }.freeze
+
+  def campaign_channel_tag(channel)
+    tag.span(class: "crm-tag crm-tag--#{channel == 'whatsapp' ? 'success' : 'info'}") do
+      safe_join([tag.i(class: CHANNEL_ICONS.fetch(channel)), ' ', CampaignMessage::CHANNEL_LABELS.fetch(channel)])
+    end
+  end
+
+  # Canais ligados; numa campanha já confirmada, os canais que de fato têm mensagens.
+  def campaign_channels(campaign)
+    used = campaign.messages.reject { |m| m.status == 'cancelled' }.map(&:channel).uniq
+    campaign.draft? || used.empty? ? campaign.enabled_channels : CampaignMessage::CHANNELS & used
+  end
 end

@@ -9,22 +9,18 @@
     <dd><%= campaign_status_tag(campaign) %><% if campaign.status_note %><small class="ec-sub"><%= campaign.status_note %></small><% end %></dd>
   </div>
   <div>
-    <dt><i class="fa-solid fa-envelope"></i> Canal de envio</dt>
-    <dd><%= campaign.channel_label %></dd>
+    <dt><i class="fa-solid fa-tower-broadcast"></i> Canais</dt>
+    <dd><% campaign_channels(campaign).each do |channel| %><%= campaign_channel_tag(channel) %> <% end %></dd>
   </div>
   <div>
     <dt><i class="fa-solid fa-circle-user"></i> Criada por</dt>
     <dd><%= campaign.created_by&.name || 'Não informado' %></dd>
   </div>
   <div>
-    <dt><i class="fa-solid fa-table-list"></i> E-mail</dt>
-    <dd><%= campaign.email_template&.name || '—' %></dd>
-  </div>
-  <div>
     <dt><i class="fa-solid fa-users"></i> Público</dt>
     <dd>
-      <%= campaign.segment&.name || '—' %>
-      <% if campaign.recipients_count %><small class="ec-sub"><%= number_with_delimiter(campaign.recipients_count, delimiter: '.') %> <%= 'pessoa'.pluralize(campaign.recipients_count) %></small><% end %>
+      <%= campaign.segments.map(&:name).join(', ').presence || '—' %>
+      <% if campaign.recipients_count %><small class="ec-sub"><%= number_with_delimiter(campaign.recipients_count, delimiter: '.') %> <%= campaign.recipients_count == 1 ? 'envio previsto' : 'envios previstos' %></small><% end %>
     </dd>
   </div>
   <% { 'sent' => ['Enviados', 'fa-check', campaign.sent_count], 'failed' => ['Falhas', 'fa-ban', campaign.failed_count],
@@ -32,7 +28,7 @@
     <div>
       <dt><i class="fa-solid <%= icon %>"></i> <%= label %></dt>
       <dd>
-        <%= number_with_delimiter(count.to_i, delimiter: '.') %> <%= 'pessoa'.pluralize(count.to_i) %>
+        <%= number_with_delimiter(count.to_i, delimiter: '.') %> <%= count.to_i == 1 ? 'envio' : 'envios' %>
         <% if count.to_i.positive? %>
           <%= link_to recipients_campaign_path(campaign, status: status), class: 'ec-details__download' do %>
             <i class="fa-solid fa-download"></i> Baixar lista
@@ -44,24 +40,12 @@
   <% if pending.positive? %>
     <div>
       <dt><i class="fa-solid fa-hourglass-half"></i> Aguardando envio</dt>
-      <dd><%= number_with_delimiter(pending, delimiter: '.') %> <%= 'pessoa'.pluralize(pending) %></dd>
+      <dd><%= number_with_delimiter(pending, delimiter: '.') %> <%= pending == 1 ? 'envio' : 'envios' %></dd>
     </div>
   <% end %>
   <div>
     <dt><i class="fa-solid fa-calendar-plus"></i> Data de criação</dt>
     <dd><%= l(campaign.created_at, format: '%d/%m/%Y às %H:%M') %></dd>
-  </div>
-  <div>
-    <dt><i class="fa-solid fa-calendar-check"></i> Data de envio</dt>
-    <dd>
-      <% if campaign.started_at %>
-        <%= l(campaign.started_at, format: '%d/%m/%Y às %H:%M') %>
-      <% elsif campaign.next_run_at %>
-        Agendada para <%= l(campaign.next_run_at, format: '%d/%m/%Y às %H:%M') %>
-      <% else %>
-        —
-      <% end %>
-    </dd>
   </div>
   <% if campaign.published_at %>
     <div>
@@ -79,10 +63,40 @@
     </div>
   <% end %>
   <div>
-    <dt><i class="fa-solid fa-coins"></i> Custo</dt>
-    <dd><%= campaign_cost_label(campaign.sent_cost) %></dd>
+    <dt><i class="fa-solid fa-coins"></i> Custo do e-mail</dt>
+    <dd><%= campaign_cost_label(campaign.sent_cost) %><% if campaign.messages.any?(&:whatsapp?) %><small class="ec-sub">WhatsApp cobrado pela Meta</small><% end %></dd>
   </div>
 </dl>
+
+<% messages = campaign.messages.reject { |m| m.status == 'draft' } %>
+<% if messages.any? %>
+  <h3 class="ec-details__subtitle">Mensagens</h3>
+  <ol class="ec-details__messages">
+    <% messages.each do |message| %>
+      <li class="ec-details__message">
+        <div class="ec-details__message-head">
+          <%= campaign_channel_tag(message.channel) %>
+          <strong><%= message.template_name || 'Modelo excluído' %></strong>
+          <span class="crm-tag crm-tag--<%= CampaignsHelper::STATUS_TAGS.fetch(message.status, 'neutral') %>"><%= Campaign::STATUSES.fetch(message.status, message.status) %></span>
+        </div>
+        <small class="cx-muted ec-sub">
+          <%= message.started_at ? "Começou em #{l(message.started_at, format: '%d/%m/%Y às %H:%M')}" : message.when_label %>
+          <% if message.progress_label %> · <%= message.progress_label %><% end %>
+        </small>
+        <% if message.note.present? && message.status == 'paused' %><small class="ec-sub ec-details__note"><%= message.note %></small><% end %>
+        <span class="ec-details__links">
+          <% { 'sent' => 'enviados', 'failed' => 'falhas', 'blocked' => 'bloqueios' }.each do |status, label| %>
+            <% next unless message.public_send("#{status}_count").to_i.positive? %>
+            <%= link_to recipients_campaign_path(campaign, status:, message_id: message.id), class: 'ec-details__download' do %>
+              <i class="fa-solid fa-download"></i> <%= label %>
+            <% end %>
+          <% end %>
+        </span>
+      </li>
+    <% end %>
+  </ol>
+<% end %>
+
 <% if campaign.started_at %>
   <%= link_to campaign_performance_path(campanha: campaign.id), class: 'ec-details__performance' do %>
     <i class="fa-solid fa-chart-column"></i> Ver desempenho da campanha

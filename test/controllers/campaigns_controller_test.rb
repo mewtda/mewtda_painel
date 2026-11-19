@@ -117,14 +117,45 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match 'Dia das mães', response.body
   end
 
-  test 'index filters by channel' do
-    @client.campaigns.create!(name: 'Por e-mail')
+  test 'index filters by channel through the messages' do
+    by_email = @client.campaigns.create!(name: 'Por e-mail')
+    by_email.messages.create!(channel: 'email')
+    by_whatsapp = @client.campaigns.create!(name: 'Pelo WhatsApp', whatsapp_enabled: true, email_enabled: false)
+    by_whatsapp.messages.create!(channel: 'whatsapp')
 
-    get campaigns_path(canal: 'email')
-    assert_match 'Por e-mail', response.body
+    get campaigns_path(canal: 'whatsapp')
+    assert_match 'Pelo WhatsApp', response.body
+    assert_no_match 'Por e-mail', response.body
 
     get campaigns_path(canal: 'nenhum')
     assert_match 'Por e-mail', response.body
+    assert_match 'Pelo WhatsApp', response.body
+  end
+
+  test 'index shows the active channels and the chosen segments' do
+    campaign = @client.campaigns.create!(name: 'Black', whatsapp_enabled: true,
+                                         segment_ids: [@client.segments.create!(name: 'VIPs', kind: 'static').id])
+    campaign.messages.create!(channel: 'whatsapp')
+
+    get campaigns_path
+
+    assert_match 'VIPs', response.body
+    assert_match 'fa-whatsapp', response.body
+  end
+
+  test 'details of a migrated e-mail campaign show the same numbers per message' do
+    campaign = @client.campaigns.create!(name: 'Antiga', status: 'sent', recipients_count: 3, sent_count: 2, failed_count: 1,
+                                         started_at: 1.day.ago)
+    message = campaign.messages.create!(channel: 'email', email_template: template(@client), status: 'sent',
+                                        recipients_count: 3, sent_count: 2, failed_count: 1)
+
+    get details_campaign_path(campaign)
+
+    assert_response :success
+    assert_match 'Modelo', response.body
+    assert_includes response.body, ERB::Util.html_escape(recipients_campaign_path(campaign, status: 'sent', message_id: message.id))
+    assert_includes response.body, ERB::Util.html_escape(recipients_campaign_path(campaign, status: 'failed', message_id: message.id))
+    assert_match '2 de 3 enviados', response.body
   end
 
   test 'create makes a draft and goes to the editor' do

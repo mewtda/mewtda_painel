@@ -210,3 +210,11 @@
 .ec-review__messages { margin: 0.75rem 0 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--fg); }
 .ec-review__messages li { margin: 0.2rem 0; }
 .ec-wa-cost { margin-top: 0.6rem; }
+
+.ec-channels { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
+.ec-details__subtitle { margin: 1rem 0 0.5rem; font-size: 0.9rem; font-weight: 700; color: var(--fg); }
+.ec-details__messages { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.ec-details__message { padding: 0.6rem 0.75rem; border: 1px solid var(--outline); border-radius: var(--radius); font-size: 0.85rem; }
+.ec-details__message-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.ec-details__links { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.3rem; }
+.ec-details__note { color: var(--warning-fg); }

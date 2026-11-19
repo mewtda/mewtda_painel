@@ -38,4 +38,19 @@ class Spreadsheets::CampaignRecipientsTest < ActiveSupport::TestCase
   test 'filename carries the campaign and the status' do
     assert_match(/\Acampanha_#{@campaign.id}_sent_\d{8}_\d{4}\.xlsx\z/, Spreadsheets::CampaignRecipients.new(@campaign, 'sent').filename)
   end
+
+  test 'a message list keeps only that message and shows the WhatsApp number' do
+    email = @campaign.messages.create!(channel: 'email', status: 'sent')
+    whatsapp = @campaign.messages.create!(channel: 'whatsapp', status: 'sent')
+    @campaign.recipients.create!(message: email, email: 'ana@example.com', status: 'sent', sent_at: Time.current)
+    @campaign.recipients.create!(message: whatsapp, channel: 'whatsapp', phone: '+5516992375432', name: 'Ana',
+                                 status: 'sent', sent_at: Time.current)
+
+    sheet = RubyXL::Parser.parse_buffer(Spreadsheets::CampaignRecipients.new(@campaign, 'sent', message: whatsapp).to_xlsx)[0]
+
+    headers = sheet[0].cells.map(&:value)
+    assert_equal '+5516992375432', sheet[1][headers.index('Telefone')].value
+    assert_equal 'WhatsApp', sheet[1][headers.index('Canal')].value
+    assert_nil sheet[2]
+  end
 end

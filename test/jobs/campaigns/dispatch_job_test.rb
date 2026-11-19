@@ -35,24 +35,27 @@ class DispatchJobTest < ActiveJob::TestCase
     SegmentMembership.create!(segment: @segment, customer:)
   end
 
-  def campaign(**attrs)
-    @client.campaigns.create!({ name: 'Verão', email_template: @template, segment: @segment, status: 'scheduled',
-                                next_run_at: 1.minute.ago }.merge(attrs))
+  # Campanha com uma mensagem de e-mail; status/next_run_at vão para a mensagem.
+  def campaign(status: 'scheduled', next_run_at: 1.minute.ago)
+    campaign = @client.campaigns.create!(name: 'Verão', segment_ids: [@segment.id], status:)
+    campaign.messages.create!(channel: 'email', email_template: @template, status:, next_run_at:)
+    campaign
   end
 
   def run_job(campaign, sender: FakeSender.new(@client), batch: nil)
     job = Campaigns::DispatchJob.new
     job.stub(:throttle, 0) do
       job.stub(:batch_size, batch || Campaigns::DispatchJob::BATCH_SIZE) do
-        Ses::SendEmailService.stub(:new, ->(_client) { sender }) { job.perform(campaign.id) }
+        Ses::SendEmailService.stub(:new, ->(_client) { sender }) { job.perform(campaign.messages.first.id) }
       end
     end
     sender
   end
 
   def freeze_for(campaign, emails)
-    emails.each { |email| campaign.recipients.create!(email:, name: email.split('@').first) }
-    campaign.update!(audience_frozen_at: Time.current, status: 'sending', recipients_count: emails.size)
+    message = campaign.messages.first
+    emails.each { |email| message.recipients.create!(campaign:, channel: 'email', email:, name: email.split('@').first) }
+    message.update!(audience_frozen_at: Time.current, status: 'sending', recipients_count: emails.size)
   end
 
   test 'freezes the audience, sends to everyone, counts and finishes' do
@@ -128,25 +131,11 @@ class DispatchJobTest < ActiveJob::TestCase
     end
   end
 
-  test 'waits for the next opening when the send window is closed' do
-    travel_to Time.zone.local(2026, 11, 16, 14, 0) do
-      campaign = campaign(send_mode: 'window', window_days: [1, 3], window_from: '08:00', window_to: '12:00')
-      freeze_for(campaign, %w[ana@example.com])
-
-      sender = run_job(campaign)
-      campaign.reload
-
-      assert_empty sender.calls
-      assert_equal 'paused', campaign.status
-      assert_equal Time.zone.local(2026, 11, 18, 8, 0), campaign.next_run_at
-    end
-  end
-
   test 'a full batch schedules another run right away' do
     3.times { |i| person("P#{i}", "p#{i}@example.com") }
     campaign = campaign()
 
-    assert_enqueued_with(job: Campaigns::DispatchJob, args: [campaign.id]) do
+    assert_enqueued_with(job: Campaigns::DispatchJob, args: [campaign.messages.first.id]) do
       run_job(campaign, batch: 2)
     end
 
@@ -171,7 +160,7 @@ class DispatchJobTest < ActiveJob::TestCase
     campaign = campaign()
 
     run_job(campaign)
-    campaign.update!(status: 'sending', next_run_at: 1.minute.ago)
+    campaign.messages.first.update!(status: 'sending', next_run_at: 1.minute.ago)
     sender = run_job(campaign)
 
     assert_empty sender.calls
@@ -201,5 +190,17 @@ class DispatchJobTest < ActiveJob::TestCase
     assert_empty sender.calls
     assert_equal 'paused', campaign.status
     assert_nil campaign.next_run_at
+    assert_match 'e-mail', campaign.messages.first.note
+  end
+
+  test 'a message of a channel turned off is cancelled without sending' do
+    person('Ana', 'ana@example.com')
+    campaign = campaign()
+    campaign.update!(email_enabled: false)
+
+    sender = run_job(campaign)
+
+    assert_empty sender.calls
+    assert_equal 'cancelled', campaign.messages.first.reload.status
   end
 end

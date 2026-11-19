@@ -1,0 +1,40 @@
+<%# Uma mensagem da campanha (linha do editor). Os campos usam o id como índice de messages_attributes. %>
+<% field = ->(name) { "campaign[messages_attributes][#{message.id}][#{name}]" } %>
+<% dom = "ec-msg-#{message.id}" %>
+<div class="ec-msg" data-message-id="<%= message.id %>" data-channel="<%= message.channel %>" id="<%= dom %>">
+  <%= hidden_field_tag field.call(:id), message.id, id: nil %>
+  <div class="ec-msg__head">
+    <span class="ec-msg__num"><%= message.whatsapp? ? 'WhatsApp' : 'E-mail' %> <b data-msg-number><%= number %></b></span>
+    <div class="ec-msg__tools">
+      <button type="button" class="crm-btn clients-btn--icon" data-msg-preview title="Ver prévia e testar esta mensagem"><i class="fa-solid fa-eye"></i></button>
+      <button type="button" class="crm-btn clients-btn--icon clients-btn--danger" data-msg-remove
+              data-url="<%= remove_message_campaign_path(message.campaign_id, message_id: message.id) %>" title="Remover mensagem"><i class="fa-solid fa-trash-can"></i></button>
+    </div>
+  </div>
+
+  <% if message.whatsapp? %>
+    <%= select_tag field.call(:whatsapp_template_id),
+                   options_for_select(@whatsapp_templates.map { |t| [t.label, t.id] }, message.whatsapp_template_id),
+                   include_blank: 'Escolha um modelo aprovado…', class: 'crm-input crm-select-block', id: "#{dom}-template",
+                   data: { custom_select: true, msg_template: true } %>
+  <% else %>
+    <%= select_tag field.call(:email_template_id),
+                   options_for_select(@email_templates.map { |t| [t.name, t.id] }, message.email_template_id),
+                   include_blank: 'Escolha um modelo de e-mail…', class: 'crm-input crm-select-block', id: "#{dom}-template",
+                   data: { custom_select: true, msg_template: true } %>
+  <% end %>
+
+  <div class="ec-msg__when">
+    <% now_checked = message.send_at.nil? %>
+    <label class="ec-msg__opt">
+      <%= radio_button_tag field.call(:send_now), '1', now_checked, id: "#{dom}-now", data: { msg_when: true } %> Assim que eu confirmar
+    </label>
+    <label class="ec-msg__opt">
+      <%= radio_button_tag field.call(:send_now), '0', !now_checked, id: "#{dom}-later", data: { msg_when: true } %> Em data e hora
+    </label>
+    <div class="ec-msg__date" data-msg-date <%= 'hidden' if now_checked %>>
+      <%= date_field_tag field.call(:send_on), message.send_on, class: 'crm-input', id: "#{dom}-on", min: Time.zone.today.iso8601 %>
+      <%= time_field_tag field.call(:send_time), message.send_time, class: 'crm-input', id: "#{dom}-time" %>
+    </div>
+  </div>
+</div>

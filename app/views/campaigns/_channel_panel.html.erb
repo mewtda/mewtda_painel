@@ -1,0 +1,54 @@
+<%# Aba de um canal: chave liga/desliga e lista de mensagens. %>
+<% whatsapp = channel == 'whatsapp' %>
+<% enabled = @campaign.channel_enabled?(channel) %>
+<% locked = whatsapp && !@whatsapp_configured %>
+<div class="ec-tabpanel" role="tabpanel" id="ec-panel-<%= channel %>" data-channel-panel="<%= channel %>" <%= 'hidden' unless active %>>
+  <%= hidden_field_tag "campaign[#{channel}_enabled]", '0', id: nil %>
+  <label class="ec-switch <%= 'is-disabled' if locked %>">
+    <%= check_box_tag "campaign[#{channel}_enabled]", '1', enabled && !locked, id: "ec-enable-#{channel}", disabled: locked,
+                      data: { channel_toggle: channel } %>
+    <span class="ec-switch__track"><span class="ec-switch__thumb"></span></span>
+    <span><strong><%= whatsapp ? 'Enviar pelo WhatsApp' : 'Enviar por e-mail' %></strong>
+      <small class="cx-muted"><%= whatsapp ? 'Pela API Oficial, só para quem tem celular no cadastro.' : 'Só para quem tem e-mail e não pediu para sair.' %></small></span>
+  </label>
+
+  <% if locked %>
+    <div class="ec-empty">
+      A API Oficial do WhatsApp ainda não está configurada para esta loja. Depois de configurada, crie e aprove os modelos em
+      <%= link_to 'Comunicação › WhatsApp', whatsapp_templates_path, target: '_blank', rel: 'noopener' %>.
+    </div>
+  <% else %>
+    <div class="ec-channel-body" data-channel-body="<%= channel %>" <%= 'hidden' unless enabled %>>
+      <% if whatsapp && @whatsapp_templates.empty? %>
+        <div class="ec-empty">
+          Você ainda não tem modelo de WhatsApp aprovado pela Meta.
+          <%= link_to whatsapp_templates_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
+            <i class="fa-brands fa-whatsapp"></i> Criar modelos em Comunicação › WhatsApp
+          <% end %>
+        </div>
+      <% elsif !whatsapp && @email_templates.empty? %>
+        <div class="ec-empty">
+          Você ainda não tem nenhum modelo de e-mail.
+          <%= link_to new_email_template_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
+            <i class="fa-solid fa-plus"></i> Criar o primeiro modelo
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="ec-msgs" data-messages="<%= channel %>">
+        <% @campaign.messages_for(channel).each_with_index do |message, index| %>
+          <%= render 'message', message:, number: index + 1 %>
+        <% end %>
+      </div>
+      <div class="ec-actions">
+        <button type="button" class="crm-btn crm-btn--secondary ec-btn-sm" data-add-message="<%= channel %>"
+                data-url="<%= add_message_campaign_path(@campaign) %>">
+          <i class="fa-solid fa-plus"></i> Adicionar mensagem de <%= whatsapp ? 'WhatsApp' : 'e-mail' %>
+        </button>
+        <%= link_to (whatsapp ? whatsapp_templates_path : email_templates_path), class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
+          <i class="fa-solid fa-pen"></i> <%= whatsapp ? 'Modelos de WhatsApp' : 'Modelos de e-mail' %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

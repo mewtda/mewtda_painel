@@ -1,15 +1,16 @@
 <% title 'Nova campanha' %>
-
-<% weekdays = [[1, 'Seg'], [2, 'Ter'], [3, 'Qua'], [4, 'Qui'], [5, 'Sex'], [6, 'Sáb'], [0, 'Dom']] %>
+<% wa_templates_json = @whatsapp_templates.to_h do |t|
+     [t.id, { body: t.preview_body('Maria'), footer: t.footer, button: t.button_text }]
+   end %>
 
 <div class="clients-wrapper cx-page">
   <%= form_with model: @campaign, url: campaign_path(@campaign), method: :patch, id: 'campaign-form',
                 html: { autocomplete: 'off', data: { preview_url: preview_campaign_path(@campaign) } } do |form| %>
+    <script type="application/json" id="ec-wa-templates"><%= raw json_escape(wa_templates_json.to_json) %></script>
 
     <div class="sg-topbar">
       <div class="sg-topbar__left">
         <%= link_to campaigns_path, class: 'sg-back' do %><i class="fa-solid fa-arrow-left"></i> Campanhas<% end %>
-        <span class="crm-tag crm-tag--info"><i class="fa-solid fa-envelope"></i> E-mail</span>
         <span class="crm-tag crm-tag--neutral">Rascunho</span>
         <span class="ec-saved" id="ec-saved"><i class="fa-solid fa-cloud-arrow-up"></i> <span id="ec-saved-text">Salvo automaticamente</span></span>
       </div>
@@ -27,113 +28,85 @@
     <div class="ec-layout">
       <div class="ec-steps">
 
-        <section class="crm-card ec-step <%= 'is-done' if @campaign.step_done['name'] %>" data-step="name">
+        <section class="crm-card ec-step <%= 'is-done' if @campaign.name.present? %>" data-step="name">
           <header class="ec-step__head">
             <span class="ec-step__num"><i class="fa-solid fa-check"></i><b>1</b></span>
             <div><h2>Nome da campanha</h2><p class="ec-hint">Só para você achar depois. O cliente não vê.</p></div>
           </header>
-          <%= form.text_field :name, class: 'crm-input', maxlength: 120, placeholder: 'Ex.: Promoção de verão' %>
+          <%= form.text_field :name, class: 'crm-input', maxlength: 120, placeholder: 'Ex.: Black Friday 2026' %>
         </section>
 
-        <section class="crm-card ec-step <%= 'is-done' if @campaign.step_done['template'] %>" data-step="template">
+        <section class="crm-card ec-step <%= 'is-done' if @campaign.segments.any? %>" data-step="audience">
           <header class="ec-step__head">
             <span class="ec-step__num"><i class="fa-solid fa-check"></i><b>2</b></span>
-            <div><h2>Qual e-mail enviar</h2><p class="ec-hint">Escolha um dos seus modelos. A prévia aparece ao lado.</p></div>
+            <div><h2>Para quem enviar</h2><p class="ec-hint">Escolha um ou mais segmentos e listas. Quem está em mais de um recebe uma vez só.</p></div>
           </header>
-          <% if @email_templates.any? %>
-            <%= form.collection_select :email_template_id, @email_templates, :id, :name,
-                                       { include_blank: 'Escolha um modelo de e-mail…' }, class: 'crm-input crm-select-block',
-                                       data: { custom_select: true } %>
-            <p class="ec-hint ec-subject" id="ec-template-subject"><%= "Assunto: #{@campaign.email_template.subject}" if @campaign.email_template %></p>
-            <div class="ec-actions">
-              <%= link_to email_templates_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
-                <i class="fa-solid fa-pen"></i> Editar modelos
-              <% end %>
-              <%= link_to new_email_template_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
-                <i class="fa-solid fa-plus"></i> Criar novo modelo
+          <%= hidden_field_tag 'campaign[segment_ids][]', '', id: nil %>
+          <% if @segments.any? %>
+            <div class="ec-segments">
+              <% @segments.each do |segment| %>
+                <% on = @campaign.segment_ids.include?(segment.id) %>
+                <label class="ec-seg <%= 'is-on' if on %>">
+                  <%= check_box_tag 'campaign[segment_ids][]', segment.id, on, id: "ec-seg-#{segment.id}" %>
+                  <span><%= segment.name %><small class="cx-muted"><%= segment.kind_label %><%= " · #{segment.customers_count} pessoas" if segment.customers_count %></small></span>
+                </label>
               <% end %>
             </div>
           <% else %>
-            <div class="ec-empty">
-              Você ainda não tem nenhum modelo de e-mail.
-              <%= link_to new_email_template_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
-                <i class="fa-solid fa-plus"></i> Criar o primeiro modelo
-              <% end %>
-            </div>
+            <div class="ec-empty">Você ainda não tem segmentos nem listas.</div>
           <% end %>
-        </section>
-
-        <section class="crm-card ec-step <%= 'is-done' if @campaign.step_done['audience'] %>" data-step="audience">
-          <header class="ec-step__head">
-            <span class="ec-step__num"><i class="fa-solid fa-check"></i><b>3</b></span>
-            <div><h2>Para quem enviar</h2><p class="ec-hint">Escolha um segmento ou uma lista. Quem pediu para sair nunca recebe.</p></div>
-          </header>
-          <%= form.collection_select :segment_id, @segments, :id, ->(segment) { "#{segment.kind_label}: #{segment.name}" },
-                                     { include_blank: 'Escolha um segmento ou lista…' }, class: 'crm-input crm-select-block', data: { custom_select: true } %>
           <div class="ec-actions">
             <%= link_to segments_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
               <i class="fa-solid fa-plus"></i> Criar um segmento
             <% end %>
           </div>
           <div class="ec-audience" id="ec-audience" hidden>
-            <div class="ec-audience__line"><strong data-summary="recipients">0</strong> pessoas vão receber</div>
+            <div class="ec-audience__line" data-audience="email"><strong data-summary="email-recipients">0</strong> pessoas por e-mail</div>
             <div class="ec-audience__sub" data-summary-consent></div>
             <div class="ec-audience__sub" data-summary-excluded></div>
+            <div class="ec-audience__line" data-audience="whatsapp"><strong data-summary="whatsapp-recipients">0</strong> números de WhatsApp</div>
+            <div class="ec-audience__sub" data-summary-without-phone></div>
           </div>
         </section>
 
-        <section class="crm-card ec-step <%= 'is-done' if @campaign.step_done['timing'] %>" data-step="timing">
+        <section class="crm-card ec-step <%= 'is-done' if @campaign.active_messages.any? %>" data-step="messages">
           <header class="ec-step__head">
-            <span class="ec-step__num"><i class="fa-solid fa-check"></i><b>4</b></span>
-            <div><h2>Quando enviar</h2><p class="ec-hint">Agora, em uma data, ou só em certos dias da semana e horários.</p></div>
+            <span class="ec-step__num"><i class="fa-solid fa-check"></i><b>3</b></span>
+            <div><h2>Mensagens</h2><p class="ec-hint">Ative o e-mail, o WhatsApp ou os dois. Cada mensagem tem seu modelo e seu horário. Quem tem e-mail e celular recebe pelos dois.</p></div>
           </header>
 
-          <div class="ec-modes">
-            <% { 'now' => ['Agora', 'Assim que você confirmar'], 'scheduled' => ['Em uma data', 'Um dia e hora marcados'],
-                 'window' => ['Dias e horários', 'Ex.: toda segunda e quarta, das 8h às 12h'] }.each do |mode, (title, hint)| %>
-              <label class="ec-mode">
-                <%= form.radio_button :send_mode, mode, class: 'ec-mode__input' %>
-                <span class="ec-mode__body"><strong><%= title %></strong><small class="cx-muted"><%= hint %></small></span>
-              </label>
+          <div class="ec-tabs" role="tablist">
+            <% { 'email' => ['fa-solid fa-envelope', 'E-mail'], 'whatsapp' => ['fa-brands fa-whatsapp', 'WhatsApp'] }.each_with_index do |(channel, (icon, label)), index| %>
+              <button type="button" role="tab" class="ec-tab <%= 'is-active' if index.zero? %>" data-tab="<%= channel %>"
+                      aria-selected="<%= index.zero? %>" aria-controls="ec-panel-<%= channel %>">
+                <i class="<%= icon %>"></i> <%= label %>
+                <span class="ec-tab__state <%= 'is-on' if @campaign.channel_enabled?(channel) %>" data-tab-state="<%= channel %>">
+                  <%= @campaign.channel_enabled?(channel) ? 'Ativo' : 'Desligado' %>
+                </span>
+              </button>
             <% end %>
           </div>
 
-          <div class="ec-panel" data-mode-panel="scheduled" hidden>
-            <div class="ec-row">
-              <div><%= form.label :scheduled_on, 'Data', class: 'crm-label' %><%= form.date_field :scheduled_on, class: 'crm-input' %></div>
-              <div><%= form.label :scheduled_time, 'Hora', class: 'crm-label' %><%= form.time_field :scheduled_time, class: 'crm-input' %></div>
-            </div>
-          </div>
-
-          <div class="ec-panel" data-mode-panel="window" hidden>
-            <%= hidden_field_tag 'campaign[window_days][]', '', id: nil %>
-            <div class="ec-days">
-              <% weekdays.each do |day, label| %>
-                <label class="cx-chip <%= 'is-on' if @campaign.window_days.include?(day) %>">
-                  <%= check_box_tag 'campaign[window_days][]', day, @campaign.window_days.include?(day), id: "ec-day-#{day}" %>
-                  <%= label %>
-                </label>
-              <% end %>
-            </div>
-            <div class="ec-row">
-              <div><%= form.label :window_from, 'Das', class: 'crm-label' %><%= form.time_field :window_from, class: 'crm-input' %></div>
-              <div><%= form.label :window_to, 'Até', class: 'crm-label' %><%= form.time_field :window_to, class: 'crm-input' %></div>
-            </div>
-            <p class="ec-hint">Se a lista for maior do que cabe em um dia, a campanha continua no próximo dia marcado.</p>
-          </div>
+          <%= render 'channel_panel', channel: 'email', active: true %>
+          <%= render 'channel_panel', channel: 'whatsapp', active: false %>
         </section>
       </div>
 
       <aside class="ec-side">
         <div class="crm-card ec-summary">
           <h3>Resumo</h3>
-          <div class="ec-summary__big"><strong data-summary="recipients">0</strong><span>pessoas</span></div>
           <dl class="ec-summary__list">
-            <div><dt>Custo estimado <span class="ec-info" tabindex="0" title="Esse valor entra na sua fatura do mês.">
+            <div data-summary-row="email"><dt><i class="fa-solid fa-envelope"></i> E-mail</dt>
+              <dd><span data-summary="email-line">—</span><small data-summary="email-sub"></small></dd></div>
+            <div data-summary-row="whatsapp"><dt><i class="fa-brands fa-whatsapp"></i> WhatsApp</dt>
+              <dd><span data-summary="whatsapp-line">—</span><small data-summary="whatsapp-sub"></small></dd></div>
+            <div><dt>Custo do e-mail <span class="ec-info" tabindex="0" title="Esse valor entra na sua fatura do mês.">
                 <i class="fa-solid fa-circle-info"></i></span></dt><dd data-summary="cost">R$ 0,00</dd></div>
             <div><dt>Envio</dt><dd data-summary="timing"><%= @campaign.timing_summary %></dd></div>
-            <div><dt>Limite de hoje</dt><dd><span data-summary="limit">—</span><small data-summary="limit-left"></small></dd></div>
           </dl>
+          <p class="ec-hint ec-wa-cost" data-summary="whatsapp-cost" hidden>
+            <i class="fa-brands fa-whatsapp"></i> As mensagens de WhatsApp são cobradas pela Meta direto no cartão da conta do WhatsApp da loja.
+          </p>
           <p class="ec-warn" id="ec-limit-warn" hidden></p>
           <div class="ec-missing" id="ec-missing" hidden>
             <strong>Falta:</strong>
@@ -143,27 +116,23 @@
 
         <div class="crm-card ec-preview">
           <div class="ec-preview__head">
-            <h3>Prévia do e-mail</h3>
-            <div class="eb-device" role="group" aria-label="Tamanho da prévia">
+            <h3 id="ec-preview-title">Prévia</h3>
+            <div class="eb-device" role="group" aria-label="Tamanho da prévia" data-preview-kind="email">
               <button type="button" class="eb-device__btn active" data-ec-device="desktop" title="Computador"><i class="fa-solid fa-desktop"></i></button>
               <button type="button" class="eb-device__btn" data-ec-device="mobile" title="Celular"><i class="fa-solid fa-mobile-screen"></i></button>
             </div>
           </div>
-          <div class="ec-preview__stage" id="ec-stage" data-live-spinner>
-            <iframe class="ec-preview__frame" id="ec-frame" title="Prévia do e-mail" sandbox="allow-same-origin"
-                    <% if @campaign.email_template_id %>src="<%= preview_campaign_path(@campaign) %>"<% end %>></iframe>
+          <p class="ec-hint" data-preview-kind="none">Clique em <i class="fa-solid fa-eye"></i> numa mensagem para ver a prévia e enviar um teste.</p>
+          <div class="ec-preview__stage" id="ec-stage" data-live-spinner data-preview-kind="email" hidden>
+            <iframe class="ec-preview__frame" id="ec-frame" title="Prévia do e-mail" sandbox="allow-same-origin"></iframe>
           </div>
-          <% if @campaign.email_template_id %>
-            <div class="ec-actions">
-              <%= link_to edit_email_template_path(@campaign.email_template_id), class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
-                <i class="fa-solid fa-pen"></i> Editar este modelo
-              <% end %>
-            </div>
-          <% end %>
+          <div data-preview-kind="whatsapp" hidden>
+            <%= render 'whatsapp_templates/bubble', template: nil %>
+          </div>
         </div>
 
-        <div class="crm-card ec-test">
-          <h3>Enviar um teste</h3>
+        <div class="crm-card ec-test" data-preview-kind="email" hidden>
+          <h3>Enviar um teste por e-mail</h3>
           <div class="ec-test__row">
             <%= email_field_tag :test_email, nil, id: 'ec-test-email', class: 'crm-input', placeholder: 'seu@email.com', autocomplete: 'off' %>
             <button type="button" class="crm-btn crm-btn--secondary" id="ec-test-send" data-url="<%= send_test_campaign_path(@campaign) %>">
@@ -172,6 +141,18 @@
           </div>
           <p class="ec-hint" id="ec-test-status"></p>
         </div>
+
+        <div class="crm-card ec-test" data-preview-kind="whatsapp" hidden>
+          <h3>Enviar um teste por WhatsApp</h3>
+          <div class="ec-test__row">
+            <%= telephone_field_tag :test_phone, nil, id: 'ec-test-phone', class: 'crm-input', placeholder: '(31) 99999-9999', autocomplete: 'off' %>
+            <button type="button" class="crm-btn crm-btn--secondary" id="ec-test-wa-send" data-url="<%= send_test_whatsapp_campaign_path(@campaign) %>">
+              <i class="fa-brands fa-whatsapp"></i> Enviar
+            </button>
+          </div>
+          <p class="ec-hint">O nome do cliente aparece como "Maria" no teste.</p>
+          <p class="ec-hint" id="ec-test-wa-status"></p>
+        </div>
       </aside>
     </div>
   <% end %>
@@ -179,16 +160,14 @@
 
 <dialog class="crm-confirm ec-review" id="ec-review-dialog">
   <h2 class="crm-confirm__title">Revisar e enviar</h2>
-  <p class="ec-review__intro">Confira antes de confirmar. Depois que começar, o envio segue sozinho e você pode cancelar quando quiser.</p>
+  <p class="ec-review__intro">Confira antes de confirmar. Cada mensagem sai no seu horário, sozinha, e você pode cancelar quando quiser.</p>
   <dl class="ec-review__list">
     <div><dt>Campanha</dt><dd data-review="name"></dd></div>
-    <div><dt>E-mail</dt><dd data-review="template"></dd></div>
-    <div><dt>Para quem</dt><dd data-review="segment"></dd></div>
+    <div><dt>Para quem</dt><dd data-review="segments"></dd></div>
     <div><dt>Pessoas</dt><dd data-review="recipients"></dd></div>
-    <div><dt>Envio</dt><dd data-review="timing"></dd></div>
-    <div><dt>Custo estimado</dt><dd data-review="cost"></dd></div>
+    <div><dt>Custo do e-mail</dt><dd data-review="cost"></dd></div>
   </dl>
-  <div class="ec-warn" data-review="limit" hidden></div>
+  <ol class="ec-review__messages" data-review="messages"></ol>
   <%= form_with url: schedule_campaign_path(@campaign), method: :post, id: 'ec-schedule-form' do %>
     <label class="ec-review__consent" id="ec-consent" hidden>
       <%= check_box_tag :accept_not_subscribed, '1', false, id: 'ec-accept' %>
@@ -196,7 +175,7 @@
     </label>
     <div class="crm-confirm__actions">
       <button type="button" class="crm-btn crm-btn--secondary" id="ec-review-back">Voltar e ajustar</button>
-      <button type="submit" class="crm-btn crm-btn--primary" id="ec-schedule-submit">Enviar campanha</button>
+      <button type="submit" class="crm-btn crm-btn--primary" id="ec-schedule-submit">Confirmar campanha</button>
     </div>
   <% end %>
 </dialog>

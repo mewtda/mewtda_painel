@@ -183,8 +183,11 @@ Rails.application.routes.draw do
         get :details
         get :recipients
         post :send_test
+        post :send_test_whatsapp
         post :schedule
         post :cancel
+        post :add_message, path: 'mensagens'
+        delete 'mensagens/:message_id', action: :remove_message, as: :remove_message
       end
     end
     resource :email_configuration, only: %i[edit update]

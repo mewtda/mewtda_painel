@@ -11,6 +11,9 @@ module Billing
       channel == 'whatsapp' ? whatsapp_scope(range).count + campaign_whatsapp_scope(range).count : email_scope(range).sum(:count)
     end
 
+    # Mensagens de campanha pela API Oficial aceitas pela Meta (base da taxa da plataforma).
+    def campaign_whatsapp_count(range) = campaign_whatsapp_scope(range).count
+
     def today(channel)
       count(channel, today_range(channel))
     end

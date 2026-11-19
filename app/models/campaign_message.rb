@@ -63,7 +63,9 @@ class CampaignMessage < ApplicationRecord
   end
 
   def sent_cost
-    email? ? sent_count.to_i * Billing::Invoice::EMAIL_PRICE_PER_THOUSAND / 1000 : 0
+    return sent_count.to_i * Billing::Invoice::WHATSAPP_PRICE_PER_MESSAGE if whatsapp?
+
+    sent_count.to_i * Billing::Invoice::EMAIL_PRICE_PER_THOUSAND / 1000
   end
 
   private

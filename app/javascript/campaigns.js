@@ -260,6 +260,7 @@
     $('[data-summary="whatsapp-line"]').textContent = whatsapp.configured ? channelLine(whatsapp) : "API Oficial não configurada";
     $('[data-summary="whatsapp-sub"]').textContent = limitLine(whatsapp, "mensagens");
     $('[data-summary="cost"]').textContent = email.enabled ? email.cost : "—";
+    $('[data-summary="whatsapp-fee"]').textContent = whatsapp.enabled ? whatsapp.cost : "—";
     $('[data-summary="timing"]').textContent = data.timing;
     $('[data-summary="whatsapp-cost"]').hidden = !whatsapp.enabled;
     renderLimitWarning(data);
@@ -389,6 +390,7 @@
     if (whatsapp.enabled) people.push(`${plural(whatsapp.recipients, "número", "números")} de WhatsApp`);
     fill("recipients", people.join(" · "));
     fill("cost", email.enabled ? email.cost : "—");
+    fill("whatsapp-fee", whatsapp.enabled ? `${whatsapp.cost} + tarifa da Meta` : "—");
     $('[data-review="messages"]', dialog).replaceChildren(...lastData.messages.map((message) => {
       const item = document.createElement("li");
       item.append(element("strong", `${message.channel_label}: `), `${message.template || "sem modelo"} — ${message.when}`);

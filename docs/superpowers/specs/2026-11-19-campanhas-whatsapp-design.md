@@ -25,8 +25,10 @@ cada uma com data e hora, sempre escolhendo os segmentos que recebem.
 - Confirmação de entregue/lido do WhatsApp (webhook da Cloud API). Fica para depois.
 - Texto livre, respostas e conversas pela API Oficial (o atendimento continua na Evolution).
 - Imagem, vídeo ou documento no cabeçalho do modelo; botões além de um link.
-- Cobrança das mensagens de WhatsApp na fatura do painel: a Meta cobra direto no cartão da conta
-  do WhatsApp da loja. *(decisão minha)*
+- Cobrar a tarifa da Meta pelo painel: a Meta cobra cada mensagem direto no cartão da conta do
+  WhatsApp da loja (app da Meta). O painel cobra só a **taxa da plataforma de R$ 0,01 por mensagem de
+  WhatsApp de campanha enviada**, na fatura do mês (valor escolhido pelo Daniel em 19/11; a tarifa de
+  marketing da Meta no Brasil é ~R$ 0,32).
 
 ## Anti-objetivos (seria falha mesmo funcionando)
 
@@ -118,8 +120,8 @@ se todas futuras; "Enviada" quando todas terminaram; "Cancelada" cancela todas a
 - Abas **E-mail** e **WhatsApp**, cada uma com chave liga/desliga e lista de mensagens:
   modelo + "Assim que confirmar" ou data e hora; adicionar, remover, reordenar por data.
   A aba WhatsApp só deixa ativar com a API Oficial configurada e mostra só modelos aprovados.
-- Resumo: pessoas por canal, mensagens e datas, custo do e-mail (como hoje) e aviso de que o
-  WhatsApp é cobrado pela Meta.
+- Resumo: pessoas por canal, mensagens e datas, custo do e-mail (como hoje), taxa do WhatsApp
+  (R$ 0,01 por mensagem) e aviso de que a tarifa da Meta é cobrada à parte.
 - Teste: e-mail de teste (como hoje) e WhatsApp de teste para um número, usando o modelo escolhido.
 - "Revisar e enviar" lista todas as mensagens com canal, modelo, data e público.
 - O modo "dias e horários" (janela semanal) sai da tela. *(decisão minha, a confirmar com o Daniel)*

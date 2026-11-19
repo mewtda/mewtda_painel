@@ -102,10 +102,13 @@
               <dd><span data-summary="whatsapp-line">—</span><small data-summary="whatsapp-sub"></small></dd></div>
             <div><dt>Custo do e-mail <span class="ec-info" tabindex="0" title="Esse valor entra na sua fatura do mês.">
                 <i class="fa-solid fa-circle-info"></i></span></dt><dd data-summary="cost">R$ 0,00</dd></div>
+            <div data-summary-row="whatsapp-cost"><dt>Taxa do WhatsApp <span class="ec-info" tabindex="0"
+                title="R$ 0,01 por mensagem enviada, na sua fatura do mês. A tarifa da Meta é cobrada à parte, no app da Meta.">
+                <i class="fa-solid fa-circle-info"></i></span></dt><dd data-summary="whatsapp-fee">—</dd></div>
             <div><dt>Envio</dt><dd data-summary="timing"><%= @campaign.timing_summary %></dd></div>
           </dl>
           <p class="ec-hint ec-wa-cost" data-summary="whatsapp-cost" hidden>
-            <i class="fa-brands fa-whatsapp"></i> As mensagens de WhatsApp são cobradas pela Meta direto no cartão da conta do WhatsApp da loja.
+            <i class="fa-brands fa-whatsapp"></i> Além da taxa de R$ 0,01 por mensagem na fatura do painel, a Meta cobra cada mensagem de marketing (cerca de R$ 0,32) direto no cartão da conta do WhatsApp da loja.
           </p>
           <p class="ec-warn" id="ec-limit-warn" hidden></p>
           <div class="ec-missing" id="ec-missing" hidden>
@@ -166,6 +169,7 @@
     <div><dt>Para quem</dt><dd data-review="segments"></dd></div>
     <div><dt>Pessoas</dt><dd data-review="recipients"></dd></div>
     <div><dt>Custo do e-mail</dt><dd data-review="cost"></dd></div>
+    <div><dt>Taxa do WhatsApp</dt><dd data-review="whatsapp-fee"></dd></div>
   </dl>
   <ol class="ec-review__messages" data-review="messages"></ol>
   <%= form_with url: schedule_campaign_path(@campaign), method: :post, id: 'ec-schedule-form' do %>

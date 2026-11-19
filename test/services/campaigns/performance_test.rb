@@ -128,7 +128,7 @@ class Campaigns::PerformanceTest < ActiveSupport::TestCase
     assert_equal 0, outcome.percent_of_audience(3)
   end
 
-  test 'WhatsApp messages count as sent but are not part of the e-mail investment' do
+  test 'investment is the e-mail price plus the platform fee per WhatsApp message' do
     mixed = campaign(recipients_count: 300, sent_count: 300)
     mixed.messages.create!(channel: 'email', status: 'sent', sent_count: 100)
     mixed.messages.create!(channel: 'whatsapp', status: 'sent', sent_count: 200)
@@ -136,6 +136,6 @@ class Campaigns::PerformanceTest < ActiveSupport::TestCase
     outcome = result(mixed)
 
     assert_equal 300, outcome.sent
-    assert_equal BigDecimal('0.4'), outcome.investment
+    assert_equal BigDecimal('2.4'), outcome.investment
   end
 end

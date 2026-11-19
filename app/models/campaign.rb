@@ -102,7 +102,7 @@ class Campaign < ApplicationRecord
     end
   end
 
-  def sent_cost = messages.select(&:email?).sum(&:sent_cost)
+  def sent_cost = messages.sum(&:sent_cost)
 
   def progress_label
     return unless recipients_count

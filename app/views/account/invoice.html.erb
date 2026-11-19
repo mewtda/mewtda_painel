@@ -44,6 +44,15 @@
           <td class="invoice-table__amount invoice-table__hide-sm">—</td>
           <td class="invoice-table__amount"><%= brl.call(@invoice.emails_amount) %></td>
         </tr>
+        <tr>
+          <td>
+            <strong>Mensagens de WhatsApp (API Oficial)</strong>
+            <small>Taxa da plataforma por mensagem de campanha enviada. A tarifa da mensagem é cobrada pela Meta direto no cartão da conta do WhatsApp.</small>
+          </td>
+          <td class="invoice-table__amount invoice-table__hide-sm"><%= number_with_delimiter(@invoice.whatsapp_messages_sent, delimiter: '.') %></td>
+          <td class="invoice-table__amount invoice-table__hide-sm"><%= brl.call(Billing::Invoice::WHATSAPP_PRICE_PER_MESSAGE) %></td>
+          <td class="invoice-table__amount"><%= brl.call(@invoice.whatsapp_amount) %></td>
+        </tr>
       </tbody>
     </table>
 

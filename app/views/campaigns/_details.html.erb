@@ -63,8 +63,8 @@
     </div>
   <% end %>
   <div>
-    <dt><i class="fa-solid fa-coins"></i> Custo do e-mail</dt>
-    <dd><%= campaign_cost_label(campaign.sent_cost) %><% if campaign.messages.any?(&:whatsapp?) %><small class="ec-sub">WhatsApp cobrado pela Meta</small><% end %></dd>
+    <dt><i class="fa-solid fa-coins"></i> Custo</dt>
+    <dd><%= campaign_cost_label(campaign.sent_cost) %><% if campaign.messages.any?(&:whatsapp?) %><small class="ec-sub">Inclui R$ 0,01 por WhatsApp enviado; a tarifa da Meta é cobrada à parte</small><% end %></dd>
   </div>
 </dl>
 

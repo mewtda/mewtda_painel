@@ -286,10 +286,13 @@ class CampaignsController < ApplicationController
   end
 
   def whatsapp_json(audience)
+    whatsapp_count = @campaign.whatsapp_enabled ? @campaign.messages_for('whatsapp').size : 0
     {
       enabled: @campaign.whatsapp_enabled, configured: Whatsapp::Cloud::Api.new(@client).configured?,
-      messages: @campaign.whatsapp_enabled ? @campaign.messages_for('whatsapp').size : 0,
+      messages: whatsapp_count,
       recipients: audience.recipients, without_phone: audience.without_phone, total: audience.total,
+      cost: helpers.campaign_cost_label(audience.recipients * [whatsapp_count, 1].max *
+                                        Billing::Invoice::WHATSAPP_PRICE_PER_MESSAGE),
       daily_limit: audience.daily_limit, used_today: audience.used_today
     }
   end

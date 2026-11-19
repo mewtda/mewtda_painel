@@ -9,6 +9,7 @@ class Client < ApplicationRecord
   has_one :back_in_stock_setting, dependent: :destroy
   has_many :back_in_stock_alerts, dependent: :destroy
   has_many :email_templates, dependent: :destroy
+  has_many :whatsapp_templates, dependent: :destroy
   has_many :email_suppressions, dependent: :destroy
   has_many :campaigns, dependent: :destroy
   has_many :message_usages, dependent: :delete_all

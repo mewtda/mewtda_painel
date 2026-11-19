@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_16_180000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_19_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -959,6 +959,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_16_180000) do
     t.index ["connection_id"], name: "index_whatsapp_receipts_on_connection_id"
   end
 
+  create_table "whatsapp_templates", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.string "name", null: false
+    t.string "label", null: false
+    t.string "category", default: "MARKETING", null: false
+    t.string "language", default: "pt_BR", null: false
+    t.text "body", null: false
+    t.string "body_example"
+    t.string "footer"
+    t.string "button_text"
+    t.string "button_url"
+    t.string "meta_id"
+    t.string "status", default: "draft", null: false
+    t.string "rejection_reason"
+    t.datetime "synced_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id", "name"], name: "index_whatsapp_templates_on_client_id_and_name", unique: true
+    t.index ["client_id", "status"], name: "index_whatsapp_templates_on_client_id_and_status"
+    t.index ["client_id"], name: "index_whatsapp_templates_on_client_id"
+  end
+
   add_foreign_key "abandoned_checkouts", "clients"
   add_foreign_key "abandoned_checkouts", "customers"
   add_foreign_key "abandoned_checkouts", "whatsapp_connections", on_delete: :nullify
@@ -1036,4 +1058,5 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_16_180000) do
   add_foreign_key "whatsapp_reads", "users"
   add_foreign_key "whatsapp_reads", "whatsapp_conversations", column: "conversation_id"
   add_foreign_key "whatsapp_receipts", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_templates", "clients"
 end

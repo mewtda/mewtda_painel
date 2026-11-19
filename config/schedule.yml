@@ -42,3 +42,8 @@ campaigns_tick:
   cron: "* * * * *"
   class: "Campaigns::TickJob"
   queue: default
+
+whatsapp_template_sync:
+  cron: "*/10 * * * *"
+  class: "Whatsapp::TemplateSyncJob"
+  queue: default

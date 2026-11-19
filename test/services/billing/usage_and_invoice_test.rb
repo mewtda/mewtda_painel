@@ -48,6 +48,22 @@ class Billing::UsageAndInvoiceTest < ActiveSupport::TestCase
     assert_equal BigDecimal('307'), invoice.total
   end
 
+  test 'invoice charges the platform fee per WhatsApp campaign message sent in the month' do
+    client = build_client(plan_name: 'Pro', plan_price: '100,00')
+    campaign = client.campaigns.create!(status: 'sent')
+    message = campaign.messages.create!(channel: 'whatsapp', status: 'sent')
+    3.times { |i| message.recipients.create!(campaign:, channel: 'whatsapp', phone: "+551699000000#{i}", status: 'sent', sent_at: Time.current) }
+    message.recipients.create!(campaign:, channel: 'whatsapp', phone: '+5516990000009', status: 'failed')
+    message.recipients.create!(campaign:, channel: 'whatsapp', phone: '+5516990000008', status: 'sent', sent_at: 2.months.ago)
+
+    invoice = Billing::Invoice.new(client)
+
+    assert_equal BigDecimal('0.01'), Billing::Invoice::WHATSAPP_PRICE_PER_MESSAGE
+    assert_equal 3, invoice.whatsapp_messages_sent
+    assert_equal BigDecimal('0.03'), invoice.whatsapp_amount
+    assert_equal BigDecimal('100.03'), invoice.total
+  end
+
   test 'SES service stops at the daily email limit and counts sends' do
     client = build_client(daily_email_limit: 1, email_sending_domain: 'loja.com.br', ses_verification_status: 'verified')
     fake_ses = Minitest::Mock.new

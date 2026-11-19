@@ -19,7 +19,7 @@ class CampaignPerformanceController < ApplicationController
 
   def scope
     campaigns = @client.campaigns.where.not(started_at: nil)
-    campaigns = campaigns.where(channel: params[:canal]) if params[:canal].in?(Campaign::CHANNELS.keys)
+    campaigns = campaigns.where(id: CampaignMessage.where(channel: params[:canal]).select(:campaign_id)) if params[:canal].in?(Campaign::CHANNELS.keys)
     @campaign ? campaigns.where(id: @campaign.id) : campaigns.where(started_at: @period.time_range)
   end
 end

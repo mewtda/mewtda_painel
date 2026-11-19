@@ -5,9 +5,16 @@ class AudienceTest < ActiveSupport::TestCase
     @client = Client.create!(name: 'Loja Teste', email: "loja-#{SecureRandom.hex(4)}@example.com")
   end
 
-  def profile(email, state: nil)
+  def profile(email, state: nil, phone: nil, name: 'Cli')
     customer = Customer.create!(first_name: 'Cli', email:, shopify_customer_id: SecureRandom.hex(6))
-    CustomerProfile.create!(client: @client, customer:, email:, email_marketing_state: state, refreshed_at: Time.current)
+    CustomerProfile.create!(client: @client, customer:, email:, phone:, name:, email_marketing_state: state,
+                            refreshed_at: Time.current)
+  end
+
+  def list(*profiles)
+    segment = @client.segments.create!(name: "Lista #{SecureRandom.hex(2)}", kind: 'static')
+    profiles.each { |p| SegmentMembership.create!(segment:, customer_id: p.customer_id) }
+    segment
   end
 
   def everyone
@@ -50,5 +57,41 @@ class AudienceTest < ActiveSupport::TestCase
 
     assert_equal 0, result.recipients
     assert_equal 0, result.cost
+  end
+
+  test 'a person in two chosen segments counts once' do
+    ana = profile('ana@example.com')
+    bia = profile('bia@example.com')
+    result = Campaigns::Audience.new(@client, [list(ana, bia), list(ana)]).call
+    assert_equal 2, result.total
+    assert_equal 2, result.recipients
+  end
+
+  test 'whatsapp: the same number in three formats is sent once and people without a phone are left out' do
+    ana = profile('ana@example.com', phone: '(16) 99237-5432', name: 'Ana Souza')
+    dup1 = profile('x@example.com', phone: '16992375432')
+    dup2 = profile('y@example.com', phone: '+5516992375432')
+    bia = profile('bia@example.com', phone: '31 99013-1953', name: 'Bia')
+    none = profile('c@example.com', phone: nil)
+    bad = profile('d@example.com', phone: '123')
+    audience = Campaigns::Audience.new(@client, [list(ana, dup1, dup2, bia, none, bad)], channel: 'whatsapp')
+
+    result = audience.call
+    assert_equal 6, result.total
+    assert_equal 2, result.without_phone
+    assert_equal 2, result.recipients
+
+    sent = []
+    audience.each_recipient { |profile, phone| sent << [profile.name, phone] }
+    assert_equal [['Ana Souza', '+5516992375432'], ['Bia', '+5531990131953']], sent.sort
+  end
+
+  test 'e-mail each_recipient yields the address and skips suppressed ones' do
+    profile('a@example.com')
+    profile('d@example.com')
+    @client.email_suppressions.create!(email: 'd@example.com', source: 'manual')
+    sent = []
+    Campaigns::Audience.new(@client, everyone).each_recipient { |_profile, email| sent << email }
+    assert_equal ['a@example.com'], sent
   end
 end

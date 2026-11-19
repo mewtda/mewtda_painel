@@ -117,14 +117,45 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match 'Dia das mães', response.body
   end
 
-  test 'index filters by channel' do
-    @client.campaigns.create!(name: 'Por e-mail')
+  test 'index filters by channel through the messages' do
+    by_email = @client.campaigns.create!(name: 'Por e-mail')
+    by_email.messages.create!(channel: 'email')
+    by_whatsapp = @client.campaigns.create!(name: 'Pelo WhatsApp', whatsapp_enabled: true, email_enabled: false)
+    by_whatsapp.messages.create!(channel: 'whatsapp')
 
-    get campaigns_path(canal: 'email')
-    assert_match 'Por e-mail', response.body
+    get campaigns_path(canal: 'whatsapp')
+    assert_match 'Pelo WhatsApp', response.body
+    assert_no_match 'Por e-mail', response.body
 
     get campaigns_path(canal: 'nenhum')
     assert_match 'Por e-mail', response.body
+    assert_match 'Pelo WhatsApp', response.body
+  end
+
+  test 'index shows the active channels and the chosen segments' do
+    campaign = @client.campaigns.create!(name: 'Black', whatsapp_enabled: true,
+                                         segment_ids: [@client.segments.create!(name: 'VIPs', kind: 'static').id])
+    campaign.messages.create!(channel: 'whatsapp')
+
+    get campaigns_path
+
+    assert_match 'VIPs', response.body
+    assert_match 'fa-whatsapp', response.body
+  end
+
+  test 'details of a migrated e-mail campaign show the same numbers per message' do
+    campaign = @client.campaigns.create!(name: 'Antiga', status: 'sent', recipients_count: 3, sent_count: 2, failed_count: 1,
+                                         started_at: 1.day.ago)
+    message = campaign.messages.create!(channel: 'email', email_template: template(@client), status: 'sent',
+                                        recipients_count: 3, sent_count: 2, failed_count: 1)
+
+    get details_campaign_path(campaign)
+
+    assert_response :success
+    assert_match 'Modelo', response.body
+    assert_includes response.body, ERB::Util.html_escape(recipients_campaign_path(campaign, status: 'sent', message_id: message.id))
+    assert_includes response.body, ERB::Util.html_escape(recipients_campaign_path(campaign, status: 'failed', message_id: message.id))
+    assert_match '2 de 3 enviados', response.body
   end
 
   test 'create makes a draft and goes to the editor' do
@@ -137,53 +168,124 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert campaign.draft?
   end
 
-  test 'edit renders the steps for a draft' do
-    campaign = @client.campaigns.create!
+  def segment_with(email: 'eu@example.com', phone: nil, subscribed: true, name: 'Lista')
+    segment = @client.segments.create!(name: "#{name} #{SecureRandom.hex(2)}", kind: 'static')
+    customer = Customer.create!(first_name: 'Eu', email:, shopify_customer_id: SecureRandom.hex(6))
+    CustomerProfile.create!(client: @client, customer:, email:, phone:, name: 'Eu Mesmo', refreshed_at: Time.current,
+                            email_marketing_state: (subscribed ? 'subscribed' : 'not_subscribed'))
+    SegmentMembership.create!(segment:, customer:)
+    segment
+  end
+
+  def configure_whatsapp!
+    @client.update!(whatsapp_cloud_phone_number_id: '1', whatsapp_cloud_business_account_id: '2',
+                    whatsapp_cloud_access_token: 'tok')
+  end
+
+  def wa_template(status: 'approved')
+    @client.whatsapp_templates.create!(label: "Black #{SecureRandom.hex(2)}", body: 'Oi {{1}}', body_example: 'Maria', status:)
+  end
+
+  test 'edit renders the e-mail and WhatsApp tabs for a draft' do
+    configure_whatsapp!
+    campaign = @client.campaigns.create!(whatsapp_enabled: true)
+    email = campaign.messages.create!(channel: 'email', email_template: template(@client), send_at: 2.days.from_now)
+    whatsapp = campaign.messages.create!(channel: 'whatsapp', whatsapp_template: wa_template)
 
     get edit_campaign_path(campaign)
 
     assert_response :success
-    assert_match 'Quando enviar', response.body
+    assert_match 'Mensagens', response.body
+    assert_match 'WhatsApp', response.body
     assert_match 'entra na sua fatura do mês', response.body
+    assert_includes response.body, "campaign[messages_attributes][#{email.id}][send_on]"
+    assert_includes response.body, "campaign[messages_attributes][#{whatsapp.id}][whatsapp_template_id]"
   end
 
-  test 'update autosaves and returns the summary' do
+  test 'add_message creates a draft message of the channel and returns its row' do
     campaign = @client.campaigns.create!
-    segment = @client.segments.create!(name: 'Lista', kind: 'static')
 
-    patch campaign_path(campaign), params: { campaign: { name: 'Verão', segment_id: segment.id, email_template_id: template(@client).id } },
-                                         as: :json
+    post add_message_campaign_path(campaign), params: { channel: 'whatsapp' }
+
+    assert_response :success
+    message = campaign.messages.sole
+    assert_equal ['whatsapp', 'draft'], [message.channel, message.status]
+    assert_includes response.body, "campaign[messages_attributes][#{message.id}][whatsapp_template_id]"
+  end
+
+  test 'remove_message deletes a message of a draft' do
+    campaign = @client.campaigns.create!
+    message = campaign.messages.create!(channel: 'email')
+
+    delete remove_message_campaign_path(campaign, message_id: message.id), as: :json
+
+    assert_response :success
+    assert_empty campaign.messages.reload
+  end
+
+  test 'saving two segments and two messages (WhatsApp and e-mail) persists and is ready' do
+    configure_whatsapp!
+    @client.update!(ses_verification_status: 'verified')
+    campaign = @client.campaigns.create!
+    email = campaign.messages.create!(channel: 'email')
+    whatsapp = campaign.messages.create!(channel: 'whatsapp')
+    first = segment_with(email: 'a@example.com', phone: '16992375432')
+    second = segment_with(email: 'b@example.com', phone: nil)
+    approved = wa_template
+
+    patch campaign_path(campaign), as: :json, params: { campaign: {
+      name: 'Black', segment_ids: ['', first.id, second.id], email_enabled: '1', whatsapp_enabled: '1',
+      messages_attributes: {
+        email.id => { id: email.id, email_template_id: template(@client).id, send_now: '1' },
+        whatsapp.id => { id: whatsapp.id, whatsapp_template_id: approved.id, send_now: '0',
+                         send_on: 2.days.from_now.to_date.iso8601, send_time: '10:00' }
+      }
+    } }
 
     assert_response :success
     body = response.parsed_body
-    assert_equal 'Verão', campaign.reload.name
-    assert_equal true, body['steps']['audience']
-    assert_equal 0, body['audience']['recipients']
     assert_equal [], body['missing']
-    assert_equal 'Oi', body['template_subject']
+    assert_equal true, body['ready']
+    assert_equal [first.id, second.id].sort, campaign.reload.segment_ids.sort
+    assert_equal 2, body['channels']['email']['recipients']
+    assert_equal 1, body['channels']['whatsapp']['recipients']
+    assert_equal true, body['channels']['whatsapp']['configured']
+    assert_equal 'R$ 0,01', body['channels']['whatsapp']['cost']
+    assert_nil email.reload.send_at
+    assert_equal '10:00', whatsapp.reload.send_at.strftime('%H:%M')
+    assert_equal 2, body['messages'].size
+  end
+
+  test 'WhatsApp with a template still in review is missing the approval' do
+    configure_whatsapp!
+    campaign = @client.campaigns.create!(name: 'Black', segment_ids: [segment_with.id], whatsapp_enabled: true,
+                                         email_enabled: false)
+    message = campaign.messages.create!(channel: 'whatsapp', whatsapp_template: wa_template(status: 'pending'))
+
+    patch campaign_path(campaign), params: { campaign: { name: 'Black' } }, as: :json
+
+    assert(response.parsed_body['missing'].any? { |text| text.include?('aprovado') })
+    assert_equal false, response.parsed_body['ready']
+    assert message
   end
 
   test 'cost shows less than one cent for a tiny audience instead of zero' do
-    segment = @client.segments.create!(name: 'Eu', kind: 'static')
-    customer = Customer.create!(first_name: 'Eu', email: 'eu@example.com', shopify_customer_id: SecureRandom.hex(6))
-    CustomerProfile.create!(client: @client, customer:, email: 'eu@example.com', refreshed_at: Time.current)
-    SegmentMembership.create!(segment:, customer:)
-    campaign = @client.campaigns.create!(segment:)
+    campaign = @client.campaigns.create!(segment_ids: [segment_with.id])
 
     patch campaign_path(campaign), params: { campaign: { name: 'Teste' } }, as: :json
 
-    assert_equal 1, response.parsed_body['audience']['recipients']
-    assert_equal 'menos de R$ 0,01', response.parsed_body['audience']['cost']
+    assert_equal 1, response.parsed_body['channels']['email']['recipients']
+    assert_equal 'menos de R$ 0,01', response.parsed_body['channels']['email']['cost']
   end
 
   test 'update rejects a segment from another store' do
     campaign = @client.campaigns.create!
     foreign = build_client.segments.create!(name: 'Alheio', kind: 'static')
 
-    patch campaign_path(campaign), params: { campaign: { segment_id: foreign.id } }, as: :json
+    patch campaign_path(campaign), params: { campaign: { segment_ids: [foreign.id] } }, as: :json
 
     assert_response :unprocessable_entity
-    assert_nil campaign.reload.segment_id
+    assert_empty campaign.reload.segment_ids
   end
 
   test 'a campaign that is not a draft cannot be edited' do
@@ -216,10 +318,11 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test 'preview renders the chosen template' do
-    campaign = @client.campaigns.create!(email_template: template(@client))
+  test 'preview renders the e-mail of the chosen message' do
+    campaign = @client.campaigns.create!
+    message = campaign.messages.create!(channel: 'email', email_template: template(@client))
 
-    get preview_campaign_path(campaign)
+    get preview_campaign_path(campaign, message_id: message.id)
 
     assert_response :success
     assert_match 'Oi', response.body
@@ -227,21 +330,23 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
 
   test 'send_test validates the address, the template and the domain' do
     campaign = @client.campaigns.create!
+    message = campaign.messages.create!(channel: 'email')
 
-    post send_test_campaign_path(campaign), params: { test_email: 'ruim' }
+    post send_test_campaign_path(campaign), params: { test_email: 'ruim', message_id: message.id }
     assert_response :unprocessable_entity
 
-    post send_test_campaign_path(campaign), params: { test_email: 'ana@example.com' }
+    post send_test_campaign_path(campaign), params: { test_email: 'ana@example.com', message_id: message.id }
     assert_match 'Escolha o e-mail', response.parsed_body['error']
 
-    campaign.update!(email_template: template(@client))
-    post send_test_campaign_path(campaign), params: { test_email: 'ana@example.com' }
+    message.update!(email_template: template(@client))
+    post send_test_campaign_path(campaign), params: { test_email: 'ana@example.com', message_id: message.id }
     assert_match 'domínio de envio', response.parsed_body['error']
   end
 
   test 'send_test sends through SES with the TESTE prefix' do
     @client.update!(ses_verification_status: 'verified')
-    campaign = @client.campaigns.create!(email_template: template(@client))
+    campaign = @client.campaigns.create!
+    message = campaign.messages.create!(channel: 'email', email_template: template(@client))
     calls = []
     sender = Object.new
     sender.define_singleton_method(:call) do |**args|
@@ -250,7 +355,7 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     end
 
     Ses::SendEmailService.stub(:new, ->(_client) { sender }) do
-      post send_test_campaign_path(campaign), params: { test_email: 'ana@example.com' }
+      post send_test_campaign_path(campaign), params: { test_email: 'ana@example.com', message_id: message.id }
     end
 
     assert_response :success
@@ -258,29 +363,85 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal '[TESTE] Oi', calls.first[:subject]
   end
 
+  test 'send_test_whatsapp sends the chosen template to the typed phone' do
+    configure_whatsapp!
+    campaign = @client.campaigns.create!
+    approved = wa_template
+    calls = []
+    api = Object.new
+    def api.configured? = true
+    api.define_singleton_method(:send_template) { |**args| calls << args and 'wamid.T' }
+
+    Whatsapp::Cloud::Api.stub(:new, ->(_client) { api }) do
+      post send_test_whatsapp_campaign_path(campaign), params: { phone: '(16) 99237-5432', whatsapp_template_id: approved.id }
+    end
+
+    assert_response :success
+    assert_equal [{ to: '+5516992375432', name: approved.name, language: 'pt_BR', body_params: ['Maria'] }], calls
+  end
+
+  test 'send_test_whatsapp refuses an invalid phone or a template not approved' do
+    configure_whatsapp!
+    campaign = @client.campaigns.create!
+
+    post send_test_whatsapp_campaign_path(campaign), params: { phone: '123', whatsapp_template_id: wa_template.id }
+    assert_response :unprocessable_entity
+
+    post send_test_whatsapp_campaign_path(campaign), params: { phone: '16992375432', whatsapp_template_id: wa_template(status: 'pending').id }
+    assert_match 'aprovado', response.parsed_body['error']
+  end
+
   def ready_campaign(subscribed: true)
     @client.update!(ses_verification_status: 'verified')
-    segment = @client.segments.create!(name: 'Lista', kind: 'static')
-    customer = Customer.create!(first_name: 'Eu', email: 'eu@example.com', shopify_customer_id: SecureRandom.hex(6))
-    CustomerProfile.create!(client: @client, customer:, email: 'eu@example.com', refreshed_at: Time.current,
-                            email_marketing_state: (subscribed ? 'subscribed' : 'not_subscribed'))
-    SegmentMembership.create!(segment:, customer:)
-    @client.campaigns.create!(name: 'Verão', segment:, email_template: template(@client))
+    campaign = @client.campaigns.create!(name: 'Verão', segment_ids: [segment_with(subscribed:).id])
+    campaign.messages.create!(channel: 'email', email_template: template(@client))
+    campaign
   end
 
   test 'schedule confirms the campaign, records who did it and wakes up the dispatch' do
     campaign = ready_campaign
+    message = campaign.messages.first
 
-    assert_enqueued_with(job: Campaigns::DispatchJob, args: [campaign.id]) do
+    assert_enqueued_with(job: Campaigns::DispatchJob, args: [message.id]) do
       post schedule_campaign_path(campaign)
     end
 
     campaign.reload
     assert_redirected_to campaigns_path
     assert_equal 'scheduled', campaign.status
+    assert_equal 'scheduled', message.reload.status
     assert campaign.next_run_at.present? && campaign.published_at.present?
     assert campaign.published_by.present?
     assert_nil campaign.acknowledged_not_subscribed
+  end
+
+  test 'schedule plans each message at its time and only wakes up the ones due now' do
+    configure_whatsapp!
+    campaign = ready_campaign
+    campaign.update!(whatsapp_enabled: true)
+    campaign.segments.first.segment_memberships.first.customer.then do |customer|
+      CustomerProfile.find_by(customer:).update!(phone: '16992375432')
+    end
+    later = 3.days.from_now.change(sec: 0)
+    whatsapp = campaign.messages.create!(channel: 'whatsapp', whatsapp_template: wa_template, send_at: later)
+    email = campaign.messages.find_by(channel: 'email')
+
+    post schedule_campaign_path(campaign)
+
+    assert_enqueued_jobs 1, only: Campaigns::DispatchJob
+    assert_enqueued_with(job: Campaigns::DispatchJob, args: [email.id])
+    assert_equal ['scheduled', later], [whatsapp.reload.status, whatsapp.next_run_at]
+    assert_in_delta Time.current.to_f, email.reload.next_run_at.to_f, 5
+  end
+
+  test 'schedule cancels messages of a channel turned off' do
+    campaign = ready_campaign
+    off = campaign.messages.create!(channel: 'whatsapp', whatsapp_template: wa_template)
+
+    post schedule_campaign_path(campaign)
+
+    assert_equal 'cancelled', off.reload.status
+    assert_equal 'scheduled', campaign.reload.status
   end
 
   test 'schedule needs the confirmation when part of the audience did not accept promotions' do
@@ -301,7 +462,7 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_match 'Falta', flash[:alert]
 
     campaign = ready_campaign
-    campaign.segment.segment_memberships.destroy_all
+    campaign.segments.first.segment_memberships.destroy_all
     post schedule_campaign_path(campaign)
     assert_match 'não tem ninguém', flash[:alert]
 
@@ -314,10 +475,12 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
 
   test 'cancel stops a running campaign but not a finished one' do
     running = @client.campaigns.create!(status: 'sending', next_run_at: 1.minute.from_now)
+    pending = running.messages.create!(channel: 'email', status: 'scheduled', next_run_at: 1.day.from_now)
     finished = @client.campaigns.create!(status: 'sent')
 
     post cancel_campaign_path(running)
     assert_equal 'cancelled', running.reload.status
+    assert_equal 'cancelled', pending.reload.status
     assert_nil running.next_run_at
 
     post cancel_campaign_path(finished)

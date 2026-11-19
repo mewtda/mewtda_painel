@@ -1,0 +1,11 @@
+<%# Balão de prévia do WhatsApp. O JS (whatsapp_templates.js / campaigns.js) atualiza os data-wt-preview-*. %>
+<div class="wt-phone">
+  <div class="wt-bubble">
+    <div class="wt-bubble__body" data-wt-preview-body><%= template&.preview_body('Maria') %></div>
+    <div class="wt-bubble__footer" data-wt-preview-footer <%= 'hidden' if template&.footer.blank? %>><%= template&.footer %></div>
+    <div class="wt-bubble__time"><%= Time.current.strftime('%H:%M') %></div>
+    <div class="wt-bubble__button" data-wt-preview-button <%= 'hidden' if template&.button_text.blank? %>>
+      <i class="fa-solid fa-arrow-up-right-from-square"></i> <span data-wt-preview-button-text><%= template&.button_text %></span>
+    </div>
+  </div>
+</div>

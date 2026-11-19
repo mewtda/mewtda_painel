@@ -32,6 +32,18 @@ class AccountLimitsControllerTest < ActionDispatch::IntegrationTest
     assert_match 'R$ 301,00', response.body
   end
 
+  test 'invoice shows the WhatsApp platform fee' do
+    campaign = @client.campaigns.create!(status: 'sent')
+    message = campaign.messages.create!(channel: 'whatsapp', status: 'sent')
+    100.times { |i| message.recipients.create!(campaign:, channel: 'whatsapp', phone: "+5516990000#{i.to_s.rjust(3, '0')}", status: 'sent', sent_at: Time.current) }
+
+    get invoice_account_path
+
+    assert_match 'Mensagens de WhatsApp', response.body
+    assert_match 'R$ 1,00', response.body
+    assert_match 'R$ 298,00', response.body
+  end
+
   test 'account edit shows the tabs' do
     get edit_account_path
 

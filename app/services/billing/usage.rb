@@ -8,8 +8,11 @@ module Billing
     end
 
     def count(channel, range)
-      channel == 'whatsapp' ? whatsapp_scope(range).count : email_scope(range).sum(:count)
+      channel == 'whatsapp' ? whatsapp_scope(range).count + campaign_whatsapp_scope(range).count : email_scope(range).sum(:count)
     end
+
+    # Mensagens de campanha pela API Oficial aceitas pela Meta (base da taxa da plataforma).
+    def campaign_whatsapp_count(range) = campaign_whatsapp_scope(range).count
 
     def today(channel)
       count(channel, today_range(channel))
@@ -32,6 +35,9 @@ module Billing
         if channel == 'whatsapp'
           whatsapp_scope(first.beginning_of_day..).group(day_sql('whatsapp_messages.sent_at')).count
                                                    .transform_keys(&:to_date)
+                                                   .merge(campaign_whatsapp_scope(first.beginning_of_day..)
+                                                     .group(day_sql('campaign_recipients.sent_at')).count
+                                                     .transform_keys(&:to_date)) { |_day, a, b| a + b }
         else
           email_scope(first..).group(:day).sum(:count)
         end
@@ -55,6 +61,12 @@ module Billing
                        .where(direction: 'outgoing', historical: false, origin: %w[team automation ai])
                        .where.not(provider_id: nil)
                        .where(sent_at: range)
+    end
+
+    # Mensagens de campanha enviadas pela API Oficial (Cloud API) e aceitas pela Meta.
+    def campaign_whatsapp_scope(range)
+      CampaignRecipient.joins(:campaign).where(campaigns: { client_id: client.id })
+                       .where(channel: 'whatsapp', status: 'sent', sent_at: range)
     end
 
     def email_scope(range)

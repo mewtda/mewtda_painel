@@ -1,0 +1,78 @@
+<% title 'WhatsApp' %>
+<% wa_tags = { 'draft' => 'neutral', 'pending' => 'warning', 'approved' => 'success', 'rejected' => 'danger',
+               'paused' => 'warning', 'disabled' => 'danger' } %>
+
+<div class="clients-wrapper cx-page">
+  <% unless @api_configured %>
+    <div class="crm-card wt-notice">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <div>
+        <strong>A API Oficial do WhatsApp ainda não está configurada para esta loja.</strong>
+        <p class="cx-muted">Você pode escrever os modelos, mas para enviar para aprovação e disparar campanhas é preciso
+          informar o token, o ID do número e o ID da conta do WhatsApp Business nas configurações do cliente.
+          <% if current_user.admin? %><%= link_to 'Abrir configurações', edit_client_path(@client) %><% else %>Fale com o suporte Mewtda.<% end %></p>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="clients-table-wrap">
+    <div class="clients-table-header">
+      <span class="clients-table-header__title"><i class="fa-brands fa-whatsapp"></i> Modelos de WhatsApp — <%= @client.name %></span>
+      <%= link_to new_whatsapp_template_path, class: 'crm-btn crm-btn--primary' do %>
+        <i class="fa-solid fa-plus"></i> Novo modelo
+      <% end %>
+    </div>
+
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Status</th>
+          <th>Mensagem</th>
+          <th class="text-center">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @templates.each do |template| %>
+          <tr>
+            <td>
+              <span class="ec-cell">
+                <% if template.editable? %><%= link_to template.label, edit_whatsapp_template_path(template), class: 'cx-link' %><% else %><%= template.label %><% end %>
+                <small class="cx-muted ec-sub"><%= template.name %></small>
+              </span>
+            </td>
+            <td data-label="Status">
+              <span class="crm-tag crm-tag--<%= wa_tags.fetch(template.status, 'neutral') %>"><%= template.status_label %></span>
+              <% if template.rejection_reason.present? %><small class="cx-muted ec-sub">Motivo: <%= template.rejection_reason %></small><% end %>
+            </td>
+            <td class="cx-muted wt-excerpt" data-label="Mensagem"><%= truncate(template.preview_body, length: 110) %></td>
+            <td class="text-center">
+              <div class="clients-table__actions">
+                <% if template.editable? %>
+                  <%= link_to edit_whatsapp_template_path(template), class: 'crm-btn clients-btn--icon', title: 'Editar' do %><i class="fa-solid fa-pen"></i><% end %>
+                  <% if @api_configured %>
+                    <%= button_to submit_whatsapp_template_path(template), method: :post, class: 'crm-btn clients-btn--icon', title: 'Enviar para aprovação',
+                        form: { data: { confirm: "Enviar \"#{template.label}\" para aprovação da Meta? Depois de enviado o texto não pode mais ser alterado.",
+                                        confirm_label: 'Enviar para aprovação' } } do %><i class="fa-solid fa-paper-plane"></i><% end %>
+                  <% end %>
+                <% end %>
+                <%= button_to duplicate_whatsapp_template_path(template), method: :post, class: 'crm-btn clients-btn--icon', title: 'Duplicar' do %><i class="fa-solid fa-copy"></i><% end %>
+                <%= button_to whatsapp_template_path(template), method: :delete, class: 'crm-btn clients-btn--icon clients-btn--danger', title: 'Excluir',
+                    form: { data: { confirm: "Excluir o modelo \"#{template.label}\"?#{' Ele também será excluído na Meta.' if template.meta_id.present?}", confirm_label: 'Excluir' } } do %>
+                  <i class="fa-solid fa-trash-can"></i>
+                <% end %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+        <% if @templates.empty? %>
+          <tr>
+            <td colspan="4" class="clients-table__empty">
+              Nenhum modelo ainda. Clique em <strong>Novo modelo</strong>, escreva a mensagem e envie para aprovação da Meta.
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

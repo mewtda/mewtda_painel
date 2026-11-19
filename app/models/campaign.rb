@@ -1,46 +1,108 @@
+# Campanha: nome, segmentos, canais ligados e uma ou mais mensagens (e-mail e/ou WhatsApp), cada uma
+# com sua data. Status, contagens e próximo envio são agregados a partir das mensagens.
+# Os campos antigos (email_template_id, segment_id, send_mode, scheduled_at, janela) não são mais usados.
 class Campaign < ApplicationRecord
   STATUSES = {
     'draft' => 'Rascunho', 'scheduled' => 'Agendada', 'sending' => 'Enviando',
     'paused' => 'Pausada', 'sent' => 'Enviada', 'cancelled' => 'Cancelada'
   }.freeze
-  SEND_MODES = %w[now scheduled window].freeze
-  CHANNELS = { 'email' => 'E-mail' }.freeze
-  TIME_FORMAT = /\A([01]\d|2[0-3]):[0-5]\d\z/
-  RESUME_HOUR = 8
-  RUNNABLE = %w[scheduled sending paused].freeze
+  CHANNELS = CampaignMessage::CHANNEL_LABELS
+  RUNNABLE = CampaignMessage::RUNNABLE
 
   belongs_to :client
-  belongs_to :email_template, optional: true
-  belongs_to :segment, optional: true
   belongs_to :created_by, class_name: 'User', optional: true
   belongs_to :published_by, class_name: 'User', optional: true
+  # Destinatários antes das mensagens: apagam primeiro.
   has_many :recipients, class_name: 'CampaignRecipient', dependent: :delete_all
+  has_many :messages, -> { order(Arel.sql('campaign_messages.send_at ASC NULLS FIRST, campaign_messages.position, campaign_messages.id')) },
+           class_name: 'CampaignMessage', dependent: :destroy, inverse_of: :campaign
+  has_many :campaign_segments, dependent: :delete_all
+  has_many :segments, through: :campaign_segments
 
-  attr_writer :scheduled_on, :scheduled_time
-
-  before_validation :compose_scheduled_at
+  accepts_nested_attributes_for :messages, allow_destroy: true
 
   validates :name, length: { maximum: 120 }
   validates :status, inclusion: { in: STATUSES.keys }
-  validates :send_mode, inclusion: { in: SEND_MODES }
-  validates :channel, inclusion: { in: CHANNELS.keys }
-  validates :window_from, :window_to, format: { with: TIME_FORMAT }
-  validate :template_and_segment_belong_to_client
-
-  def window_days=(value)
-    super(Array(value).compact_blank.map(&:to_i).select { |day| (0..6).cover?(day) }.uniq.sort)
-  end
+  validate :segments_belong_to_client
 
   def draft? = status == 'draft'
   def cancelable? = status.in?(RUNNABLE)
+  def status_label = STATUSES.fetch(status)
+  def display_name = name.presence || 'Campanha sem nome'
 
-  def recount!
-    counts = recipients.group(:status).count
-    update_columns(sent_count: counts.fetch('sent', 0), failed_count: counts.fetch('failed', 0),
-                   blocked_count: counts.fetch('blocked', 0))
+  def channel_enabled?(channel)
+    channel.to_s == 'whatsapp' ? whatsapp_enabled : email_enabled
   end
 
-  def sent_cost = sent_count.to_i * Billing::Invoice::EMAIL_PRICE_PER_THOUSAND / 1000
+  def enabled_channels = CampaignMessage::CHANNELS.select { |channel| channel_enabled?(channel) }
+
+  def live_messages = messages.reject(&:marked_for_destruction?)
+
+  def active_messages
+    live_messages.select { |message| channel_enabled?(message.channel) && message.status != 'cancelled' }
+  end
+
+  def messages_for(channel) = live_messages.select { |message| message.channel == channel.to_s }
+
+  def whatsapp_ready? = Whatsapp::Cloud::Api.new(client).configured?
+
+  def missing_steps(now = Time.current)
+    steps = []
+    steps << 'Dê um nome à campanha' if name.blank?
+    steps << 'Escolha para quem enviar' if segments.empty?
+    steps << 'Ative o e-mail ou o WhatsApp' if enabled_channels.empty?
+    steps << 'Configure a API Oficial do WhatsApp da loja' if whatsapp_enabled && !whatsapp_ready?
+    enabled_channels.each do |channel|
+      list = messages_for(channel)
+      steps << "Adicione uma mensagem de #{channel == 'email' ? 'e-mail' : 'WhatsApp'}" if list.empty?
+      list.each_with_index { |message, index| steps.concat(message_steps(message, index + 1, now)) }
+    end
+    steps
+  end
+
+  def timing_summary
+    list = active_messages
+    return 'Adicione as mensagens' if list.empty?
+
+    dates = list.map(&:send_at)
+    return list.one? ? 'Assim que você confirmar' : "#{list.size} mensagens · assim que você confirmar" if dates.all?(&:nil?)
+    return I18n.l(dates.first, format: '%d/%m/%Y às %H:%M') if list.one?
+
+    first = dates.include?(nil) ? 'ao confirmar' : I18n.l(dates.compact.min, format: '%d/%m %H:%M')
+    "#{list.size} mensagens · #{first} a #{I18n.l(dates.compact.max, format: '%d/%m %H:%M')}"
+  end
+
+  # Recalcula status, contagens e próximo envio a partir das mensagens já confirmadas.
+  # Sob trava da linha da campanha: duas mensagens terminando juntas não sobrescrevem uma à outra.
+  # Uma campanha cancelada pela loja continua cancelada.
+  def refresh_from_messages!
+    with_lock do
+      list = messages.reload.reject { |message| message.status == 'draft' }
+      next if list.empty?
+
+      runnable = list.select(&:runnable?)
+      counted = list.select(&:recipients_count)
+      update_columns(
+        status: status == 'cancelled' ? 'cancelled' : aggregate_status(list.map(&:status)),
+        recipients_count: counted.any? ? counted.sum(&:recipients_count) : nil,
+        sent_count: list.sum(&:sent_count), failed_count: list.sum(&:failed_count), blocked_count: list.sum(&:blocked_count),
+        started_at: list.filter_map(&:started_at).min,
+        next_run_at: runnable.filter_map(&:next_run_at).min,
+        finished_at: runnable.empty? ? list.filter_map(&:finished_at).max : nil,
+        audience_frozen_at: list.filter_map(&:audience_frozen_at).min,
+        updated_at: Time.current
+      )
+    end
+  end
+
+  def cancel!
+    transaction do
+      messages.where(status: RUNNABLE + ['draft']).update_all(status: 'cancelled', next_run_at: nil, updated_at: Time.current)
+      update!(status: 'cancelled', next_run_at: nil)
+    end
+  end
+
+  def sent_cost = messages.sum(&:sent_cost)
 
   def progress_label
     return unless recipients_count
@@ -54,107 +116,44 @@ class Campaign < ApplicationRecord
   def status_note(now = Time.current)
     return unless status.in?(RUNNABLE)
     return 'Enviando agora' if status == 'sending'
-    return 'Confira o e-mail e o público desta campanha' if next_run_at.nil?
+
+    note = messages.find { |message| message.status == 'paused' && message.note.present? }&.note if status == 'paused'
+    return note if note
+    return if next_run_at.nil?
     return 'Enviando agora' if next_run_at <= now
 
     when_label = I18n.l(next_run_at, format: '%d/%m às %H:%M')
-    return "Continua em #{when_label}" if status == 'paused'
-
-    "Começa em #{when_label}" unless send_mode == 'scheduled'
-  end
-
-  def status_label = STATUSES.fetch(status)
-  def channel_label = CHANNELS.fetch(channel)
-  def display_name = name.presence || 'Campanha sem nome'
-
-  def scheduled_on = @scheduled_on || scheduled_at&.to_date
-  def scheduled_time = @scheduled_time || scheduled_at&.strftime('%H:%M')
-
-  def window = Campaigns::SendWindow.new(days: window_days, from: window_from, to: window_to)
-
-  def audience = Campaigns::Audience.new(client, segment).call
-
-  # Primeiro instante em que a campanha pode sair: agora, a data marcada ou a
-  # próxima abertura da janela de envio.
-  def first_send_at(from = Time.current)
-    case send_mode
-    when 'scheduled' then [scheduled_at, from].compact.max
-    when 'window' then window.next_opening(from) || from
-    else from
-    end
-  end
-
-  # Depois de bater o limite diário a campanha continua às 8h do dia seguinte,
-  # ou na próxima abertura da janela de envio.
-  def resume_at(from = Time.current)
-    start = first_send_at(from).in_time_zone.tomorrow.beginning_of_day
-    return window.next_opening(start) if send_mode == 'window' && window.valid?
-
-    start.change(hour: RESUME_HOUR)
-  end
-
-  # Textos do aviso de limite diário: sempre com o dia da semana e a data.
-  def first_day_label(from = Time.current)
-    time = first_send_at(from)
-    label = day_label(time, from)
-    case send_mode
-    when 'scheduled' then scheduled_at && scheduled_at > from ? "#{label} às #{time.strftime('%H:%M')}" : label
-    when 'window' then "#{label}, das #{window_from} às #{window_to}"
-    else label
-    end
-  end
-
-  def resume_label(from = Time.current)
-    time = resume_at(from)
-    label = day_label(time, from)
-    send_mode == 'window' ? "#{label}, das #{window_from} às #{window_to}" : "#{label} às #{time.strftime('%H:%M')}"
-  end
-
-  def timing_summary
-    case send_mode
-    when 'scheduled' then scheduled_at ? I18n.l(scheduled_at, format: '%d/%m/%Y às %H:%M') : 'Escolha a data e a hora'
-    when 'window' then window.summary
-    else 'Assim que você confirmar'
-    end
-  end
-
-  def missing_steps
-    steps = []
-    steps << 'Dê um nome à campanha' if name.blank?
-    steps << 'Escolha o e-mail' unless email_template
-    steps << 'Escolha para quem enviar' unless segment
-    steps << 'Escolha a data e a hora' if send_mode == 'scheduled' && !scheduled_at
-    steps << 'Escolha os dias e o horário' if send_mode == 'window' && !window.valid?
-    steps
-  end
-
-  def step_done
-    {
-      'name' => name.present?, 'template' => email_template.present?, 'audience' => segment.present?,
-      'timing' => send_mode == 'now' || (send_mode == 'scheduled' && scheduled_at.present?) ||
-        (send_mode == 'window' && window.valid?)
-    }
+    status == 'paused' ? "Continua em #{when_label}" : "Próxima mensagem em #{when_label}"
   end
 
   private
 
-  def day_label(time, from)
-    label = I18n.l(time, format: '%A, %d/%m').upcase_first
-    time.to_date == from.in_time_zone.to_date ? "#{label} (hoje)" : label
+  def aggregate_status(statuses)
+    return 'sending' if statuses.include?('sending')
+    return(statuses.include?('sent') ? 'sent' : 'cancelled') if statuses.all? { |s| s.in?(CampaignMessage::FINISHED) }
+    return 'paused' if statuses.include?('paused')
+
+    'scheduled'
   end
 
-  def compose_scheduled_at
-    return if @scheduled_on.nil? && @scheduled_time.nil?
+  def message_steps(message, number, now)
+    label = "#{message.channel == 'email' ? 'e-mail' : 'WhatsApp'} #{number}"
+    template = message.template
+    return ["Escolha o modelo da mensagem de #{label}"] unless template
+    return [] if message.status != 'draft'
 
-    date = (@scheduled_on.presence || scheduled_on).to_s
-    time = (@scheduled_time.presence || scheduled_time).to_s
-    self.scheduled_at = (Time.zone.parse("#{date} #{time}") if date.present? && time.present?)
-  rescue ArgumentError
-    self.scheduled_at = nil
+    steps = []
+    if message.whatsapp? && !template.approved?
+      steps << "O modelo \"#{template.label}\" (WhatsApp #{number}) ainda não foi aprovado pela Meta"
+    end
+    steps << "A data da mensagem de #{label} já passou" if message.send_at && message.send_at <= now
+    steps << "Escolha a data e a hora da mensagem de #{label}" if message.send_now.to_s == '0' && message.send_at.nil?
+    steps
   end
 
-  def template_and_segment_belong_to_client
-    errors.add(:email_template_id, 'não pertence a esta loja') if email_template && email_template.client_id != client_id
-    errors.add(:segment_id, 'não pertence a esta loja') if segment && segment.client_id != client_id
+  def segments_belong_to_client
+    return if segments.all? { |segment| segment.client_id == client_id }
+
+    errors.add(:segment_ids, 'não pertencem a esta loja')
   end
 end

@@ -1,9 +1,9 @@
 module Campaigns
-  # Envia uma campanha em lotes. No primeiro disparo grava a lista de pessoas
-  # (a "foto" do público); depois envia um lote por execução e para quando bate
-  # o limite diário, fecha a janela de envio ou a loja cancela a campanha.
-  # O próximo horário fica em next_run_at, que também serve de reserva contra
-  # duas execuções ao mesmo tempo.
+  # Envia uma mensagem da campanha (e-mail ou WhatsApp) em lotes. No primeiro disparo grava a lista de
+  # pessoas daquele canal (a "foto" do público); depois envia um lote por execução e para quando bate o
+  # limite diário, a Meta/AWS pede para esperar, falta configuração ou a loja cancela a campanha.
+  # O próximo horário fica em next_run_at da mensagem, que também serve de reserva contra duas execuções
+  # ao mesmo tempo. Ao final, a campanha recalcula status e contagens a partir das mensagens.
   class DispatchJob < ApplicationJob
     queue_as :default
 
@@ -12,17 +12,16 @@ module Campaigns
     THROTTLE = 0.07
     BACKOFF = 1.minute
     CHECK_EVERY = 10
+    SENDERS = { 'email' => Senders::Email, 'whatsapp' => Senders::Whatsapp }.freeze
 
-    attr_reader :campaign
+    attr_reader :message
 
-    def perform(campaign_id)
-      @campaign = claim(campaign_id)
-      return unless @campaign
-      return pause_without_date unless sendable?
+    def perform(message_id)
+      @message = claim(message_id)
+      return unless @message
 
-      freeze_audience unless campaign.audience_frozen_at
-      send_batch
-      finish_run
+      run
+      campaign.refresh_from_messages!
     end
 
     private
@@ -31,122 +30,121 @@ module Campaigns
 
     def throttle = THROTTLE
 
+    def campaign = message.campaign
+
     def client = campaign.client
 
-    def claim(campaign_id)
+    def sender = @sender ||= SENDERS.fetch(message.channel).new(message)
+
+    def run
+      return cancel_message unless campaign.channel_enabled?(message.channel)
+
+      note, retry_at = sender.blocker
+      return message.update!(status: 'paused', next_run_at: retry_at, note:) if note
+
+      message.update_columns(note: nil) if message.note
+      freeze_audience unless message.audience_frozen_at
+      send_batch
+      finish_run
+    end
+
+    def claim(message_id)
       now = Time.current
-      claimed = Campaign.where(id: campaign_id, status: Campaign::RUNNABLE).where(next_run_at: ..now)
-                        .update_all(status: 'sending', next_run_at: now + LEASE, updated_at: now)
-      Campaign.find(campaign_id) if claimed == 1
+      claimed = CampaignMessage.where(id: message_id, status: CampaignMessage::RUNNABLE).where(next_run_at: ..now)
+                               .update_all(status: 'sending', next_run_at: now + LEASE, updated_at: now)
+      @leased_at = now
+      CampaignMessage.find(message_id) if claimed == 1
     end
 
-    def sendable?
-      campaign.email_template && (campaign.audience_frozen_at || campaign.segment)
-    end
-
-    def pause_without_date
-      campaign.update!(status: 'paused', next_run_at: nil)
+    def cancel_message
+      message.update!(status: 'cancelled', next_run_at: nil)
     end
 
     def freeze_audience
       now = Time.current
-      Campaign.transaction do
-        Audience.new(client, campaign.segment).recipients_scope.find_in_batches(batch_size: 1000) do |profiles|
-          rows = profiles.map do |profile|
-            { campaign_id: campaign.id, customer_id: profile.customer_id, email: profile.email.downcase,
-              name: profile.name, status: 'pending', created_at: now, updated_at: now }
-          end
-          CampaignRecipient.insert_all(rows, unique_by: %i[campaign_id email])
+      CampaignMessage.transaction do
+        audience = Audience.new(client, campaign.segments.to_a, channel: message.channel)
+        rows = []
+        audience.each_recipient do |profile, address|
+          rows << recipient_row(profile, address, now)
+          flush(rows) if rows.size >= 1000
         end
-        campaign.update!(audience_frozen_at: now, started_at: now, status: 'sending',
-                         recipients_count: campaign.recipients.count)
+        flush(rows)
+        message.update!(audience_frozen_at: now, started_at: now, status: 'sending', note: nil,
+                        recipients_count: message.recipients.count)
       end
+    end
+
+    def recipient_row(profile, address, now)
+      row = { campaign_id: campaign.id, campaign_message_id: message.id, channel: message.channel,
+              customer_id: profile.customer_id, name: profile.name, status: 'pending', created_at: now, updated_at: now }
+      message.whatsapp? ? row.merge(phone: address, email: nil) : row.merge(email: address)
+    end
+
+    def flush(rows)
+      return if rows.empty?
+
+      index = message.whatsapp? ? 'index_campaign_recipients_unique_phone' : 'index_campaign_recipients_unique_email'
+      CampaignRecipient.insert_all(rows, unique_by: index)
+      rows.clear
     end
 
     def send_batch
       catch(:stop) do
-        campaign.recipients.where(status: 'pending').order(:id).limit(batch_size).each_with_index do |recipient, index|
-          check_before_sending(index)
-          deliver(recipient)
+        message.recipients.where(status: 'pending').order(:id).limit(batch_size).each_with_index do |recipient, index|
+          stop_for(nil, :cancelled) if (index % CHECK_EVERY).zero? && !still_running?
+          renew_lease
+          check_limit
+          result = sender.deliver(recipient)
+          stop_for(result[1], result[0], result[2]) if result.is_a?(Array)
           sleep(throttle)
         end
       end
     end
 
-    def check_before_sending(index)
-      stop_for(nil, :cancelled) if (index % CHECK_EVERY).zero? && !still_running?
-      stop_for(campaign.window.next_opening, :wait) if campaign.send_mode == 'window' && !campaign.window.open?
-      stop_for(Time.current + 1.hour, :pause) unless client.ses_domain_verified?
-      stop_for(campaign.resume_at, :pause) if Billing::Usage.new(client).limit_reached?('email')
+    def check_limit
+      stop_for(message.resume_at, :pause) if Billing::Usage.new(client).limit_reached?(message.channel)
+    end
+
+    # Renova a reserva enquanto o lote ainda está enviando (a Meta pode demorar até 15 s por chamada),
+    # para o TickJob não entregar a mesma mensagem a outro job no meio do caminho.
+    def renew_lease
+      now = Time.current
+      return if now - @leased_at < LEASE / 5
+
+      renewed = CampaignMessage.where(id: message.id, status: 'sending').update_all(next_run_at: now + LEASE)
+      stop_for(nil, :cancelled) if renewed.zero?
+      @leased_at = now
     end
 
     def still_running?
-      Campaign.where(id: campaign.id, status: Campaign::RUNNABLE).exists?
+      CampaignMessage.where(id: message.id, status: CampaignMessage::RUNNABLE).exists?
     end
 
-    def stop_for(next_run, reason)
+    def stop_for(next_run, reason, note = nil)
       @next_run = next_run
       @reason = reason
+      @note = note
       throw :stop
     end
 
-    def deliver(recipient)
-      return recipient.update!(status: 'blocked') if EmailSuppression.suppressed?(client, recipient.email)
-
-      message = message_for(recipient)
-      sent = Ses::SendEmailService.new(client).call(
-        to: recipient.email, subject: message.subject, html_body: message.html, text_body: message.text,
-        unsubscribe_url: message.unsubscribe_url,
-        tags: { source: 'campaign', campaign_id: campaign.id, recipient_id: recipient.id }
-      )
-      return recipient.update!(status: 'sent', sent_at: Time.current) if sent
-
-      stop_for(campaign.resume_at, :pause) if Billing::Usage.new(client).limit_reached?('email')
-      recipient.update!(status: 'failed', error: 'O envio não foi aceito')
-    rescue Aws::SESV2::Errors::TooManyRequestsException
-      stop_for(Time.current + BACKOFF, :wait)
-    rescue Aws::Errors::ServiceError => e
-      recipient.update!(status: 'failed', error: e.message.to_s.first(250))
-    end
-
-    def message_for(recipient)
-      EmailTemplates::Message.new(
-        campaign.email_template,
-        variables: { nome: recipient.name.to_s.split.first.presence || 'cliente', loja: client.name },
-        default_url: default_url, logo_url: logo_url,
-        unsubscribe_url: EmailSuppression.unsubscribe_url(client, recipient.email, template: campaign.email_template)
-      )
-    end
-
-    def default_url
-      @default_url ||= client.storefront_url.then { |url| url.match?(%r{\Ahttps?://[^/]+\z}) ? url : BackInStockSetting::WIDGET_HOST }
-    end
-
-    def logo_url
-      return unless client.logo.attached?
-
-      Rails.application.routes.url_helpers.rails_blob_url(client.logo, host: BackInStockSetting::WIDGET_HOST)
-    end
-
     def finish_run
-      campaign.reload
-      campaign.recount!
-      return if campaign.status == 'cancelled'
-      return finish_campaign unless campaign.recipients.where(status: 'pending').exists?
+      message.reload
+      message.recount!
+      return if message.status == 'cancelled'
+      return message.update!(status: 'sent', finished_at: Time.current, next_run_at: nil) unless pending?
 
       case @reason
-      when :pause, :wait then campaign.update!(status: 'paused', next_run_at: @next_run)
+      when :pause, :wait then message.update!(status: 'paused', next_run_at: @next_run, note: @note)
       else continue_now
       end
     end
 
-    def finish_campaign
-      campaign.update!(status: 'sent', finished_at: Time.current, next_run_at: nil)
-    end
+    def pending? = message.recipients.where(status: 'pending').exists?
 
     def continue_now
-      campaign.update!(status: 'sending', next_run_at: Time.current)
-      self.class.perform_later(campaign.id)
+      message.update!(status: 'sending', next_run_at: Time.current)
+      self.class.perform_later(message.id)
     end
   end
 end

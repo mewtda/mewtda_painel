@@ -56,7 +56,7 @@
                                         confirm_label: 'Enviar para aprovação' } } do %><i class="fa-solid fa-paper-plane"></i><% end %>
                   <% end %>
                 <% end %>
-                <%= button_to duplicate_whatsapp_template_path(template), method: :post, class: 'crm-btn clients-btn--icon', title: 'Duplicar' do %><i class="fa-regular fa-copy"></i><% end %>
+                <%= button_to duplicate_whatsapp_template_path(template), method: :post, class: 'crm-btn clients-btn--icon', title: 'Duplicar' do %><i class="fa-solid fa-copy"></i><% end %>
                 <%= button_to whatsapp_template_path(template), method: :delete, class: 'crm-btn clients-btn--icon clients-btn--danger', title: 'Excluir',
                     form: { data: { confirm: "Excluir o modelo \"#{template.label}\"?#{' Ele também será excluído na Meta.' if template.meta_id.present?}", confirm_label: 'Excluir' } } do %>
                   <i class="fa-solid fa-trash-can"></i>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_19_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_19_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -231,20 +231,62 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_19_120000) do
     t.index ["client_id"], name: "index_billing_charges_on_client_id"
   end
 
+  create_table "campaign_messages", force: :cascade do |t|
+    t.bigint "campaign_id", null: false
+    t.string "channel", default: "email", null: false
+    t.bigint "email_template_id"
+    t.bigint "whatsapp_template_id"
+    t.datetime "send_at"
+    t.integer "position", default: 0, null: false
+    t.string "status", default: "draft", null: false
+    t.string "note"
+    t.datetime "next_run_at"
+    t.datetime "audience_frozen_at"
+    t.integer "recipients_count"
+    t.integer "sent_count", default: 0, null: false
+    t.integer "failed_count", default: 0, null: false
+    t.integer "blocked_count", default: 0, null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_campaign_messages_on_campaign_id"
+    t.index ["email_template_id"], name: "index_campaign_messages_on_email_template_id"
+    t.index ["status", "next_run_at"], name: "index_campaign_messages_on_status_and_next_run_at"
+    t.index ["whatsapp_template_id"], name: "index_campaign_messages_on_whatsapp_template_id"
+  end
+
   create_table "campaign_recipients", force: :cascade do |t|
     t.bigint "campaign_id", null: false
     t.bigint "customer_id"
-    t.string "email", null: false
+    t.string "email"
     t.string "name"
     t.string "status", default: "pending", null: false
     t.text "error"
     t.datetime "sent_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["campaign_id", "email"], name: "index_campaign_recipients_on_campaign_id_and_email", unique: true
+    t.bigint "campaign_message_id"
+    t.string "channel", default: "email", null: false
+    t.string "phone"
+    t.string "provider_message_id"
     t.index ["campaign_id", "status"], name: "index_campaign_recipients_on_campaign_id_and_status"
     t.index ["campaign_id"], name: "index_campaign_recipients_on_campaign_id"
+    t.index ["campaign_message_id", "email"], name: "index_campaign_recipients_unique_email", unique: true, where: "((channel)::text = 'email'::text)"
+    t.index ["campaign_message_id", "phone"], name: "index_campaign_recipients_unique_phone", unique: true, where: "((channel)::text = 'whatsapp'::text)"
+    t.index ["campaign_message_id", "status"], name: "index_campaign_recipients_on_campaign_message_id_and_status"
+    t.index ["campaign_message_id"], name: "index_campaign_recipients_on_campaign_message_id"
     t.index ["customer_id"], name: "index_campaign_recipients_on_customer_id"
+  end
+
+  create_table "campaign_segments", force: :cascade do |t|
+    t.bigint "campaign_id", null: false
+    t.bigint "segment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id", "segment_id"], name: "index_campaign_segments_on_campaign_id_and_segment_id", unique: true
+    t.index ["campaign_id"], name: "index_campaign_segments_on_campaign_id"
+    t.index ["segment_id"], name: "index_campaign_segments_on_segment_id"
   end
 
   create_table "campaigns", force: :cascade do |t|
@@ -273,6 +315,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_19_120000) do
     t.datetime "published_at"
     t.integer "acknowledged_not_subscribed"
     t.bigint "published_by_id"
+    t.boolean "email_enabled", default: true, null: false
+    t.boolean "whatsapp_enabled", default: false, null: false
     t.index ["client_id", "status"], name: "index_campaigns_on_client_id_and_status"
     t.index ["client_id"], name: "index_campaigns_on_client_id"
     t.index ["created_by_id"], name: "index_campaigns_on_created_by_id"
@@ -997,8 +1041,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_19_120000) do
   add_foreign_key "back_in_stock_settings", "clients"
   add_foreign_key "back_in_stock_settings", "email_templates", on_delete: :nullify
   add_foreign_key "billing_charges", "clients"
+  add_foreign_key "campaign_messages", "campaigns", on_delete: :cascade
+  add_foreign_key "campaign_messages", "email_templates", on_delete: :nullify
+  add_foreign_key "campaign_messages", "whatsapp_templates", on_delete: :nullify
+  add_foreign_key "campaign_recipients", "campaign_messages", on_delete: :cascade
   add_foreign_key "campaign_recipients", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_recipients", "customers", on_delete: :nullify
+  add_foreign_key "campaign_segments", "campaigns", on_delete: :cascade
+  add_foreign_key "campaign_segments", "segments", on_delete: :cascade
   add_foreign_key "campaigns", "clients"
   add_foreign_key "campaigns", "email_templates", on_delete: :nullify
   add_foreign_key "campaigns", "segments", on_delete: :nullify

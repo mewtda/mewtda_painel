@@ -62,6 +62,14 @@ class Segment < ApplicationRecord
   private
 
   def dynamic_needs_rules
-    errors.add(:base, 'Adicione pelo menos uma condição ao segmento.') if dynamic? && Array(rules['groups']).empty?
+    return unless dynamic?
+
+    groups = Array(rules['groups'])
+    errors.add(:base, 'Adicione pelo menos uma condição ao segmento.') if groups.empty?
+    conditions = groups.flat_map { |group| Array(group['conditions']) }
+    empty_tags = conditions.any? { |cond| cond['field'] == 'customer_tag' && Array(cond['value']).compact_blank.empty? }
+    return unless empty_tags
+
+    errors.add(:base, 'Escolha pelo menos uma tag na condição "Tag do cliente".')
   end
 end

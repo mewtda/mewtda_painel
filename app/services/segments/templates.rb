@@ -22,6 +22,10 @@ module Segments
         'tres_mais' => { name: 'Compraram três vezes ou mais', popular: false, icon: 'fa-gem',
                          description: 'Alto potencial de fidelidade. Merecem benefícios VIP.',
                          rules: rules(cond('orders_count', 'gte', '3')) },
+        'tag_cliente' => { name: 'Clientes com tag', popular: true, icon: 'fa-tag',
+                           description: 'Escolha uma ou várias tags dos clientes da Shopify. ' \
+                                        'Inclui quem se cadastrou e ainda não comprou.',
+                           rules: rules(cond('customer_tag', 'in', [])) },
         'ativos' => { name: 'Clientes ativos', popular: true, icon: 'fa-bolt',
                       description: 'Lado direito da Matriz RFM: compraram recentemente.',
                       rules: rules(cond('rfm_segment', 'in', CustomerProfile::ACTIVE_SEGMENTS)) },

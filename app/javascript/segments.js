@@ -76,9 +76,55 @@
     return node;
   };
 
+  // Tags do cliente: chips com busca. Sem busca mostra as mais usadas e sempre
+  // as já escolhidas (mesmo que nenhum cliente tenha a tag hoje).
+  const TAG_LIMIT = 40;
+  const tagPicker = (cond) => {
+    const chosen = new Set(Array.isArray(cond.value) ? cond.value : []);
+    const known = schema.customer_tags.map((t) => t.key);
+    const knownLower = new Set(known.map((t) => t.toLowerCase()));
+    const all = [...known, ...[...chosen].filter((t) => !knownLower.has(String(t).toLowerCase()))];
+    const wrap = el("div", { class: "sg-tags" });
+    if (!all.length) {
+      wrap.appendChild(el("span", { class: "cx-muted", text: "Nenhuma tag encontrada nos clientes desta loja." }));
+      return wrap;
+    }
+    const search = el("input", { type: "search", class: "crm-input sg-tags__search", placeholder: "Buscar tag…", "aria-label": "Buscar tag" });
+    const box = el("div", { class: "sg-rfm" });
+    const hint = el("span", { class: "cx-muted sg-tags__hint" });
+    const draw = () => {
+      const term = search.value.trim().toLowerCase();
+      const matches = all.filter((t) => !term || t.toLowerCase().includes(term));
+      const visible = term ? matches : [...new Set([...all.filter((t) => chosen.has(t)), ...matches.slice(0, TAG_LIMIT)])];
+      box.replaceChildren();
+      visible.forEach((tag) => {
+        const cb = el("input", { type: "checkbox", value: tag });
+        cb.checked = chosen.has(tag);
+        const label = el("label", { class: `cx-chip ${cb.checked ? "is-on" : ""}` }, [cb, document.createTextNode(tag)]);
+        cb.addEventListener("change", () => {
+          if (cb.checked) chosen.add(tag);
+          else chosen.delete(tag);
+          cond.value = Array.from(chosen);
+          label.classList.toggle("is-on", cb.checked);
+          sync();
+        });
+        box.appendChild(label);
+      });
+      if (!matches.length) box.appendChild(el("span", { class: "cx-muted", text: "Nenhuma tag com esse nome." }));
+      const hidden = matches.length - visible.filter((t) => matches.includes(t)).length;
+      hint.textContent = hidden > 0 ? `Mostrando as ${TAG_LIMIT} mais usadas. Busque para ver as outras ${hidden.toLocaleString("pt-BR")}.` : "";
+    };
+    search.addEventListener("input", draw);
+    search.addEventListener("keydown", (event) => { if (event.key === "Enter") event.preventDefault(); });
+    draw();
+    wrap.append(search, box, hint);
+    return wrap;
+  };
+
   const valueControls = (cond, type) => {
     const op = cond.op;
     if (type === "bool") return [];
+    if (type === "customer_tags") return [tagPicker(cond)];
     if (["rfm", "marketing", "categories", "sizes"].includes(type)) {
       const chosen = new Set(Array.isArray(cond.value) ? cond.value : []);
       const box = el("div", { class: "sg-rfm" });

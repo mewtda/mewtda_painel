@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_19_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_19_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -369,6 +369,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_19_130000) do
     t.string "asaas_customer_id"
     t.string "sales_channels", default: [], null: false, array: true
     t.string "sales_locations", default: [], null: false, array: true
+    t.datetime "customers_synced_at"
     t.index ["shopify_shop_url"], name: "index_clients_on_shopify_shop_url", unique: true
     t.index ["slug"], name: "index_clients_on_slug", unique: true
   end
@@ -473,6 +474,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_19_130000) do
     t.datetime "updated_at", null: false
     t.jsonb "addresses", default: [], null: false
     t.string "email_marketing_state"
+    t.bigint "client_id"
+    t.index ["client_id"], name: "index_customers_on_client_id"
     t.index ["email"], name: "index_customers_on_email"
     t.index ["shopify_customer_id"], name: "index_customers_on_shopify_customer_id", unique: true
   end
@@ -1059,6 +1062,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_19_130000) do
   add_foreign_key "custom_automation_runs", "users"
   add_foreign_key "customer_profiles", "clients"
   add_foreign_key "customer_profiles", "customers"
+  add_foreign_key "customers", "clients", validate: false
   add_foreign_key "email_events", "back_in_stock_alerts", on_delete: :cascade
   add_foreign_key "email_events", "campaign_recipients", on_delete: :cascade
   add_foreign_key "email_events", "campaigns", on_delete: :cascade

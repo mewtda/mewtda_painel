@@ -28,9 +28,10 @@ back_in_stock_restock_check:
   class: "BackInStock::RestockCheckJob"
   queue: default
 
+# Nome antigo mantido de propósito: load_from_hash não remove entradas velhas do Redis.
 customers_marketing_sync:
-  cron: "0 4 * * * America/Sao_Paulo"
-  class: "Customers::SyncMarketingJob"
+  cron: "15 * * * * America/Sao_Paulo"
+  class: "Customers::SyncJob"
   queue: default
 
 customer_profiles_refresh:

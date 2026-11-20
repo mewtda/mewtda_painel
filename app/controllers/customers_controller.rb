@@ -1,5 +1,6 @@
-# Clientes: base de compradores da loja com números de compra e
-# perfil RFM (customer_profiles), filtros por segmento/RFM e matriz RFM.
+# Clientes: base da loja (compradores e cadastros da Shopify sem compra) com
+# números de compra e perfil RFM (customer_profiles), filtros por segmento/RFM e
+# matriz RFM. Indicadores e matriz RFM consideram só quem comprou.
 class CustomersController < ApplicationController
   include ClientScoped
   include EnsuresCustomerProfiles
@@ -21,7 +22,8 @@ class CustomersController < ApplicationController
   before_action :set_filtered_scope, only: %i[index export_xlsx]
 
   def index
-    @summary = summary(@client.customer_profiles)
+    @summary = summary(@client.customer_profiles.where('orders_count > 0'))
+    @leads_count = @client.customer_profiles.where(orders_count: 0).count
     @sort, @direction = sort_params
     @profiles = @scope.order(Arel.sql("#{SORTS.fetch(@sort)} #{@direction} NULLS LAST, customer_profiles.id"))
                       .paginate(page: params[:page], per_page: PER_PAGE)
@@ -32,7 +34,7 @@ class CustomersController < ApplicationController
   end
 
   def rfm
-    profiles = @client.customer_profiles
+    profiles = @client.customer_profiles.where('orders_count > 0')
     @total = profiles.count
     @counts = profiles.group(:rfm_segment).count
     @stats = profiles.group(:rfm_segment)

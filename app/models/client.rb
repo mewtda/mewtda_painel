@@ -14,6 +14,7 @@ class Client < ApplicationRecord
   has_many :campaigns, dependent: :destroy
   has_many :message_usages, dependent: :delete_all
   has_many :customer_profiles, dependent: :delete_all
+  has_many :customers, dependent: :nullify
   has_many :segments, dependent: :destroy
   has_many :landing_pages, dependent: :destroy
   has_many :billing_charges, dependent: :destroy

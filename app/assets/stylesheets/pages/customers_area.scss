@@ -222,6 +222,10 @@
 .sg-add-group { margin-top: 0.75rem; }
 .sg-legend { margin-top: 0.6rem; }
 .sg-rfm { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.sg-tags { display: flex; flex-direction: column; gap: 0.45rem; flex: 1; min-width: 220px; }
+.sg-tags__search { max-width: 260px; }
+.sg-tags__hint:empty { display: none; }
+.sg-tags__hint { font-size: 0.75rem; }
 .sg-summary { text-align: center; position: sticky; top: calc(var(--crm-header) + 1rem); }
 .sg-summary h3 { margin: 0 0 0.6rem; font-size: 0.95rem; color: var(--fg); }
 .sg-summary__count { font-size: 2.2rem; font-weight: 800; color: var(--primary); transition: opacity .15s; }

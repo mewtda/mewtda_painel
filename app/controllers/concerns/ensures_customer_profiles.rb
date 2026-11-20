@@ -13,7 +13,7 @@ module EnsuresCustomerProfiles
   def ensure_profiles
     last = @client.customer_profiles.maximum(:refreshed_at)
     if last.nil?
-      if Order.where(client_id: @client.id).exists?
+      if Order.where(client_id: @client.id).exists? || @client.customers.exists?
         Customers::RefreshProfiles.new(@client).call
         @client.segments.find_each(&:recount!)
       end

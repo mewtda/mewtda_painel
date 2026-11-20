@@ -1,4 +1,5 @@
 class Customer < ApplicationRecord
+  belongs_to :client, optional: true
   has_many :orders, dependent: :nullify
   has_many :automation_actions, dependent: :nullify
   has_many :customer_profiles, dependent: :delete_all

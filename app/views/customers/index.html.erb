@@ -13,7 +13,8 @@
 
   <%# KPIs da base %>
   <div class="cx-kpis">
-    <div class="cx-kpi"><span>Clientes compradores</span><strong><%= number_with_delimiter(@summary[:total], delimiter: '.') %></strong></div>
+    <div class="cx-kpi"><span>Clientes compradores</span><strong><%= number_with_delimiter(@summary[:total], delimiter: '.') %></strong>
+      <% if @leads_count.positive? %><small>+ <%= number_with_delimiter(@leads_count, delimiter: '.') %> cadastrados sem compra</small><% end %></div>
     <div class="cx-kpi"><span>Ativos (RFM)</span><strong><%= number_with_delimiter(@summary[:active], delimiter: '.') %></strong>
       <small><%= @summary[:total].zero? ? 0 : (@summary[:active] * 100.0 / @summary[:total]).round(1) %>% da base</small></div>
     <div class="cx-kpi"><span>Recompra</span><strong><%= number_with_precision(@summary[:repeat_rate], precision: 1, separator: ',') %>%</strong>

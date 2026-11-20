@@ -84,7 +84,8 @@ class SegmentsController < ApplicationController
 
   def set_product_options
     options = Segments::ProductOptions.new(@client)
-    @product_options = { categories: options.categories, sizes: options.sizes }
+    @product_options = { categories: options.categories, sizes: options.sizes,
+                         customer_tags: Segments::CustomerTagOptions.new(@client).call }
   end
 
   def require_client!

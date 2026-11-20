@@ -133,9 +133,86 @@ class CustomersSegmentsTest < ActiveSupport::TestCase
 
     Segments::Templates.all.each do |key, template|
       segment = @client.segments.new(name: template[:name], rules: template[:rules])
+      if key == 'tag_cliente'
+        assert_not segment.valid?, 'o modelo de tag pede para escolher as tags'
+        segment.rules = rules({ 'field' => 'customer_tag', 'op' => 'in', 'value' => ['vip'] })
+      end
       assert segment.valid?, "#{key}: #{segment.errors.full_messages}"
       assert_nothing_raised { segment.profiles.count }
     end
+  end
+
+  # ---------------------------------------------- clientes sem compra e tags --
+
+  def shopify_customer(email, tags: nil, client: @client)
+    Customer.create!(email:, first_name: email.split('@').first.capitalize, shopify_customer_id: SecureRandom.hex(6),
+                     tags:, client:)
+  end
+
+  def other_client = Client.create!(name: 'Outra', email: "o-#{SecureRandom.hex(3)}@x.com")
+
+  def tagged(operator, *values) = matching(rules({ 'field' => 'customer_tag', 'op' => operator, 'value' => values }))
+
+  test 'refresh includes Shopify customers who never bought, without RFM, and ranks only buyers' do
+    shopify_customer('lead@example.com', tags: 'lead-lp')
+    shopify_customer('outra@example.com', client: other_client)
+    5.times { |i| order(customer("b#{i}@example.com"), total: 100 * (i + 1), at: (i + 1).days.ago) }
+
+    assert_equal 6, refresh
+    lead = @client.customer_profiles.find_by!(email: 'lead@example.com')
+    assert_equal 0, lead.orders_count
+    assert_equal 0, lead.total_spent
+    assert_equal 0, lead.avg_ticket
+    assert_nil lead.last_order_at
+    assert_nil lead.rfm_segment
+    assert_equal [1, 2, 3, 4, 5], @client.customer_profiles.where('orders_count > 0').pluck(:m_score).sort
+  end
+
+  test 'a lead registration merged with a buyer keeps the purchase numbers' do
+    lead = shopify_customer('ana@example.com', tags: 'lead-lp')
+    buyer = customer('ANA@example.com')
+    order(buyer, total: 120, at: 2.days.ago)
+
+    refresh
+    profile = @client.customer_profiles.sole
+    assert_equal [lead.id, buyer.id].sort, profile.merged_customer_ids.sort
+    assert_equal 1, profile.orders_count
+    assert_equal 120, profile.last_order_total
+    assert profile.rfm_segment.present?
+  end
+
+  test 'customer tag: any, all or none of the tags, ignoring case and spacing, across merged registrations' do
+    shopify_customer('ana@example.com', tags: 'lead-lp, VIP')
+    shopify_customer('bia@example.com', tags: 'Lead-LP')
+    shopify_customer('cris@example.com', tags: 'atacado')
+    shopify_customer('duda@example.com')
+    order(customer('cris@example.com').tap { |c| c.update!(tags: 'vip') }, total: 50, at: 1.day.ago)
+    refresh
+
+    assert_equal %w[ana@example.com bia@example.com], tagged('in', ' lead-lp ')
+    assert_equal %w[ana@example.com bia@example.com cris@example.com], tagged('in', 'lead-lp', 'vip')
+    assert_equal %w[ana@example.com cris@example.com], tagged('all', 'VIP', 'vip')
+    assert_equal %w[ana@example.com], tagged('all', 'lead-lp', 'vip')
+    assert_equal %w[duda@example.com], tagged('not_in', 'lead-lp', 'vip')
+    assert_equal [], tagged('in', 'lead')
+    assert_equal [], tagged('in')
+  end
+
+  test 'customer tag options list the tags of this store only, most used first' do
+    shopify_customer('ana@example.com', tags: 'lead-lp, VIP')
+    shopify_customer('bia@example.com', tags: 'Lead-LP ')
+    shopify_customer('outra@example.com', tags: 'secreta', client: other_client)
+    refresh
+
+    assert_equal %w[Lead-LP VIP], Segments::CustomerTagOptions.new(@client).call.pluck(:key)
+  end
+
+  test 'a segment with the customer tag condition needs at least one tag' do
+    empty = rules({ 'field' => 'customer_tag', 'op' => 'in', 'value' => [] })
+    segment = @client.segments.new(name: 'Leads', rules: empty)
+
+    assert_not segment.valid?
+    assert_includes segment.errors.full_messages.join, 'Escolha pelo menos uma tag'
   end
 
   def person(first_name, email: nil, phone: nil, marketing: nil)

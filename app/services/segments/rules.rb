@@ -16,13 +16,16 @@ module Segments
     BOOL_OPS = { 'yes' => 'Sim', 'no' => 'Não' }.freeze
     SEGMENT_OPS = { 'in' => 'Faz parte', 'not_in' => 'Não faz parte' }.freeze
     ITEM_OPS = { 'in' => 'Comprou' }.freeze
+    TAG_OPS = { 'in' => 'Tem alguma das tags', 'all' => 'Tem todas as tags',
+                'not_in' => 'Não tem nenhuma das tags' }.freeze
 
     MARKETING_STATES = { 'subscribed' => 'Inscrito', 'not_subscribed' => 'Não inscrito', 'pending' => 'Pendente',
                          'unsubscribed' => 'Cancelou a inscrição', 'unknown' => 'Sem informação' }.freeze
 
     OPS = { number: NUMBER_OPS, money: NUMBER_OPS, date: DATE_OPS, text: TEXT_OPS, rfm: LIST_OPS, bool: BOOL_OPS,
-            segment: SEGMENT_OPS, marketing: LIST_OPS, categories: ITEM_OPS, sizes: ITEM_OPS }.freeze
-    LIST_TYPES = %i[rfm marketing categories sizes].freeze
+            segment: SEGMENT_OPS, marketing: LIST_OPS, categories: ITEM_OPS, sizes: ITEM_OPS,
+            customer_tags: TAG_OPS }.freeze
+    LIST_TYPES = %i[rfm marketing categories sizes customer_tags].freeze
 
     P = 'customer_profiles'.freeze
 
@@ -45,6 +48,7 @@ module Segments
       'product_category' => { group: 'Produto', label: 'Comprou produto da categoria', type: :categories, item: :category },
       'product_size' => { group: 'Produto', label: 'Comprou produto no tamanho', type: :sizes, item: :size },
       # Dados do cliente
+      'customer_tag' => { group: 'Dados do cliente', label: 'Tag do cliente', type: :customer_tags },
       'rfm_segment' => { group: 'Dados do cliente', label: 'Perfil RFM', type: :rfm, column: "#{P}.rfm_segment" },
       'name' => { group: 'Dados do cliente', label: 'Nome', type: :text, column: "#{P}.name" },
       'email' => { group: 'Dados do cliente', label: 'E-mail', type: :text, column: "#{P}.email" },
@@ -99,6 +103,7 @@ module Segments
       {
         categories: [],
         sizes: [],
+        customer_tags: [],
         fields: FIELDS.map { |key, f| { key:, group: f[:group], label: f[:label], type: f[:type] } },
         ops: OPS.transform_values { |ops| ops.map { |k, l| { key: k, label: l } } },
         rfm: CustomerProfile::RFM_SEGMENTS.map { |k, v| { key: k, label: v[:label] } },
@@ -169,6 +174,7 @@ module Segments
 
       sql =
         if field[:type] == :segment then segment_sql(cond)
+        elsif field[:type] == :customer_tags then customer_tag_sql(cond)
         elsif field[:sql] then field[:sql]
         elsif field[:exists] then exists_sql(field[:exists], cond)
         else compare(field[:column], field[:type], cond)
@@ -291,6 +297,23 @@ module Segments
 
       like = bind("%#{ActiveRecord::Base.sanitize_sql_like(value)}%")
       kind == :product_tag ? "p.tags ILIKE #{like}" : "(p.shopify_product_name ILIKE #{like} OR oi.sku ILIKE #{like})"
+    end
+
+    # Tags dos cadastros do perfil (todos os mesclados), sem diferenciar maiúsculas
+    # nem espaços. "all" exige cada tag escolhida em algum dos cadastros.
+    def customer_tag_sql(cond)
+      values = Array(cond['value']).map { |value| value.to_s.strip.downcase }.compact_blank.uniq.first(20)
+      return if values.empty?
+
+      tags = "SELECT 1 FROM customers c CROSS JOIN LATERAL unnest(string_to_array(c.tags, ',')) AS customer_tag " \
+             "WHERE (c.id = #{P}.customer_id OR c.id = ANY(#{P}.merged_customer_ids)) " \
+             "AND LOWER(BTRIM(customer_tag)) IN (#{bind(values)})"
+      case cond['op']
+      when 'not_in' then "NOT EXISTS (#{tags})"
+      when 'all'
+        "(SELECT COUNT(DISTINCT LOWER(BTRIM(customer_tag))) #{tags.delete_prefix('SELECT 1 ')}) = #{bind(values.size)}"
+      else "EXISTS (#{tags})"
+      end
     end
 
     def segment_sql(cond)

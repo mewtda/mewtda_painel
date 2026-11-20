@@ -2,6 +2,9 @@ module Customers
   # Recalcula customer_profiles de uma loja a partir dos pedidos não
   # cancelados: totais, datas, ticket médio e notas RFM.
   #
+  # Entram os clientes com pedido na loja e os importados da Shopify
+  # (customers.client_id), mesmo sem compra: esses ficam com 0 compras e sem RFM.
+  #
   # Cadastros da mesma pessoa viram um perfil só: agrupa pelo e-mail e, quando o
   # cadastro não tem e-mail, pelo telefone junto com o primeiro nome. O perfil
   # fica no cadastro mais antigo do grupo (merged_customer_ids lista todos).
@@ -17,7 +20,7 @@ module Customers
     def call
       started = Time.current
       CustomerProfile.connection.exec_query(upsert_sql(started), 'Customers::RefreshProfiles')
-      # Quem não tem mais pedido válido (ex.: todos cancelados) sai da base.
+      # Quem saiu da base (ex.: só tinha pedidos cancelados e não veio da Shopify) é removido.
       CustomerProfile.where(client_id: @client.id).where(refreshed_at: ...started).delete_all
       CustomerProfile.where(client_id: @client.id).count
     end
@@ -39,7 +42,8 @@ module Customers
                    'c:' || c.id
                  ) AS person_key
           FROM customers c
-          WHERE c.id IN (SELECT o.customer_id FROM orders o
+          WHERE c.client_id = :client_id
+             OR c.id IN (SELECT o.customer_id FROM orders o
                          WHERE o.client_id = :client_id AND o.customer_id IS NOT NULL AND o.cancelled_at IS NULL)
         ), stats AS (
           SELECT p.person_key,
@@ -49,15 +53,14 @@ module Customers
                       WHEN BOOL_OR(p.email_marketing_state = 'subscribed') THEN 'subscribed'
                       WHEN BOOL_OR(p.email_marketing_state = 'pending') THEN 'pending'
                       WHEN BOOL_OR(p.email_marketing_state = 'not_subscribed') THEN 'not_subscribed' END AS marketing_state,
-                 COUNT(*) AS orders_count,
+                 COUNT(o.id) AS orders_count,
                  COALESCE(SUM(o.total_price), 0) AS total_spent,
                  MIN(#{ORDER_DATE}) AS first_order_at,
                  MAX(#{ORDER_DATE}) AS last_order_at,
-                 (ARRAY_AGG(o.total_price ORDER BY #{ORDER_DATE} DESC))[1] AS last_order_total,
+                 (ARRAY_AGG(o.total_price ORDER BY #{ORDER_DATE} DESC) FILTER (WHERE o.id IS NOT NULL))[1] AS last_order_total,
                  COUNT(*) FILTER (WHERE COALESCE(o.discount_code, '') <> '') AS coupons_used
-          FROM orders o
-          JOIN people p ON p.customer_id = o.customer_id
-          WHERE o.client_id = :client_id AND o.cancelled_at IS NULL
+          FROM people p
+          LEFT JOIN orders o ON o.customer_id = p.customer_id AND o.client_id = :client_id AND o.cancelled_at IS NULL
           GROUP BY p.person_key
         ), scored AS (
           SELECT s.*,
@@ -65,6 +68,11 @@ module Customers
                  LEAST(s.orders_count, 5) AS f_score,
                  NTILE(5) OVER (ORDER BY s.total_spent) AS m_score
           FROM stats s
+          WHERE s.orders_count > 0
+          UNION ALL
+          SELECT s.*, NULL::integer, NULL::integer, NULL::integer
+          FROM stats s
+          WHERE s.orders_count = 0
         )
         INSERT INTO customer_profiles (
           client_id, customer_id, name, email, phone, city, state,
@@ -78,7 +86,7 @@ module Customers
                COALESCE(NULLIF(c.phone, ''), NULLIF(c.default_address_phone, '')),
                NULLIF(c.default_address_city, ''),
                COALESCE(NULLIF(c.default_address_province_code, ''), NULLIF(c.default_address_province, '')),
-               sc.orders_count, sc.total_spent, ROUND(sc.total_spent / sc.orders_count, 2),
+               sc.orders_count, sc.total_spent, COALESCE(ROUND(sc.total_spent / NULLIF(sc.orders_count, 0), 2), 0),
                sc.last_order_total, sc.coupons_used, sc.first_order_at, sc.last_order_at,
                sc.r_score, sc.f_score, sc.m_score, #{segment_case},
                sc.marketing_state, sc.merged_ids, :now, :now, :now

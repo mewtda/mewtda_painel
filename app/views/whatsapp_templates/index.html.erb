@@ -43,8 +43,8 @@
           <i class="fa-solid fa-chart-simple"></i>
           <div>
             <strong>A Meta não informou os números dos modelos.</strong>
-            <p class="cx-muted">Resposta da Meta: <%= @stats_error %>. Normalmente é porque os insights de modelos estão
-              desligados na conta do WhatsApp.</p>
+            <p class="cx-muted">Resposta da Meta: <%= @stats_error.to_s.delete_suffix('.') %>. Se os insights de modelos
+              estiverem desligados na conta do WhatsApp, ative pelo botão abaixo.</p>
             <%= button_to 'Ativar insights de modelos na Meta', enable_insights_whatsapp_templates_path, method: :post,
                           class: 'crm-btn crm-btn--primary' %>
           </div>
@@ -70,7 +70,7 @@
             <td>
               <span class="ec-cell">
                 <%= template.label %>
-                <small class="cx-muted ec-sub"><%= template.name %></small>
+                <small class="cx-muted ec-sub"><i class="fa-brands fa-meta" title="Modelo da conta do WhatsApp na Meta"></i> Meta · <%= template.name %></small>
               </span>
             </td>
             <td data-label="Status">

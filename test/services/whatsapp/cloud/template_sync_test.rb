@@ -50,7 +50,7 @@ class Whatsapp::Cloud::TemplateSyncTest < ActiveSupport::TestCase
     api.define_singleton_method(:template_analytics) do |ids, from:, to:|
       raise Whatsapp::Cloud::Api::Error, analytics_error if analytics_error
 
-      @analytics_call = { ids:, days: ((to - from) / 1.day).round }
+      @analytics_call = { ids:, inside_90_days: from > 90.days.ago, from_midnight: from == from.beginning_of_day }
       analytics
     end
     api.define_singleton_method(:analytics_call) { @analytics_call }
@@ -100,7 +100,7 @@ class Whatsapp::Cloud::TemplateSyncTest < ActiveSupport::TestCase
     result = Whatsapp::Cloud::Api.stub(:new, api) { Whatsapp::Cloud::TemplateSync.new(client).call }
 
     assert_nil result.stats_error
-    assert_equal({ ids: ['10'], days: 90 }, api.analytics_call)
+    assert_equal({ ids: ['10'], inside_90_days: true, from_midnight: true }, api.analytics_call)
     template.reload
     assert_equal [40, 38, 19, 4], [template.stats_sent, template.stats_delivered, template.stats_read, template.stats_clicked]
     assert_equal 50, template.read_rate

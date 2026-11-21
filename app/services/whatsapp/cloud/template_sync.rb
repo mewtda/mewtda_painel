@@ -79,7 +79,9 @@ module Whatsapp
         return if templates.none?
 
         now = Time.current
-        totals = api.template_analytics(templates.pluck(:meta_id), from: now - STATS_DAYS.days, to: now)
+        # A Meta recusa início fora da janela de 90 dias; começar no início do dia, 89 dias atrás, fica dentro.
+        from = (now - (STATS_DAYS - 1).days).beginning_of_day
+        totals = api.template_analytics(templates.pluck(:meta_id), from:, to: now)
         templates.find_each do |template|
           row = totals.fetch(template.meta_id.to_s, { sent: 0, delivered: 0, read: 0, clicked: 0 })
           template.update_columns(stats_sent: row[:sent], stats_delivered: row[:delivered], stats_read: row[:read],

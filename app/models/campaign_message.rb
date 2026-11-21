@@ -7,6 +7,7 @@ class CampaignMessage < ApplicationRecord
   CHANNELS = %w[email whatsapp].freeze
   CHANNEL_LABELS = { 'email' => 'E-mail', 'whatsapp' => 'WhatsApp' }.freeze
   RESUME_HOUR = 8
+  CONTINUOUS_EVERY = 5.minutes
 
   belongs_to :campaign, inverse_of: :messages
   belongs_to :email_template, optional: true
@@ -14,13 +15,15 @@ class CampaignMessage < ApplicationRecord
   has_many :recipients, class_name: 'CampaignRecipient', inverse_of: :message, dependent: :delete_all
 
   attr_accessor :send_now
-  attr_writer :send_on, :send_time
+  attr_writer :send_on, :send_time, :continuous, :continuous_on, :continuous_time
 
   before_validation :compose_send_at
+  before_validation :compose_continuous_until
 
   validates :channel, inclusion: { in: CHANNELS }
   validates :status, inclusion: { in: STATUSES }
   validate :templates_belong_to_store
+  validate :continuous_until_after_send_at
 
   def email? = channel == 'email'
   def whatsapp? = channel == 'whatsapp'
@@ -35,6 +38,19 @@ class CampaignMessage < ApplicationRecord
 
   def send_on = @send_on || send_at&.to_date&.iso8601
   def send_time = @send_time || send_at&.strftime('%H:%M')
+
+  # Boas-vindas (contínua): depois do primeiro envio, segue mandando para quem entra no segmento até
+  # continuous_until. Cada número/e-mail recebe uma vez só (índice único por mensagem).
+  def continuous? = continuous_until.present?
+  def continuing?(now = Time.current) = continuous? && continuous_until > now
+  def continuous_on = @continuous_on || continuous_until&.to_date&.iso8601
+  def continuous_time = @continuous_time || continuous_until&.strftime('%H:%M')
+
+  def continuous_label
+    return unless continuous?
+
+    "· boas-vindas para quem entrar até #{I18n.l(continuous_until, format: '%d/%m às %H:%M')}"
+  end
 
   def when_label
     send_at ? I18n.l(send_at, format: '%d/%m/%Y às %H:%M') : 'Assim que você confirmar'
@@ -82,6 +98,23 @@ class CampaignMessage < ApplicationRecord
     self.send_at = (Time.zone.parse("#{date} #{time}") if date.present? && time.present?)
   rescue ArgumentError
     self.send_at = nil
+  end
+
+  def compose_continuous_until
+    return if @continuous.nil? && @continuous_on.nil? && @continuous_time.nil?
+    return self.continuous_until = nil if @continuous.to_s == '0'
+
+    date = continuous_on.to_s
+    time = continuous_time.to_s
+    self.continuous_until = (Time.zone.parse("#{date} #{time}") if date.present? && time.present?)
+  rescue ArgumentError
+    self.continuous_until = nil
+  end
+
+  def continuous_until_after_send_at
+    return unless continuous_until && send_at && continuous_until <= send_at
+
+    errors.add(:continuous_until, 'precisa ser depois do envio da mensagem')
   end
 
   def templates_belong_to_store

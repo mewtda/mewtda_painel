@@ -4,7 +4,7 @@
 <div class="ec-msg" data-message-id="<%= message.id %>" data-channel="<%= message.channel %>" id="<%= dom %>">
   <%= hidden_field_tag field.call(:id), message.id, id: nil %>
   <div class="ec-msg__head">
-    <span class="ec-msg__num"><%= message.whatsapp? ? 'WhatsApp' : 'E-mail' %> <b data-msg-number><%= number %></b></span>
+    <span class="ec-msg__num"><%= message.whatsapp? ? 'WhatsApp' : 'E-mail' %> <b data-msg-number><%= number %></b><%= ' · Boas-vindas' if message.continuous? %></span>
     <div class="ec-msg__tools">
       <button type="button" class="crm-btn clients-btn--icon" data-msg-preview title="Ver prévia e testar esta mensagem"><i class="fa-solid fa-eye"></i></button>
       <button type="button" class="crm-btn clients-btn--icon clients-btn--danger" data-msg-remove
@@ -35,6 +35,22 @@
     <div class="ec-msg__date" data-msg-date <%= 'hidden' if now_checked %>>
       <%= date_field_tag field.call(:send_on), message.send_on, class: 'crm-input', id: "#{dom}-on", min: Time.zone.today.iso8601 %>
       <%= time_field_tag field.call(:send_time), message.send_time, class: 'crm-input', id: "#{dom}-time" %>
+    </div>
+  </div>
+
+  <div class="ec-msg__when">
+    <%= hidden_field_tag field.call(:continuous), '0', id: nil %>
+    <label class="ec-msg__opt">
+      <%= check_box_tag field.call(:continuous), '1', message.continuous?, id: "#{dom}-continuous",
+                        data: { msg_continuous: true } %>
+      <b>Mensagem de boas-vindas</b>: enviar também para cada pessoa que entrar no segmento depois
+      (cada número recebe uma vez só)
+    </label>
+    <div class="ec-msg__date" data-msg-continuous-date <%= 'hidden' unless message.continuous? %>>
+      <small>Recebe quem entrar até</small>
+      <%= date_field_tag field.call(:continuous_on), message.continuous_on, class: 'crm-input', id: "#{dom}-cont-on",
+                         min: Time.zone.today.iso8601 %>
+      <%= time_field_tag field.call(:continuous_time), message.continuous_time, class: 'crm-input', id: "#{dom}-cont-time" %>
     </div>
   </div>
 </div>

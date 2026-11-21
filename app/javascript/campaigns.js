@@ -356,6 +356,9 @@
     const row = target.closest(".ec-msg");
     if (row) {
       if (target.matches("[data-msg-when]")) syncWhen(row);
+      if (target.matches("[data-msg-continuous]")) {
+        $("[data-msg-continuous-date]", row).hidden = !target.checked;
+      }
       if (target.matches("[data-msg-template]")) {
         if (selected?.id !== row.dataset.messageId) selectMessage(row);
         else refreshPreview(row);

@@ -160,7 +160,8 @@ class CampaignsController < ApplicationController
   def campaign_params
     params.require(:campaign).permit(
       :name, :email_enabled, :whatsapp_enabled, segment_ids: [],
-      messages_attributes: %i[id email_template_id whatsapp_template_id send_now send_on send_time _destroy]
+      messages_attributes: %i[id email_template_id whatsapp_template_id send_now send_on send_time continuous
+                               continuous_on continuous_time _destroy]
     ).tap do |permitted|
       # Só mensagens desta campanha; o canal nunca muda pelo formulário.
       ids = @campaign.messages.pluck(:id).map(&:to_s)
@@ -264,7 +265,8 @@ class CampaignsController < ApplicationController
       channels: { email: email_json(audiences['email']), whatsapp: whatsapp_json(audiences['whatsapp']) },
       messages: @campaign.active_messages.map do |message|
         { id: message.id, channel: message.channel, channel_label: message.channel_label,
-          template: message.template_name, when: message.when_label }
+          template: message.template_name,
+          when: [message.when_label, message.continuous_label].compact.join(' ') }
       end
     }
   end

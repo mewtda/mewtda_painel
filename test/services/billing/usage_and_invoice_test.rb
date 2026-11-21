@@ -58,10 +58,10 @@ class Billing::UsageAndInvoiceTest < ActiveSupport::TestCase
 
     invoice = Billing::Invoice.new(client)
 
-    assert_equal BigDecimal('0.01'), Billing::Invoice::WHATSAPP_PRICE_PER_MESSAGE
+    assert_equal BigDecimal('0.10'), Billing::Invoice::WHATSAPP_PRICE_PER_MESSAGE
     assert_equal 3, invoice.whatsapp_messages_sent
-    assert_equal BigDecimal('0.03'), invoice.whatsapp_amount
-    assert_equal BigDecimal('100.03'), invoice.total
+    assert_equal BigDecimal('0.30'), invoice.whatsapp_amount
+    assert_equal BigDecimal('100.30'), invoice.total
   end
 
   test 'SES service stops at the daily email limit and counts sends' do

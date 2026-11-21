@@ -3,7 +3,7 @@ module Billing
   # campanha (API Oficial). A tarifa da própria mensagem a Meta cobra direto da loja, no app da Meta.
   class Invoice
     EMAIL_PRICE_PER_THOUSAND = BigDecimal('4')
-    WHATSAPP_PRICE_PER_MESSAGE = BigDecimal('0.01')
+    WHATSAPP_PRICE_PER_MESSAGE = BigDecimal('0.10')
 
     attr_reader :client, :month
 

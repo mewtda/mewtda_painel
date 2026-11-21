@@ -45,8 +45,8 @@ class CampaignMessageTest < ActiveSupport::TestCase
     refute message.recipients.new(campaign: @campaign, channel: 'email').valid?
   end
 
-  test 'sent cost: R$ 4 per thousand e-mails and R$ 0,01 per WhatsApp message' do
+  test 'sent cost: R$ 4 per thousand e-mails and R$ 0,10 per WhatsApp message' do
     assert_equal BigDecimal('4'), @campaign.messages.new(channel: 'email', sent_count: 1000).sent_cost
-    assert_equal BigDecimal('1'), @campaign.messages.new(channel: 'whatsapp', sent_count: 100).sent_cost
+    assert_equal BigDecimal('10'), @campaign.messages.new(channel: 'whatsapp', sent_count: 100).sent_cost
   end
 end

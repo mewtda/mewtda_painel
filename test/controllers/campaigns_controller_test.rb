@@ -250,7 +250,7 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, body['channels']['email']['recipients']
     assert_equal 1, body['channels']['whatsapp']['recipients']
     assert_equal true, body['channels']['whatsapp']['configured']
-    assert_equal 'R$ 0,01', body['channels']['whatsapp']['cost']
+    assert_equal 'R$ 0,10', body['channels']['whatsapp']['cost']
     assert_nil email.reload.send_at
     assert_equal '10:00', whatsapp.reload.send_at.strftime('%H:%M')
     assert_equal 2, body['messages'].size

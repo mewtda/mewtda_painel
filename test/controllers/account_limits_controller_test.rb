@@ -40,8 +40,8 @@ class AccountLimitsControllerTest < ActionDispatch::IntegrationTest
     get invoice_account_path
 
     assert_match 'Mensagens de WhatsApp', response.body
-    assert_match 'R$ 1,00', response.body
-    assert_match 'R$ 298,00', response.body
+    assert_match 'R$ 10,00', response.body
+    assert_match 'R$ 307,00', response.body
   end
 
   test 'account edit shows the tabs' do

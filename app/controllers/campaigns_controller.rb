@@ -152,7 +152,7 @@ class CampaignsController < ApplicationController
 
   def load_editor_options
     @email_templates = @client.email_templates.order(:name)
-    @whatsapp_templates = @client.whatsapp_templates.approved.order(:label)
+    @whatsapp_templates = @client.whatsapp_templates.sendable.order(:label)
     @segments = @client.segments.order(:name)
     @whatsapp_configured = Whatsapp::Cloud::Api.new(@client).configured?
   end

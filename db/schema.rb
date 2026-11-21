@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_21_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_21_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -1024,6 +1024,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_120000) do
     t.datetime "synced_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "header_text"
+    t.boolean "imported", default: false, null: false
+    t.string "unsupported_reason"
+    t.integer "stats_sent", default: 0, null: false
+    t.integer "stats_delivered", default: 0, null: false
+    t.integer "stats_read", default: 0, null: false
+    t.integer "stats_clicked", default: 0, null: false
+    t.datetime "stats_synced_at"
     t.index ["client_id", "name"], name: "index_whatsapp_templates_on_client_id_and_name", unique: true
     t.index ["client_id", "status"], name: "index_whatsapp_templates_on_client_id_and_status"
     t.index ["client_id"], name: "index_whatsapp_templates_on_client_id"

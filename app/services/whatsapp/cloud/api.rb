@@ -46,18 +46,9 @@ module Whatsapp
         data.dig('messages', 0, 'id')
       end
 
-      def create_template(payload)
-        request(:post, "#{BASE_URL}/#{waba_id}/message_templates", body: payload)
-      end
-
-      # Edita um modelo já enviado (por exemplo, rejeitado) em vez de criar outro com o mesmo nome.
-      def update_template(template_id, payload)
-        request(:post, "#{BASE_URL}/#{template_id}", body: payload)
-      end
-
       def templates
         url = "#{BASE_URL}/#{waba_id}/message_templates"
-        query = { fields: 'name,status,id,rejected_reason,category', limit: 100 }
+        query = { fields: 'name,status,id,rejected_reason,category,language,components,parameter_format', limit: 100 }
         list = []
         while url
           data = request(:get, url, query:)
@@ -68,8 +59,34 @@ module Whatsapp
         list
       end
 
-      def delete_template(name:)
-        request(:delete, "#{BASE_URL}/#{waba_id}/message_templates", query: { name: })
+      # Números por modelo (enviadas, entregues, lidas, cliques) da análise de modelos da Meta, somados no período.
+      # A Meta aceita até 10 modelos por consulta e só responde se os insights de modelos estiverem ativos na conta.
+      # Devolve { meta_id => { sent:, delivered:, read:, clicked: } }.
+      def template_analytics(template_ids, from:, to:)
+        totals = Hash.new { |hash, id| hash[id] = { sent: 0, delivered: 0, read: 0, clicked: 0 } }
+        Array(template_ids).compact.uniq.each_slice(10) do |ids|
+          url = "#{BASE_URL}/#{waba_id}/template_analytics"
+          query = { start: from.to_i, end: to.to_i, granularity: 'DAILY', template_ids: ids.map(&:to_s).to_json,
+                    metric_types: %w[SENT DELIVERED READ CLICKED].to_json }
+          while url
+            data = request(:get, url, query:)
+            Array(data['data']).flat_map { |group| Array(group['data_points']) }.each do |point|
+              row = totals[point['template_id'].to_s]
+              row[:sent] += point['sent'].to_i
+              row[:delivered] += point['delivered'].to_i
+              row[:read] += point['read'].to_i
+              row[:clicked] += Array(point['clicked']).sum { |click| click['count'].to_i }
+            end
+            url = data.dig('paging', 'next')
+            query = nil
+          end
+        end
+        totals
+      end
+
+      # Liga os insights de modelos da conta na Meta (necessário para template_analytics).
+      def enable_template_insights!
+        request(:post, "#{BASE_URL}/#{waba_id}", query: { is_enabled_for_insights: true })
         true
       end
 

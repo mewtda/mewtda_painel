@@ -256,6 +256,28 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, body['messages'].size
   end
 
+  test 'saving only the welcome or date fields of a message persists them' do
+    campaign = @client.campaigns.create!(name: 'Black', whatsapp_enabled: true, email_enabled: false)
+    message = campaign.messages.create!(channel: 'whatsapp', whatsapp_template: wa_template)
+
+    patch campaign_path(campaign), as: :json, params: { campaign: { messages_attributes: {
+      message.id => { id: message.id, send_now: '1', continuous: '1', continuous_on: '2026-11-23', continuous_time: '14:00' }
+    } } }
+    assert_response :success
+    assert_equal Time.zone.local(2026, 11, 23, 14, 0), message.reload.continuous_until
+
+    patch campaign_path(campaign), as: :json, params: { campaign: { messages_attributes: {
+      message.id => { id: message.id, send_now: '0', send_on: '2026-11-23', send_time: '09:00', continuous: '1',
+                      continuous_on: '2026-11-23', continuous_time: '14:00' }
+    } } }
+    assert_equal Time.zone.local(2026, 11, 23, 9, 0), message.reload.send_at
+
+    patch campaign_path(campaign), as: :json, params: { campaign: { messages_attributes: {
+      message.id => { id: message.id, continuous: '0' }
+    } } }
+    assert_nil message.reload.continuous_until
+  end
+
   test 'WhatsApp with a template still in review is missing the approval' do
     configure_whatsapp!
     campaign = @client.campaigns.create!(name: 'Black', segment_ids: [segment_with.id], whatsapp_enabled: true,

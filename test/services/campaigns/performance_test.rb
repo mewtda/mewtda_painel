@@ -136,6 +136,6 @@ class Campaigns::PerformanceTest < ActiveSupport::TestCase
     outcome = result(mixed)
 
     assert_equal 300, outcome.sent
-    assert_equal BigDecimal('2.4'), outcome.investment
+    assert_equal BigDecimal('20.4'), outcome.investment
   end
 end

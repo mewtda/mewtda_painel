@@ -1,74 +1,42 @@
-# Comunicação > WhatsApp: modelos de mensagem da API Oficial, enviados para aprovação da Meta.
+# Comunicação > WhatsApp: modelos de mensagem da conta do WhatsApp conectada (API Oficial).
+# Os modelos são criados no Gerenciador do WhatsApp da Meta; aqui o painel só importa e mostra
+# status e números da Meta (enviadas, entregues, lidas, cliques).
 class WhatsappTemplatesController < ApplicationController
   include ClientScoped
 
   before_action :set_client
   before_action :require_client!
-  before_action :set_template, only: %i[edit update destroy submit duplicate]
+
+  SYNC_EVERY = 10.minutes
 
   def index
     @api_configured = api.configured?
-    sync_pending if @api_configured
-    @templates = @client.whatsapp_templates.ordered
+    sync_from_meta if @api_configured && sync_due?
+    flash.now[:alert] = @sync_error if @sync_error
+    @stats_error ||= flash[:stats_error]
+    @templates = @client.whatsapp_templates.where.not(status: 'draft').ordered
+    @stats_synced_at = @templates.filter_map(&:stats_synced_at).max
   end
 
-  def new
-    @template = @client.whatsapp_templates.new
+  # Botão "Atualizar da Meta": importa os modelos da conta conectada, status e números.
+  def sync
+    return redirect_to(whatsapp_templates_path, alert: 'A API Oficial do WhatsApp não está configurada.') unless api.configured?
+
+    result = sync_from_meta
+    return redirect_to(whatsapp_templates_path, alert: @sync_error) unless result
+
+    flash[:stats_error] = result.stats_error if result.stats_error
+    redirect_to whatsapp_templates_path, notice: sync_notice(result)
   end
 
-  def create
-    @template = @client.whatsapp_templates.new(template_params)
-    if @template.save
-      redirect_to whatsapp_templates_path, notice: 'Modelo salvo como rascunho. Envie para aprovação quando estiver pronto.'
-    else
-      render :new, status: :unprocessable_entity
-    end
-  end
-
-  def edit
-    redirect_to whatsapp_templates_path, alert: not_editable_message unless @template.editable?
-  end
-
-  def update
-    return redirect_to(whatsapp_templates_path, alert: not_editable_message) unless @template.editable?
-
-    if @template.update(template_params.merge(status: 'draft', rejection_reason: nil))
-      redirect_to whatsapp_templates_path, notice: 'Modelo atualizado.'
-    else
-      render :edit, status: :unprocessable_entity
-    end
-  end
-
-  def submit
-    unless @template.editable?
-      return redirect_to(whatsapp_templates_path, alert: 'Este modelo já foi enviado para a Meta.')
-    end
-
-    if @template.submit!
-      redirect_to whatsapp_templates_path, notice: 'Modelo enviado para aprovação da Meta. Costuma levar de minutos a algumas horas.'
-    else
-      redirect_to whatsapp_templates_path, alert: "A Meta recusou o envio: #{@template.errors[:base].to_sentence}"
-    end
-  end
-
-  def duplicate
-    copy = @client.whatsapp_templates.create!(
-      @template.slice(:body, :body_example, :footer, :button_text, :button_url, :category, :language)
-               .merge(label: "#{@template.label} (cópia)".first(120))
-    )
-    redirect_to edit_whatsapp_template_path(copy), notice: 'Cópia criada. Ajuste e envie para aprovação.'
-  end
-
-  def destroy
-    if @template.meta_id.present? && api.configured?
-      begin
-        api.delete_template(name: @template.name)
-      rescue Whatsapp::Cloud::Api::Error => e
-        return redirect_to(whatsapp_templates_path, alert: "Não foi possível excluir na Meta: #{e.message}")
-      end
-    end
-    @template.destroy
-    redirect_to whatsapp_templates_path, notice: 'Modelo excluído.'
+  # Liga os insights de modelos na conta do WhatsApp (sem isso a Meta não informa enviadas/lidas por modelo).
+  def enable_insights
+    api.enable_template_insights!
+    sync_from_meta
+    redirect_to whatsapp_templates_path,
+                notice: 'Insights de modelos ativados na Meta. Os números aparecem conforme a Meta for processando.'
+  rescue Whatsapp::Cloud::Api::Error => e
+    redirect_to whatsapp_templates_path, alert: "A Meta recusou: #{e.message}"
   end
 
   private
@@ -77,29 +45,27 @@ class WhatsappTemplatesController < ApplicationController
     @api ||= Whatsapp::Cloud::Api.new(@client)
   end
 
-  def sync_pending
-    return unless @client.whatsapp_templates.where(status: 'pending').exists?
-
-    Whatsapp::Cloud::TemplateSync.new(@client).call
-  rescue Whatsapp::Cloud::Api::Error => e
-    flash.now[:alert] = "Não foi possível atualizar o status na Meta agora: #{e.message}"
+  def sync_due?
+    last = @client.whatsapp_templates.maximum(:synced_at)
+    last.nil? || last < SYNC_EVERY.ago || @client.whatsapp_templates.where(status: 'pending').exists?
   end
 
-  def not_editable_message
-    'Modelos enviados para a Meta não podem ser editados. Use "Duplicar" para criar uma nova versão.'
+  def sync_from_meta
+    result = Whatsapp::Cloud::TemplateSync.new(@client).call
+    @stats_error = result.stats_error
+    result
+  rescue Whatsapp::Cloud::Api::Error => e
+    @sync_error = "Não foi possível atualizar da Meta agora: #{e.message}"
+    nil
+  end
+
+  def sync_notice(result)
+    return 'Modelos atualizados da Meta.' if result.imported.zero?
+
+    "Modelos atualizados da Meta. #{result.imported} #{result.imported == 1 ? 'modelo novo importado' : 'modelos novos importados'}."
   end
 
   def require_client!
     redirect_to crm_path, alert: 'Nenhum cliente selecionado.' unless @client
-  end
-
-  def set_template
-    @template = @client.whatsapp_templates.find(params[:id])
-  rescue ActiveRecord::RecordNotFound
-    redirect_to whatsapp_templates_path, alert: 'Modelo não encontrado.'
-  end
-
-  def template_params
-    params.require(:whatsapp_template).permit(:label, :body, :body_example, :footer, :button_text, :button_url)
   end
 end

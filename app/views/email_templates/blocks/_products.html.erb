@@ -1,0 +1,35 @@
+<%# Produtos da loja (puxados de uma coleção da Shopify): 3 por linha no computador, 2 no celular.
+    Carrossel que desliza não funciona no Gmail/Outlook, então a vitrine é uma grade que aparece igual em todos. %>
+<% items = Array(block['items']).select { |item| item['title'].present? } %>
+<% if items.any? %>
+  <% button = message.interpolate(block['button_text']) %>
+  <% button_color = message.color(block['color']) %>
+  <% items.each_slice(3) do |row| %>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <% row.each do |item| %>
+          <% href = message.link(item['link']) %>
+          <td class="email-product" width="33.33%" valign="top" align="center" style="padding: 6px;">
+            <% if item['photo'].present? %>
+              <% img = tag.img(src: item['photo'], alt: item['title'], width: 176,
+                               style: 'display: block; width: 100%; height: auto; border: 0; border-radius: 8px;') %>
+              <%= href ? link_to(img, href, target: '_blank') : img %>
+            <% end %>
+            <p style="margin: 8px 0 2px; font-size: 13px; line-height: 1.35; color: <%= message.design['text_color'] %>;">
+              <% if href %><a href="<%= href %>" target="_blank" style="color: inherit; text-decoration: none;"><%= item['title'] %></a><% else %><%= item['title'] %><% end %>
+            </p>
+            <% if block['show_price'] && item['price'].present? %>
+              <p style="margin: 0 0 8px; font-size: 14px; font-weight: bold; color: <%= message.design['text_color'] %>;"><%= item['price'] %></p>
+            <% end %>
+            <% if button.present? && href %>
+              <a href="<%= href %>" target="_blank" style="display: inline-block; padding: 8px 14px; font-size: 12px; font-weight: bold; color: #ffffff; text-decoration: none; background: <%= button_color %>; border-radius: <%= message.button_radius %>px;"><%= button %></a>
+            <% end %>
+          </td>
+        <% end %>
+        <% (3 - row.size).times do %><td class="email-product email-product--empty" width="33.33%" style="padding: 6px;"></td><% end %>
+      </tr>
+    </table>
+  <% end %>
+<% elsif message.preview? %>
+  <span class="email-placeholder">🛍️ Escolha uma coleção e clique em "Puxar produtos"</span>
+<% end %>

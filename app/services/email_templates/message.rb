@@ -175,6 +175,7 @@ module EmailTemplates
       when 'menu' then Array(block['items']).map { |item| link_line(item['label'], link(item['link'])) }
       when 'image_text' then [plain(block['heading']), plain(block['text']), link_line(block['button_text'], link(block['link']))]
       when 'product' then product_text(block)
+      when 'products' then Array(block['items']).filter_map { |item| link_line(item['title'], link(item['link'])) if item['title'].present? }
       else []
       end
     end

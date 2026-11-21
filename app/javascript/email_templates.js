@@ -130,6 +130,18 @@
       summary: (b) => `${b.items.length} ${b.items.length === 1 ? "imagem" : "imagens"} lado a lado`,
       fields: [{ kind: "items", key: "items", label: "Imagens (até 3, lado a lado)" }],
     },
+    products: {
+      label: "Produtos da loja", icon: "fa-bag-shopping",
+      defaults: { collection: "", items: [], button_text: "Ver produto", color: "", show_price: true },
+      summary: (b) => (b.items.length ? `${b.items.length} produtos${b.collection ? ` · ${b.collection}` : ""}` : "Escolha uma coleção"),
+      fields: [
+        { kind: "hint", text: "Puxa os produtos com estoque de uma coleção da Shopify (foto, nome, preço e link). No e-mail aparecem em vitrine: 3 por linha no computador, 2 no celular." },
+        { kind: "products", key: "items", label: "Coleção" },
+        { kind: "text", key: "button_text", label: "Texto do botão (vazio = sem botão)", vars: true },
+        { kind: "toggle", key: "show_price", label: "Mostrar preço" },
+        { kind: "color", key: "color", label: "Cor do botão", empty: "Cor da marca" },
+      ],
+    },
     divider: {
       label: "Divisor", icon: "fa-minus",
       defaults: { color: "", thickness: "1" },
@@ -187,6 +199,10 @@
     { label: "Vitrine", icon: "fa-store", blocks: [
       { type: "heading", text: "Mais vendidos", size: "md" },
       { type: "gallery", items: [1, 2, 3].map(() => ({ image_id: "", link: "", caption: "Produto" })) },
+    ] },
+    { label: "Novidades", icon: "fa-bag-shopping", blocks: [
+      { type: "heading", text: "Aproveite também nossas novidades", size: "md" },
+      { type: "products" },
     ] },
     { label: "Cabeçalho", icon: "fa-bars", blocks: [{ type: "logo" }, { type: "menu" }] },
     { label: "Assinatura", icon: "fa-signature", blocks: [
@@ -680,6 +696,10 @@
         wrapper.appendChild(itemsControl(target));
         break;
       }
+      case "products": {
+        wrapper.appendChild(productsControl(target));
+        break;
+      }
       default:
         break;
     }
@@ -871,6 +891,108 @@
     };
     render();
     return list;
+  }
+
+  // Bloco "Produtos da loja": escolhe a coleção, puxa os produtos e permite tirar os que não quiser.
+  let collectionsCache = null;
+
+  function productsControl(block) {
+    const box = document.createElement("div");
+    box.className = "eb-items";
+    box.innerHTML = `
+      <select class="crm-input" data-collection><option value="">Carregando coleções…</option></select>
+      <div class="eb-segmented" data-limit>
+        ${[3, 6, 9].map((n) => `<button type="button" data-value="${n}" class="${n === 6 ? "active" : ""}">${n} produtos</button>`).join("")}
+      </div>
+      <button type="button" class="crm-btn eb-items__add" data-pull><i class="fa-solid fa-cloud-arrow-down"></i> Puxar produtos</button>
+      <span class="cpform-field__hint" data-status></span>
+      <div data-list></div>`;
+    const select = $("[data-collection]", box);
+    const status = $("[data-status]", box);
+    const list = $("[data-list]", box);
+    let limit = block.items.length > 6 ? 9 : block.items.length > 3 || !block.items.length ? 6 : 3;
+    $$("[data-limit] button", box).forEach((b) => b.classList.toggle("active", Number(b.dataset.value) === limit));
+
+    const fillCollections = (collections) => {
+      select.innerHTML = '<option value="">Escolha uma coleção…</option>' + collections
+        .map((c) => `<option value="${escapeHtml(c.handle)}" ${c.handle === block.collection ? "selected" : ""}>${escapeHtml(c.title)} (${c.count})</option>`)
+        .join("");
+    };
+    const loadCollections = async () => {
+      try {
+        if (!collectionsCache) {
+          const response = await fetch(preview.dataset.collectionsUrl, { headers: { Accept: "application/json" } });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || "Erro ao buscar coleções");
+          collectionsCache = data.collections;
+        }
+        fillCollections(collectionsCache);
+      } catch (error) {
+        select.innerHTML = '<option value="">Não foi possível carregar as coleções</option>';
+        status.textContent = error.message;
+      }
+    };
+
+    const renderList = () => {
+      list.innerHTML = "";
+      block.items.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "eb-items__card eb-product-item";
+        card.innerHTML = `
+          ${item.photo ? `<img src="${escapeHtml(item.photo)}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:6px;">` : ""}
+          <span style="flex:1;min-width:0;"><strong style="display:block;font-size:13px;">${escapeHtml(item.title)}</strong>
+            <small class="eb-muted">${escapeHtml(item.price || "")}</small></span>
+          <button type="button" class="eb-link-btn eb-link-btn--danger" title="Tirar do e-mail" data-remove><i class="fa-solid fa-xmark"></i></button>`;
+        card.style.display = "flex";
+        card.style.alignItems = "center";
+        card.style.gap = "8px";
+        $("[data-remove]", card).addEventListener("click", () => {
+          block.items.splice(index, 1);
+          changed();
+          renderList();
+        });
+        list.appendChild(card);
+      });
+    };
+
+    $("[data-limit]", box).addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button) return;
+      limit = Number(button.dataset.value);
+      $$("[data-limit] button", box).forEach((b) => b.classList.toggle("active", b === button));
+    });
+    select.addEventListener("change", () => {
+      block.collection = select.value;
+      changed({ layers: false });
+    });
+    $("[data-pull]", box).addEventListener("click", async () => {
+      if (!select.value) {
+        status.textContent = "Escolha uma coleção primeiro.";
+        return;
+      }
+      status.textContent = "Buscando produtos na Shopify…";
+      try {
+        const url = new URL(preview.dataset.productsUrl, window.location.origin);
+        url.searchParams.set("handle", select.value);
+        url.searchParams.set("limit", limit);
+        const response = await fetch(url, { headers: { Accept: "application/json" } });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Erro ao buscar produtos");
+        block.collection = select.value;
+        block.items = data.products;
+        status.textContent = data.products.length
+          ? `${data.products.length} produtos com estoque. Tire os que não quiser.`
+          : "Nenhum produto com estoque nessa coleção.";
+        changed();
+        renderList();
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    });
+
+    loadCollections();
+    renderList();
+    return box;
   }
 
   function linksControl(block) {

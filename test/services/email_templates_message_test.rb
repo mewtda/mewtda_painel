@@ -85,4 +85,33 @@ class EmailTemplatesMessageTest < ActiveSupport::TestCase
     assert_match '#111111', html
     assert_match '/email/icons/instagram-white.png', html
   end
+
+  test 'products block renders the chosen products in a grid and only keeps safe fields' do
+    blocks = EmailTemplates::Blocks.sanitize([
+      { 'type' => 'products', 'collection' => 'novidades', 'button_text' => 'Ver', 'show_price' => true,
+        'items' => [
+          { 'title' => 'Vestido Longo', 'price' => 'R$ 599,00', 'photo' => 'https://cdn.shopify.com/v.jpg',
+            'link' => 'https://lojaoneway.com/products/vestido', 'extra' => 'x' },
+          { 'title' => 'Calça', 'price' => 'R$ 209,93', 'photo' => 'http://inseguro.com/c.jpg',
+            'link' => 'javascript:alert(1)' },
+          { 'title' => '' }
+        ] }
+    ])
+    items = blocks.first['items']
+    assert_equal 2, items.size
+    assert_equal %w[link photo price title], items.first.keys.sort
+    assert_equal '', items.last['photo'], 'só aceita foto https'
+    assert_equal '', items.last['link']
+
+    message = EmailTemplates::Message.new(template(blocks), variables: { loja: 'Loja' }, default_url: 'https://lojaoneway.com')
+    html = message.html
+    assert_match 'Vestido Longo', html
+    assert_match 'R$ 599,00', html
+    assert_match 'src="https://cdn.shopify.com/v.jpg"', html
+    assert_match 'href="https://lojaoneway.com/products/vestido"', html
+    assert_no_match 'inseguro.com', html
+    assert_no_match 'javascript:', html
+    assert_match 'email-product', html
+    assert_match "Vestido Longo: https://lojaoneway.com/products/vestido", message.text
+  end
 end

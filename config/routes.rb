@@ -167,6 +167,8 @@ Rails.application.routes.draw do
         post :preview
         post :send_test
         post :upload_image
+        get :shopify_collections, path: 'colecoes'
+        get :collection_products, path: 'produtos-da-colecao'
       end
     end
     resources :whatsapp_templates, path: 'modelos-whatsapp', only: [:index] do

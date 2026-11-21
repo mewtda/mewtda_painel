@@ -132,11 +132,12 @@
     },
     products: {
       label: "Produtos da loja", icon: "fa-bag-shopping",
-      defaults: { collection: "", items: [], button_text: "Ver produto", color: "", show_price: true },
-      summary: (b) => (b.items.length ? `${b.items.length} produtos${b.collection ? ` · ${b.collection}` : ""}` : "Escolha uma coleção"),
+      defaults: { collection: "", limit: "6", fixed: false, items: [], button_text: "Ver produto", color: "", show_price: true },
+      summary: (b) => (b.collection ? `${b.fixed ? `${b.items.length} produtos fixos` : `Últimas ${b.limit} peças`} · ${b.collection}` : "Escolha uma coleção"),
       fields: [
-        { kind: "hint", text: "Puxa os produtos com estoque de uma coleção da Shopify (foto, nome, preço e link). No e-mail aparecem em vitrine: 3 por linha no computador, 2 no celular." },
+        { kind: "hint", text: "Mostra as últimas peças com estoque de uma coleção da Shopify (foto, nome, preço e link), buscadas na hora do envio: o e-mail sempre leva as novidades do momento. No e-mail aparecem em vitrine: 3 por linha no computador, 2 no celular." },
         { kind: "products", key: "items", label: "Coleção" },
+        { kind: "toggle", key: "fixed", label: "Manter fixos os produtos da lista (não atualizar no envio)" },
         { kind: "text", key: "button_text", label: "Texto do botão (vazio = sem botão)", vars: true },
         { kind: "toggle", key: "show_price", label: "Mostrar preço" },
         { kind: "color", key: "color", label: "Cor do botão", empty: "Cor da marca" },
@@ -910,7 +911,7 @@
     const select = $("[data-collection]", box);
     const status = $("[data-status]", box);
     const list = $("[data-list]", box);
-    let limit = block.items.length > 6 ? 9 : block.items.length > 3 || !block.items.length ? 6 : 3;
+    let limit = Number(block.limit) || 6;
     $$("[data-limit] button", box).forEach((b) => b.classList.toggle("active", Number(b.dataset.value) === limit));
 
     const fillCollections = (collections) => {
@@ -960,10 +961,12 @@
       if (!button) return;
       limit = Number(button.dataset.value);
       $$("[data-limit] button", box).forEach((b) => b.classList.toggle("active", b === button));
+      block.limit = String(limit);
+      changed();
     });
     select.addEventListener("change", () => {
       block.collection = select.value;
-      changed({ layers: false });
+      changed();
     });
     $("[data-pull]", box).addEventListener("click", async () => {
       if (!select.value) {
@@ -979,9 +982,10 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Erro ao buscar produtos");
         block.collection = select.value;
+        block.limit = String(limit);
         block.items = data.products;
         status.textContent = data.products.length
-          ? `${data.products.length} produtos com estoque. Tire os que não quiser.`
+          ? `${data.products.length} produtos com estoque agora. No envio, o e-mail busca as últimas peças da coleção de novo.`
           : "Nenhum produto com estoque nessa coleção.";
         changed();
         renderList();

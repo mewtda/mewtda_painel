@@ -1,6 +1,6 @@
 <%# Produtos da loja (puxados de uma coleção da Shopify): 3 por linha no computador, 2 no celular.
     Carrossel que desliza não funciona no Gmail/Outlook, então a vitrine é uma grade que aparece igual em todos. %>
-<% items = Array(block['items']).select { |item| item['title'].present? } %>
+<% items = message.products_for(block) %>
 <% if items.any? %>
   <% button = message.interpolate(block['button_text']) %>
   <% button_color = message.color(block['color']) %>

@@ -14,11 +14,25 @@ class CampaignMessage < ApplicationRecord
   belongs_to :whatsapp_template, optional: true
   has_many :recipients, class_name: 'CampaignRecipient', inverse_of: :message, dependent: :delete_all
 
-  attr_accessor :send_now
-  attr_writer :send_on, :send_time, :continuous, :continuous_on, :continuous_time
+  attr_reader :send_now
+
+  # Os campos do formulário recalculam send_at/continuous_until na hora: assim a coluna muda e a mensagem
+  # é salva mesmo quando o formulário (atributos aninhados da campanha) só mexeu na data ou nas boas-vindas.
+  %i[send_now send_on send_time].each do |name|
+    define_method(:"#{name}=") do |value|
+      instance_variable_set(:"@#{name}", value)
+      compose_send_at
+    end
+  end
+
+  %i[continuous continuous_on continuous_time].each do |name|
+    define_method(:"#{name}=") do |value|
+      instance_variable_set(:"@#{name}", value)
+      compose_continuous_until
+    end
+  end
 
   before_validation :compose_send_at
-  before_validation :compose_continuous_until
 
   validates :channel, inclusion: { in: CHANNELS }
   validates :status, inclusion: { in: STATUSES }

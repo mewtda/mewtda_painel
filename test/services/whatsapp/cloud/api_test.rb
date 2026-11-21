@@ -68,20 +68,6 @@ class Whatsapp::Cloud::ApiTest < ActiveSupport::TestCase
     assert_equal %w[a b], list.map { |t| t['name'] }
   end
 
-  test 'create_template posts to the WABA and delete_template deletes by name' do
-    seen = nil
-    created = HTTParty.stub(:post, ->(url, opts) { seen = [url, JSON.parse(opts[:body])] and ok(id: '9', status: 'PENDING', category: 'MARKETING') }) do
-      @api.create_template(name: 'x', category: 'MARKETING')
-    end
-    assert_equal 'https://graph.facebook.com/v26.0/222/message_templates', seen[0]
-    assert_equal 'x', seen[1]['name']
-    assert_equal '9', created['id']
-
-    deleted = nil
-    assert(HTTParty.stub(:delete, ->(url, opts) { deleted = [url, opts[:query]] and ok(success: true) }) { @api.delete_template(name: 'x') })
-    assert_equal ['https://graph.facebook.com/v26.0/222/message_templates', { name: 'x' }], deleted
-  end
-
   test 'configured? requires phone id, waba and token' do
     assert @api.configured?
     @client.whatsapp_cloud_business_account_id = nil
@@ -98,12 +84,30 @@ class Whatsapp::Cloud::ApiTest < ActiveSupport::TestCase
     end
   end
 
-  test 'update_template edits an existing template by id' do
-    seen = nil
-    HTTParty.stub(:post, ->(url, opts) { seen = [url, JSON.parse(opts[:body])] and ok(success: true) }) do
-      @api.update_template('987', components: [{ type: 'BODY', text: 'Oi' }])
+  test 'template_analytics sums the daily points per template, 10 templates per request' do
+    calls = []
+    get = lambda do |url, opts|
+      calls << { url:, query: opts[:query] }
+      ids = JSON.parse(opts[:query][:template_ids])
+      ok(data: [{ granularity: 'DAILY', data_points: ids.flat_map do |id|
+        [{ template_id: id, sent: 2, delivered: 2, read: 1, clicked: [{ type: 'url_button', count: 1 }] },
+         { template_id: id, sent: 1, delivered: 0, read: 0 }]
+      end }])
     end
-    assert_equal 'https://graph.facebook.com/v26.0/987', seen[0]
-    assert_equal [{ 'type' => 'BODY', 'text' => 'Oi' }], seen[1]['components']
+    now = Time.zone.local(2026, 11, 21, 12, 0)
+    totals = HTTParty.stub(:get, get) { @api.template_analytics((1..12).map(&:to_s), from: now - 90.days, to: now) }
+
+    assert_equal 2, calls.size
+    assert_equal 'https://graph.facebook.com/v26.0/222/template_analytics', calls.first[:url]
+    assert_equal now.to_i, calls.first[:query][:end]
+    assert_equal 'DAILY', calls.first[:query][:granularity]
+    assert_equal 10, JSON.parse(calls.first[:query][:template_ids]).size
+    assert_equal({ sent: 3, delivered: 2, read: 1, clicked: 1 }, totals['12'])
+  end
+
+  test 'enable_template_insights! turns on template insights on the WABA' do
+    seen = nil
+    HTTParty.stub(:post, ->(url, opts) { seen = [url, opts[:query]] and ok(success: true) }) { @api.enable_template_insights! }
+    assert_equal ['https://graph.facebook.com/v26.0/222', { is_enabled_for_insights: true }], seen
   end
 end

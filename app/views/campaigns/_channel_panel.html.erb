@@ -14,7 +14,8 @@
 
   <% if locked %>
     <div class="ec-empty">
-      A API Oficial do WhatsApp ainda não está configurada para esta loja. Depois de configurada, crie e aprove os modelos em
+      A API Oficial do WhatsApp ainda não está configurada para esta loja. Depois de configurada, os modelos aprovados
+      no Gerenciador do WhatsApp da Meta aparecem em
       <%= link_to 'Comunicação › WhatsApp', whatsapp_templates_path, target: '_blank', rel: 'noopener' %>.
     </div>
   <% else %>
@@ -23,7 +24,7 @@
         <div class="ec-empty">
           Você ainda não tem modelo de WhatsApp aprovado pela Meta.
           <%= link_to whatsapp_templates_path, class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
-            <i class="fa-brands fa-whatsapp"></i> Criar modelos em Comunicação › WhatsApp
+            <i class="fa-brands fa-whatsapp"></i> Ver modelos da Meta em Comunicação › WhatsApp
           <% end %>
         </div>
       <% elsif !whatsapp && @email_templates.empty? %>
@@ -46,7 +47,7 @@
           <i class="fa-solid fa-plus"></i> Adicionar mensagem de <%= whatsapp ? 'WhatsApp' : 'e-mail' %>
         </button>
         <%= link_to (whatsapp ? whatsapp_templates_path : email_templates_path), class: 'crm-btn crm-btn--secondary ec-btn-sm', target: '_blank', rel: 'noopener' do %>
-          <i class="fa-solid fa-pen"></i> <%= whatsapp ? 'Modelos de WhatsApp' : 'Modelos de e-mail' %>
+          <i class="fa-solid <%= whatsapp ? 'fa-list' : 'fa-pen' %>"></i> <%= whatsapp ? 'Modelos de WhatsApp' : 'Modelos de e-mail' %>
         <% end %>
       </div>
     </div>

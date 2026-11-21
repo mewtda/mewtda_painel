@@ -19,16 +19,34 @@ class WhatsappTemplatesControllerTest < ActionDispatch::IntegrationTest
   end
 
   def template(client = @client, **attrs)
-    client.whatsapp_templates.create!({ label: 'Black 1', body: 'Oi {{1}}!', body_example: 'Maria' }.merge(attrs))
+    client.whatsapp_templates.create!({ label: 'Black 1', body: 'Oi {{1}}!', status: 'approved', meta_id: '5',
+                                        synced_at: Time.current }.merge(attrs))
   end
 
-  test 'index lists only the current client templates' do
-    template
+  def fake_api(templates: [], analytics: {}, analytics_error: nil, on_enable: nil)
+    api = Object.new
+    api.define_singleton_method(:configured?) { true }
+    api.define_singleton_method(:templates) { templates }
+    api.define_singleton_method(:template_analytics) do |*, **|
+      raise Whatsapp::Cloud::Api::Error, analytics_error if analytics_error
+
+      analytics
+    end
+    api.define_singleton_method(:enable_template_insights!) { on_enable&.call || true }
+    api
+  end
+
+  test 'index lists only the current client templates with the Meta numbers' do
+    template(stats_sent: 1200, stats_delivered: 1000, stats_read: 400, stats_clicked: 37)
     template(build_client, label: 'De outro cliente')
     get whatsapp_templates_path
     assert_response :success
     assert_match 'Black 1', response.body
+    assert_match '1.200', response.body
+    assert_match '40% das entregues', response.body
     assert_no_match 'De outro cliente', response.body
+    assert_match 'Criar no Gerenciador do WhatsApp', response.body
+    assert_no_match 'Novo modelo', response.body
   end
 
   test 'index warns when the official API is not configured' do
@@ -37,68 +55,44 @@ class WhatsappTemplatesControllerTest < ActionDispatch::IntegrationTest
     assert_match 'API Oficial', response.body
   end
 
-  test 'index refreshes pending templates from Meta' do
-    pending = template(status: 'pending')
-    api = Object.new
-    def api.configured? = true
-    def api.templates = [{ 'name' => 'black_1', 'status' => 'APPROVED', 'id' => '5' }]
+  test 'index pulls templates from Meta when the last sync is old' do
+    pending = template(status: 'pending', synced_at: 1.hour.ago)
+    api = fake_api(templates: [{ 'name' => 'black_1', 'status' => 'APPROVED', 'id' => '5' },
+                               { 'name' => 'novo_da_meta', 'status' => 'APPROVED', 'id' => '6',
+                                 'components' => [{ 'type' => 'BODY', 'text' => 'Chegou!' }] }])
     Whatsapp::Cloud::Api.stub(:new, api) { get whatsapp_templates_path }
     assert_equal 'approved', pending.reload.status
+    assert_match 'Novo da meta', response.body
   end
 
-  test 'create saves a draft and redirects' do
-    assert_difference -> { @client.whatsapp_templates.count } do
-      post whatsapp_templates_path, params: { whatsapp_template: { label: 'Nova', body: 'Oi {{1}}', body_example: 'Ana' } }
-    end
+  test 'sync imports from Meta and reports new templates' do
+    api = fake_api(templates: [{ 'name' => 'promo', 'status' => 'APPROVED', 'id' => '7',
+                                 'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}' }] }])
+    Whatsapp::Cloud::Api.stub(:new, api) { post sync_whatsapp_templates_path }
     assert_redirected_to whatsapp_templates_path
-    assert_equal 'draft', @client.whatsapp_templates.last.status
+    assert_equal '1 modelo novo importado', flash[:notice][/1 modelo novo importado/]
+    assert @client.whatsapp_templates.find_by!(name: 'promo').imported?
   end
 
-  test 'create with errors re-renders the form' do
-    post whatsapp_templates_path, params: { whatsapp_template: { label: '', body: '' } }
-    assert_response :unprocessable_entity
+  test 'when Meta does not return the numbers the page offers to turn on insights' do
+    template(synced_at: 1.hour.ago)
+    api = fake_api(templates: [{ 'name' => 'black_1', 'status' => 'APPROVED', 'id' => '5' }],
+                   analytics_error: 'Template analytics is not enabled')
+    Whatsapp::Cloud::Api.stub(:new, api) { get whatsapp_templates_path }
+    assert_match 'Ativar insights de modelos na Meta', response.body
+    assert_match 'Template analytics is not enabled', response.body
   end
 
-  test 'approved templates cannot be edited' do
-    approved = template(status: 'approved')
-    patch whatsapp_template_path(approved), params: { whatsapp_template: { body: 'Outro texto' } }
+  test 'enable_insights turns on insights in the Meta account' do
+    called = false
+    api = fake_api(on_enable: -> { called = true })
+    Whatsapp::Cloud::Api.stub(:new, api) { post enable_insights_whatsapp_templates_path }
+    assert called
     assert_redirected_to whatsapp_templates_path
-    assert_equal 'Oi {{1}}!', approved.reload.body
   end
 
-  test 'submit sends to Meta and marks pending' do
-    draft = template
-    api = Object.new
-    def api.create_template(_) = { 'id' => '77', 'status' => 'PENDING' }
-    Whatsapp::Cloud::Api.stub(:new, api) { post submit_whatsapp_template_path(draft) }
-    assert_redirected_to whatsapp_templates_path
-    assert_equal 'pending', draft.reload.status
-  end
-
-  test 'duplicate creates a draft copy' do
-    approved = template(status: 'approved', meta_id: '9')
-    post duplicate_whatsapp_template_path(approved)
-    copy = @client.whatsapp_templates.order(:id).last
-    assert_equal 'Black 1 (cópia)', copy.label
-    assert_equal 'draft', copy.status
-    assert_nil copy.meta_id
-    assert_redirected_to edit_whatsapp_template_path(copy)
-  end
-
-  test 'destroy deletes on Meta when submitted' do
-    sent = template(status: 'rejected', meta_id: '9')
-    deleted = []
-    api = Object.new
-    def api.configured? = true
-    api.define_singleton_method(:delete_template) { |name:| deleted << name }
-    Whatsapp::Cloud::Api.stub(:new, api) { delete whatsapp_template_path(sent) }
-    assert_equal ['black_1'], deleted
-    refute WhatsappTemplate.exists?(sent.id)
-  end
-
-  test 'another client template is not reachable' do
-    other = template(build_client, label: 'Alheio')
-    get edit_whatsapp_template_path(other)
-    assert_redirected_to whatsapp_templates_path
+  test 'templates can no longer be created or edited in the panel' do
+    assert_raises(NameError) { new_whatsapp_template_path }
+    assert_raises(NameError) { edit_whatsapp_template_path(1) }
   end
 end

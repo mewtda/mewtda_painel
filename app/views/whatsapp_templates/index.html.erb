@@ -1,6 +1,7 @@
 <% title 'WhatsApp' %>
 <% wa_tags = { 'draft' => 'neutral', 'pending' => 'warning', 'approved' => 'success', 'rejected' => 'danger',
                'paused' => 'warning', 'disabled' => 'danger' } %>
+<% meta_manager_url = "https://business.facebook.com/latest/whatsapp_manager/message_templates/?asset_id=#{ERB::Util.url_encode(@client.whatsapp_cloud_business_account_id.to_s)}" %>
 
 <div class="clients-wrapper cx-page">
   <% unless @api_configured %>
@@ -8,8 +9,8 @@
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div>
         <strong>A API Oficial do WhatsApp ainda não está configurada para esta loja.</strong>
-        <p class="cx-muted">Você pode escrever os modelos, mas para enviar para aprovação e disparar campanhas é preciso
-          informar o token, o ID do número e o ID da conta do WhatsApp Business nas configurações do cliente.
+        <p class="cx-muted">Os modelos vêm da conta do WhatsApp Business conectada. Para puxar os modelos e disparar
+          campanhas, informe o token, o ID do número e o ID da conta do WhatsApp Business nas configurações do cliente.
           <% if current_user.admin? %><%= link_to 'Abrir configurações', edit_client_path(@client) %><% else %>Fale com o suporte Mewtda.<% end %></p>
       </div>
     </div>
@@ -18,10 +19,38 @@
   <div class="clients-table-wrap">
     <div class="clients-table-header">
       <span class="clients-table-header__title"><i class="fa-brands fa-whatsapp"></i> Modelos de WhatsApp — <%= @client.name %></span>
-      <%= link_to new_whatsapp_template_path, class: 'crm-btn crm-btn--primary' do %>
-        <i class="fa-solid fa-plus"></i> Novo modelo
+      <% if @api_configured %>
+        <div class="clients-table__actions">
+          <%= link_to meta_manager_url, class: 'crm-btn', target: '_blank', rel: 'noopener' do %>
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Criar no Gerenciador do WhatsApp
+          <% end %>
+          <%= button_to sync_whatsapp_templates_path, method: :post, class: 'crm-btn crm-btn--primary',
+                        title: 'Importa os modelos da conta do WhatsApp conectada e atualiza status e números' do %>
+            <i class="fa-solid fa-rotate"></i> Atualizar da Meta
+          <% end %>
+        </div>
       <% end %>
     </div>
+
+    <% if @api_configured %>
+      <p class="cx-muted wt-stats-note">
+        Os modelos são criados e aprovados no Gerenciador do WhatsApp da Meta e aparecem aqui sozinhos.
+        Números da Meta dos últimos <%= Whatsapp::Cloud::TemplateSync::STATS_DAYS %> dias<% if @stats_synced_at %>,
+        atualizados há <%= time_ago_in_words(@stats_synced_at) %><% end %>.
+      </p>
+      <% if @stats_error %>
+        <div class="crm-card wt-notice">
+          <i class="fa-solid fa-chart-simple"></i>
+          <div>
+            <strong>A Meta não informou os números dos modelos.</strong>
+            <p class="cx-muted">Resposta da Meta: <%= @stats_error %>. Normalmente é porque os insights de modelos estão
+              desligados na conta do WhatsApp.</p>
+            <%= button_to 'Ativar insights de modelos na Meta', enable_insights_whatsapp_templates_path, method: :post,
+                          class: 'crm-btn crm-btn--primary' %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
 
     <table class="crm-table">
       <thead>
@@ -29,7 +58,10 @@
           <th>Nome</th>
           <th>Status</th>
           <th>Mensagem</th>
-          <th class="text-center">Ações</th>
+          <th class="text-center" title="Mensagens enviadas (Meta)">Enviadas</th>
+          <th class="text-center" title="Mensagens entregues (Meta)">Entregues</th>
+          <th class="text-center" title="Mensagens lidas / abertas (Meta)">Lidas</th>
+          <th class="text-center" title="Cliques nos botões (Meta)">Cliques</th>
         </tr>
       </thead>
       <tbody>
@@ -37,38 +69,29 @@
           <tr>
             <td>
               <span class="ec-cell">
-                <% if template.editable? %><%= link_to template.label, edit_whatsapp_template_path(template), class: 'cx-link' %><% else %><%= template.label %><% end %>
+                <%= template.label %>
                 <small class="cx-muted ec-sub"><%= template.name %></small>
               </span>
             </td>
             <td data-label="Status">
               <span class="crm-tag crm-tag--<%= wa_tags.fetch(template.status, 'neutral') %>"><%= template.status_label %></span>
               <% if template.rejection_reason.present? %><small class="cx-muted ec-sub">Motivo: <%= template.rejection_reason %></small><% end %>
+              <% unless template.supported? %><small class="cx-muted ec-sub">Não dá para usar em campanha: <%= template.unsupported_reason %></small><% end %>
             </td>
             <td class="cx-muted wt-excerpt" data-label="Mensagem"><%= truncate(template.preview_body, length: 110) %></td>
-            <td class="text-center">
-              <div class="clients-table__actions">
-                <% if template.editable? %>
-                  <%= link_to edit_whatsapp_template_path(template), class: 'crm-btn clients-btn--icon', title: 'Editar' do %><i class="fa-solid fa-pen"></i><% end %>
-                  <% if @api_configured %>
-                    <%= button_to submit_whatsapp_template_path(template), method: :post, class: 'crm-btn clients-btn--icon', title: 'Enviar para aprovação',
-                        form: { data: { confirm: "Enviar \"#{template.label}\" para aprovação da Meta? Depois de enviado o texto não pode mais ser alterado.",
-                                        confirm_label: 'Enviar para aprovação' } } do %><i class="fa-solid fa-paper-plane"></i><% end %>
-                  <% end %>
-                <% end %>
-                <%= button_to duplicate_whatsapp_template_path(template), method: :post, class: 'crm-btn clients-btn--icon', title: 'Duplicar' do %><i class="fa-solid fa-copy"></i><% end %>
-                <%= button_to whatsapp_template_path(template), method: :delete, class: 'crm-btn clients-btn--icon clients-btn--danger', title: 'Excluir',
-                    form: { data: { confirm: "Excluir o modelo \"#{template.label}\"?#{' Ele também será excluído na Meta.' if template.meta_id.present?}", confirm_label: 'Excluir' } } do %>
-                  <i class="fa-solid fa-trash-can"></i>
-                <% end %>
-              </div>
+            <td class="text-center" data-label="Enviadas"><%= number_with_delimiter(template.stats_sent, delimiter: '.') %></td>
+            <td class="text-center" data-label="Entregues"><%= number_with_delimiter(template.stats_delivered, delimiter: '.') %></td>
+            <td class="text-center" data-label="Lidas">
+              <%= number_with_delimiter(template.stats_read, delimiter: '.') %>
+              <% if template.read_rate %><small class="cx-muted ec-sub"><%= template.read_rate %>% das entregues</small><% end %>
             </td>
+            <td class="text-center" data-label="Cliques"><%= number_with_delimiter(template.stats_clicked, delimiter: '.') %></td>
           </tr>
         <% end %>
         <% if @templates.empty? %>
           <tr>
-            <td colspan="4" class="clients-table__empty">
-              Nenhum modelo ainda. Clique em <strong>Novo modelo</strong>, escreva a mensagem e envie para aprovação da Meta.
+            <td colspan="7" class="clients-table__empty">
+              Nenhum modelo ainda. Crie no Gerenciador do WhatsApp da Meta e clique em <strong>Atualizar da Meta</strong>.
             </td>
           </tr>
         <% end %>

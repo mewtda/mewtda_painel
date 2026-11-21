@@ -1,4 +1,6 @@
-# Modelo de mensagem do WhatsApp (API Oficial), criado no painel e aprovado pela Meta.
+# Modelo de mensagem do WhatsApp (API Oficial). Os modelos são criados e aprovados no Gerenciador do
+# WhatsApp da Meta e importados para o painel pela Whatsapp::Cloud::TemplateSync — o painel não cria nem
+# edita modelos. Guarda o texto (para prévia), o status na Meta e os números da Meta por modelo.
 class WhatsappTemplate < ApplicationRecord
   STATUSES = %w[draft pending approved rejected paused disabled].freeze
   STATUS_LABELS = { 'draft' => 'Rascunho', 'pending' => 'Em análise', 'approved' => 'Aprovado',
@@ -9,25 +11,18 @@ class WhatsappTemplate < ApplicationRecord
   belongs_to :client
 
   scope :approved, -> { where(status: 'approved') }
+  # Aprovados que o painel consegue enviar (a Meta permite recursos que o envio ainda não cobre).
+  scope :sendable, -> { approved.where(unsupported_reason: nil) }
   scope :ordered, -> { order(updated_at: :desc) }
 
   before_validation :generate_name, if: -> { name.blank? && label.present? }
 
   validates :label, presence: true, length: { maximum: 120 }
-  validates :body, presence: true, length: { maximum: 1024 }
-  validates :footer, length: { maximum: 60 }
-  validates :button_text, length: { maximum: 25 }
-  validates :button_url, format: { with: %r{\Ahttps?://\S+\z}, message: 'deve começar com http:// ou https://' },
-                         allow_blank: true
   validates :name, presence: true, format: { with: NAME_FORMAT }, uniqueness: { scope: :client_id }
   validates :status, inclusion: { in: STATUSES }
-  validate :only_first_variable
-  validates :body_example, presence: { message: 'é obrigatório quando a mensagem usa o nome do cliente' },
-                           if: :uses_variable?
-  validate :button_needs_both
 
   def uses_variable? = body.to_s.include?(VARIABLE)
-  def editable? = status.in?(%w[draft rejected])
+  def supported? = unsupported_reason.blank?
   def approved? = status == 'approved'
   def status_label = STATUS_LABELS.fetch(status, status)
 
@@ -35,32 +30,10 @@ class WhatsappTemplate < ApplicationRecord
     body.to_s.gsub(VARIABLE, first_name.to_s)
   end
 
-  def meta_payload
-    body_component = { type: 'BODY', text: body }
-    body_component[:example] = { body_text: [[body_example]] } if uses_variable?
-    components = [body_component]
-    components << { type: 'FOOTER', text: footer } if footer.present?
-    if button_text.present? && button_url.present?
-      components << { type: 'BUTTONS', buttons: [{ type: 'URL', text: button_text, url: button_url }] }
-    end
-    { name:, category:, language:, components: }
-  end
+  def read_rate
+    return if stats_delivered.to_i.zero?
 
-  # Envia para aprovação da Meta. Em erro, deixa a mensagem da Meta em errors[:base] e devolve false.
-  def submit!
-    api = Whatsapp::Cloud::Api.new(client)
-    if meta_id.present?
-      api.update_template(meta_id, { components: meta_payload[:components] })
-      return update!(status: 'pending', rejection_reason: nil, synced_at: Time.current)
-    end
-
-    response = api.create_template(meta_payload)
-    update!(meta_id: response['id'], status: response['status'].to_s.downcase.presence_in(STATUSES) || 'pending',
-            rejection_reason: nil, synced_at: Time.current)
-    true
-  rescue Whatsapp::Cloud::Api::Error => e
-    errors.add(:base, e.message)
-    false
+    (stats_read.to_f / stats_delivered * 100).round
   end
 
   private
@@ -75,16 +48,5 @@ class WhatsappTemplate < ApplicationRecord
       candidate = "#{base}_#{n}"
     end
     self.name = candidate
-  end
-
-  def only_first_variable
-    others = body.to_s.scan(/\{\{\s*(\w+)\s*\}\}/).flatten - ['1']
-    errors.add(:body, 'só pode usar a variável {{1}} (primeiro nome do cliente)') if others.any?
-  end
-
-  def button_needs_both
-    return if button_text.blank? == button_url.blank?
-
-    errors.add(:button_url, 'e o texto do botão precisam ser preenchidos juntos')
   end
 end

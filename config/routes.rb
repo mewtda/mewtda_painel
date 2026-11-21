@@ -169,10 +169,10 @@ Rails.application.routes.draw do
         post :upload_image
       end
     end
-    resources :whatsapp_templates, path: 'modelos-whatsapp', except: [:show] do
-      member do
-        post :submit
-        post :duplicate
+    resources :whatsapp_templates, path: 'modelos-whatsapp', only: [:index] do
+      collection do
+        post :sync, path: 'atualizar'
+        post :enable_insights, path: 'ativar-insights'
       end
     end
     resources :email_suppressions, path: 'lista-de-recusa', only: %i[index create destroy]

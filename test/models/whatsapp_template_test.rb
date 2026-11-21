@@ -20,61 +20,19 @@ class WhatsappTemplateTest < ActiveSupport::TestCase
     assert_equal 'draft', first.status
   end
 
-  test 'meta_payload with variable, footer and button' do
-    template = build(footer: 'Responda SAIR para não receber', button_text: 'Ver ofertas',
-                     button_url: 'https://loja.com/black').tap(&:save!)
-    assert_equal({ name: 'black_friday_1', category: 'MARKETING', language: 'pt_BR',
-                   components: [{ type: 'BODY', text: 'Oi {{1}}, a Black chegou!', example: { body_text: [['Maria']] } },
-                                { type: 'FOOTER', text: 'Responda SAIR para não receber' },
-                                { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Ver ofertas', url: 'https://loja.com/black' }] }] },
-                 template.meta_payload)
-  end
-
-  test 'body without variable has no example' do
-    template = build(body: 'A Black chegou!', body_example: nil)
-    assert template.valid?
-    assert_equal [{ type: 'BODY', text: 'A Black chegou!' }], template.meta_payload[:components]
-  end
-
-  test 'only {{1}} is allowed and needs an example' do
-    refute build(body: 'Oi {{1}} e {{2}}').valid?
-    refute build(body_example: '').valid?
-    refute build(button_text: 'Ver', button_url: 'loja.com').valid?
-  end
-
   test 'preview_body replaces the variable' do
     assert_equal 'Oi Ana, a Black chegou!', build.preview_body('Ana')
   end
 
-  test 'submit! stores pending and meta id' do
-    template = build.tap(&:save!)
-    api = Minitest::Mock.new
-    api.expect(:create_template, { 'id' => '987', 'status' => 'PENDING' }, [template.meta_payload])
-    Whatsapp::Cloud::Api.stub(:new, api) { assert template.submit! }
-    api.verify
-    template.reload
-    assert_equal 'pending', template.status
-    assert_equal '987', template.meta_id
-    assert template.synced_at
-    refute template.editable?
+  test 'sendable means approved and supported by the sender' do
+    ok = build(status: 'approved').tap(&:save!)
+    build(label: 'Com imagem', status: 'approved', unsupported_reason: 'Cabeçalho com imagem').save!
+    build(label: 'Em análise', status: 'pending').save!
+    assert_equal [ok.id], @client.whatsapp_templates.sendable.pluck(:id)
   end
 
-  test 'submit! keeps the Meta error' do
-    template = build.tap(&:save!)
-    api = Object.new
-    def api.create_template(_) = raise(Whatsapp::Cloud::Api::Error, 'Nome já existe')
-    Whatsapp::Cloud::Api.stub(:new, api) { refute template.submit! }
-    assert_includes template.errors[:base], 'Nome já existe'
-    assert_equal 'draft', template.reload.status
-  end
-
-  test 'submit! of a rejected template edits it on Meta instead of creating a duplicate' do
-    template = build.tap(&:save!)
-    template.update!(status: 'rejected', meta_id: '555', rejection_reason: 'PROMOTIONAL')
-    api = Minitest::Mock.new
-    api.expect(:update_template, { 'success' => true }, ['555', { components: template.meta_payload[:components] }])
-    Whatsapp::Cloud::Api.stub(:new, api) { assert template.submit! }
-    api.verify
-    assert_equal ['pending', '555', nil], [template.status, template.meta_id, template.rejection_reason]
+  test 'read rate is read over delivered' do
+    assert_nil build.read_rate
+    assert_equal 25, build(stats_delivered: 8, stats_read: 2).read_rate
   end
 end

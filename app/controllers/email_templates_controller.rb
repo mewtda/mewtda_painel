@@ -90,12 +90,34 @@ class EmailTemplatesController < ApplicationController
     render json: { signed_id: blob.signed_id, url: url_for(blob) }
   end
 
+  # Bloco "Produtos da loja": coleções da Shopify e os produtos de uma delas (com estoque).
+  def shopify_collections
+    render json: { collections: Shopify::CollectionProducts.new(current_client).collections }
+  rescue StandardError => e
+    render_shopify_error(e)
+  end
+
+  def collection_products
+    handle = params[:handle].to_s.strip
+    return render(json: { error: 'Escolha uma coleção.' }, status: :unprocessable_entity) if handle.blank?
+
+    render json: { products: Shopify::CollectionProducts.new(current_client).products(handle, limit: params[:limit] || 6) }
+  rescue StandardError => e
+    render_shopify_error(e)
+  end
+
   def destroy
     @email_template.destroy
     redirect_to email_templates_path, notice: 'E-mail excluído com sucesso.'
   end
 
   private
+
+  def render_shopify_error(error)
+    Rails.logger.warn("[EmailTemplates] Shopify: #{error.class} #{error.message}")
+    render json: { error: 'Não foi possível buscar na Shopify agora. Confira a conexão da loja e tente de novo.' },
+           status: :unprocessable_entity
+  end
 
   def current_client
     @client

@@ -10,6 +10,8 @@ module EmailTemplates
     MAX_BLOCKS = 60
     MAX_TEXT = 5_000
     MAX_GALLERY_ITEMS = 3
+    MAX_PRODUCT_ITEMS = 9
+    HTTPS_URL = %r{\Ahttps://\S+\z}
     MAX_MENU_ITEMS = 8
     MAX_LABEL = 60
 
@@ -34,6 +36,9 @@ module EmailTemplates
         'button_text' => :text, 'link' => :url, 'color' => :color
       },
       'gallery' => { 'items' => :items },
+      # Produtos puxados de uma coleção da Shopify (foto, nome, preço e link guardados no bloco).
+      'products' => { 'collection' => :text, 'items' => :products, 'button_text' => :text, 'color' => :color,
+                      'show_price' => :bool },
       'divider' => { 'color' => :color, 'thickness' => %w[1 2 4] },
       'spacer' => { 'height' => %w[24 8 16 32 48 64 96] },
       'social' => {
@@ -45,6 +50,7 @@ module EmailTemplates
     }.freeze
 
     GALLERY_ITEM = { 'image_id' => :image, 'link' => :url, 'caption' => :text }.freeze
+    PRODUCT_ITEM = { 'title' => :text, 'price' => :label, 'photo' => :https, 'link' => :url }.freeze
     LINK_ITEM = { 'label' => :label, 'link' => :url }.freeze
 
     FONTS = {
@@ -105,6 +111,8 @@ module EmailTemplates
       when :image then value.to_s.first(600)
       when :bool then ActiveModel::Type::Boolean.new.cast(value) ? true : false
       when :items then items(value)
+      when :products then products(value)
+      when :https then value.to_s.strip.first(2_000).then { |link| link.match?(HTTPS_URL) ? link : '' }
       when :links then links(value)
       when :label then value.to_s.strip.first(MAX_LABEL)
       end
@@ -119,6 +127,17 @@ module EmailTemplates
       return [] unless value.is_a?(Array)
 
       value.first(MAX_GALLERY_ITEMS).filter_map { |item| clean_fields(GALLERY_ITEM, item) if item.is_a?(Hash) }
+    end
+
+    def products(value)
+      return [] unless value.is_a?(Array)
+
+      value.first(MAX_PRODUCT_ITEMS).filter_map do |item|
+        next unless item.is_a?(Hash)
+
+        product = clean_fields(PRODUCT_ITEM, item)
+        product.merge('title' => product['title'].first(120)) if product['title'].present?
+      end
     end
 
     def links(value)

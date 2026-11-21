@@ -126,7 +126,9 @@
       </div>
 
       <div class="eb-inbox" id="email-preview" data-url="<%= preview_email_templates_path(id: email_template.id) %>"
-           data-upload-url="<%= upload_image_email_templates_path %>">
+           data-upload-url="<%= upload_image_email_templates_path %>"
+           data-collections-url="<%= shopify_collections_email_templates_path %>"
+           data-products-url="<%= collection_products_email_templates_path %>">
         <div class="eb-inbox__avatar"><%= current_client.name.to_s.first.upcase %></div>
         <div class="eb-inbox__lines">
           <div class="eb-inbox__from"><%= current_client.name %> <span class="eb-muted">· agora</span></div>

@@ -120,6 +120,11 @@ class Campaign < ApplicationRecord
     note = messages.find { |message| message.status == 'paused' && message.note.present? }&.note if status == 'paused'
     return note if note
     return if next_run_at.nil?
+
+    continuing = messages.find { |message| message.runnable? && message.started_at && message.continuing?(now) }
+    if continuing
+      return "Boas-vindas para quem entra no segmento até #{I18n.l(continuing.continuous_until, format: '%d/%m às %H:%M')}"
+    end
     return 'Enviando agora' if next_run_at <= now
 
     when_label = I18n.l(next_run_at, format: '%d/%m às %H:%M')
@@ -148,6 +153,9 @@ class Campaign < ApplicationRecord
     end
     steps << "A data da mensagem de #{label} já passou" if message.send_at && message.send_at <= now
     steps << "Escolha a data e a hora da mensagem de #{label}" if message.send_now.to_s == '0' && message.send_at.nil?
+    if message.continuous? && message.continuous_until <= now
+      steps << "O prazo das boas-vindas da mensagem de #{label} já passou"
+    end
     steps
   end
 

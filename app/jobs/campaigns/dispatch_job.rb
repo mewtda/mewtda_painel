@@ -4,6 +4,8 @@ module Campaigns
   # limite diário, a Meta/AWS pede para esperar, falta configuração ou a loja cancela a campanha.
   # O próximo horário fica em next_run_at da mensagem, que também serve de reserva contra duas execuções
   # ao mesmo tempo. Ao final, a campanha recalcula status e contagens a partir das mensagens.
+  # Mensagem contínua (continuous_until): a cada rodada inclui quem entrou no segmento e, enquanto o prazo
+  # não termina, volta a olhar de tempos em tempos em vez de encerrar.
   class DispatchJob < ApplicationJob
     queue_as :default
 
@@ -43,7 +45,9 @@ module Campaigns
       return message.update!(status: 'paused', next_run_at: retry_at, note:) if note
 
       message.update_columns(note: nil) if message.note
-      freeze_audience unless message.audience_frozen_at
+      if !message.audience_frozen_at then freeze_audience
+      elsif message.continuous? then add_newcomers
+      end
       send_batch
       finish_run
     end
@@ -73,6 +77,19 @@ module Campaigns
         message.update!(audience_frozen_at: now, started_at: now, status: 'sending', note: nil,
                         recipients_count: message.recipients.count)
       end
+    end
+
+    # Mensagem contínua: inclui quem entrou no segmento desde a última rodada. Quem já está na lista desta
+    # mensagem (enviado, falha ou pendente) é ignorado pelo índice único — ninguém recebe a mesma mensagem duas vezes.
+    def add_newcomers
+      now = Time.current
+      rows = []
+      Audience.new(client, campaign.segments.to_a, channel: message.channel).each_recipient do |profile, address|
+        rows << recipient_row(profile, address, now)
+        flush(rows) if rows.size >= 1000
+      end
+      flush(rows)
+      message.update_columns(recipients_count: message.recipients.count, updated_at: now)
     end
 
     def recipient_row(profile, address, now)
@@ -132,6 +149,7 @@ module Campaigns
       message.reload
       message.recount!
       return if message.status == 'cancelled'
+      return wait_for_newcomers if !pending? && message.continuing?
       return message.update!(status: 'sent', finished_at: Time.current, next_run_at: nil) unless pending?
 
       case @reason
@@ -141,6 +159,13 @@ module Campaigns
     end
 
     def pending? = message.recipients.where(status: 'pending').exists?
+
+    # Todos da lista já receberam, mas a mensagem ainda aceita novos: volta a olhar o segmento daqui a pouco
+    # (a última rodada acontece logo depois do prazo, para pegar quem entrou no finalzinho).
+    def wait_for_newcomers
+      next_check = [Time.current + CampaignMessage::CONTINUOUS_EVERY, message.continuous_until].min
+      message.update!(status: 'scheduled', next_run_at: next_check)
+    end
 
     def continue_now
       message.update!(status: 'sending', next_run_at: Time.current)

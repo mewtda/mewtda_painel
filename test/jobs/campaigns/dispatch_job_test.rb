@@ -203,4 +203,49 @@ class DispatchJobTest < ActiveJob::TestCase
     assert_empty sender.calls
     assert_equal 'cancelled', campaign.messages.first.reload.status
   end
+
+  test 'a continuous message sends once to each person and keeps picking up newcomers until the deadline' do
+    person('Ana', 'ana@example.com')
+    campaign = campaign()
+    message = campaign.messages.first
+    message.update!(continuous_until: 1.hour.from_now)
+
+    sender = run_job(campaign)
+    message.reload
+    assert_equal %w[ana@example.com], sender.calls.map { |call| call[:to] }
+    assert_equal 'scheduled', message.status
+    assert_in_delta 5.minutes.from_now, message.next_run_at, 5
+    assert_equal 'scheduled', campaign.reload.status
+    assert_match 'Boas-vindas para quem entra no segmento', campaign.status_note
+
+    person('Bia', 'bia@example.com')
+    message.update!(next_run_at: 1.minute.ago)
+    sender = run_job(campaign)
+    assert_equal %w[bia@example.com], sender.calls.map { |call| call[:to] }
+    assert_equal 2, message.reload.recipients_count
+    assert_equal 'scheduled', message.status
+
+    person('Caio', 'caio@example.com')
+    message.update!(next_run_at: 1.minute.ago, continuous_until: 1.minute.ago)
+    sender = run_job(campaign)
+    message.reload
+    assert_equal %w[caio@example.com], sender.calls.map { |call| call[:to] }
+    assert_equal 'sent', message.status
+    assert_nil message.next_run_at
+    assert_equal 3, message.sent_count
+    assert_equal 'sent', campaign.reload.status
+  end
+
+  test 'continuous_until comes from the form fields and must be after the send date' do
+    message = campaign(status: 'draft').messages.first
+    message.update!(send_now: '0', send_on: '2026-11-23', send_time: '13:00', continuous: '1',
+                    continuous_on: '2026-11-23', continuous_time: '14:00')
+    assert_equal Time.zone.local(2026, 11, 23, 14, 0), message.reload.continuous_until
+
+    message.assign_attributes(continuous: '1', continuous_on: '2026-11-23', continuous_time: '12:00')
+    assert_not message.valid?
+
+    message.update!(continuous: '0')
+    assert_nil message.reload.continuous_until
+  end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_19_140000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_21_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -250,6 +250,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_19_140000) do
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "continuous_until"
     t.index ["campaign_id"], name: "index_campaign_messages_on_campaign_id"
     t.index ["email_template_id"], name: "index_campaign_messages_on_email_template_id"
     t.index ["status", "next_run_at"], name: "index_campaign_messages_on_status_and_next_run_at"

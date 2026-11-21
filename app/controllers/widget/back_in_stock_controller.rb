@@ -10,7 +10,12 @@ module Widget
     before_action :set_setting
     before_action :require_allowed_origin!, only: :create_alert
 
+    CONFIG_CACHE_TTL = 5.minutes
+
+    # Cache curto no navegador: o botão aparece mais rápido de uma página de produto para outra.
+    # Mudanças nas configurações chegam à loja em até 5 minutos.
     def show_config
+      expires_in CONFIG_CACHE_TTL, public: true
       render json: @setting.slice(:button_text, :modal_title, :accent_color, :only_marked_products)
     end
 

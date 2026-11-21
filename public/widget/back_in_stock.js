@@ -253,13 +253,23 @@
     setInterval(sync, SYNC_INTERVAL_MS);
   };
 
+  // As buscas começam assim que o script chega (ele é carregado com async), sem esperar a página toda;
+  // só a montagem do botão espera o HTML estar pronto, porque precisa achar o formulário do produto.
+  const domReady = new Promise((resolve) => {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", resolve, { once: true });
+    else resolve();
+  });
+
   Promise.all([
     fetchJson(`${API}/widget/back_in_stock/config?token=${encodeURIComponent(token)}`),
     fetchJson(`/products/${handle}.js`),
   ])
-    .then(([config, product]) => {
+    .then(async ([config, product]) => {
       if (config.only_marked_products && !productEnabled) return;
-      if (product.variants.some((variant) => !variant.available)) start(config, product);
+      if (!product.variants.some((variant) => !variant.available)) return;
+
+      await domReady;
+      start(config, product);
     })
     .catch(() => {});
 })();

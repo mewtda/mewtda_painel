@@ -37,8 +37,10 @@ module EmailTemplates
       },
       'gallery' => { 'items' => :items },
       # Produtos puxados de uma coleção da Shopify (foto, nome, preço e link guardados no bloco).
-      'products' => { 'collection' => :text, 'items' => :products, 'button_text' => :text, 'color' => :color,
-                      'show_price' => :bool },
+      # Produtos de uma coleção da Shopify. Por padrão são buscados na hora do envio (sempre as últimas peças
+      # da coleção); com 'fixed' manda sempre os itens escolhidos no editor.
+      'products' => { 'collection' => :text, 'limit' => %w[6 3 9], 'fixed' => :bool, 'items' => :products,
+                      'button_text' => :text, 'color' => :color, 'show_price' => :bool },
       'divider' => { 'color' => :color, 'thickness' => %w[1 2 4] },
       'spacer' => { 'height' => %w[24 8 16 32 48 64 96] },
       'social' => {

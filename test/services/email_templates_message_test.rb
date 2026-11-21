@@ -114,4 +114,28 @@ class EmailTemplatesMessageTest < ActiveSupport::TestCase
     assert_match 'email-product', html
     assert_match "Vestido Longo: https://lojaoneway.com/products/vestido", message.text
   end
+
+  test 'products block fetches the latest pieces of the collection at send time, unless fixed' do
+    saved = [{ 'title' => 'Antigo', 'price' => 'R$ 10,00', 'photo' => '', 'link' => 'https://loja.com/products/antigo' }]
+    live = [{ title: 'Novidade 1', price: 'R$ 99,00', photo: 'https://cdn.shopify.com/n.jpg', link: 'https://loja.com/products/n1' }]
+    calls = []
+    fake = Object.new
+    fake.define_singleton_method(:products) { |handle, limit:| calls << [handle, limit] and live }
+
+    tpl = template([{ 'type' => 'products', 'collection' => 'novidades', 'limit' => '3', 'items' => saved }])
+    html = Shopify::CollectionProducts.stub(:new, fake) { EmailTemplates::Message.new(tpl).html }
+    assert_match 'Novidade 1', html
+    assert_no_match 'Antigo', html
+    assert_equal [['novidades', 3]], calls
+
+    fixed = template([{ 'type' => 'products', 'collection' => 'novidades', 'fixed' => true, 'items' => saved }])
+    html = Shopify::CollectionProducts.stub(:new, fake) { EmailTemplates::Message.new(fixed).html }
+    assert_match 'Antigo', html
+    assert_equal 1, calls.size, 'fixo não consulta a Shopify'
+
+    broken = Object.new
+    broken.define_singleton_method(:products) { |*, **| raise StandardError, 'fora do ar' }
+    html = Shopify::CollectionProducts.stub(:new, broken) { EmailTemplates::Message.new(tpl).html }
+    assert_match 'Antigo', html, 'sem resposta da Shopify usa a lista salva'
+  end
 end

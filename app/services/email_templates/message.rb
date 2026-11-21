@@ -65,6 +65,20 @@ module EmailTemplates
       @design ||= @template.design
     end
 
+    PRODUCTS_CACHE_TTL = 30.minutes
+
+    # Itens do bloco "Produtos da loja": as últimas peças da coleção no momento do envio (cache de 30 min por
+    # loja/coleção, para um disparo grande não consultar a Shopify a cada e-mail). Se o bloco estiver fixo, ou a
+    # Shopify não responder, usa os itens guardados no editor.
+    def products_for(block)
+      saved = Array(block['items']).select { |item| item['title'].present? }
+      return saved if block['fixed'] || block['collection'].blank? || client.nil?
+
+      @live_products ||= {}
+      @live_products[[block['collection'], block['limit']]] ||= live_products(block['collection'], block['limit'].to_i)
+      @live_products[[block['collection'], block['limit']]].presence || saved
+    end
+
     def store_name
       @variables['loja']
     end
@@ -175,7 +189,7 @@ module EmailTemplates
       when 'menu' then Array(block['items']).map { |item| link_line(item['label'], link(item['link'])) }
       when 'image_text' then [plain(block['heading']), plain(block['text']), link_line(block['button_text'], link(block['link']))]
       when 'product' then product_text(block)
-      when 'products' then Array(block['items']).filter_map { |item| link_line(item['title'], link(item['link'])) if item['title'].present? }
+      when 'products' then products_for(block).map { |item| link_line(item['title'], link(item['link'])) }
       else []
       end
     end
@@ -203,6 +217,18 @@ module EmailTemplates
 
     def public_blob_url(blob)
       Rails.application.routes.url_helpers.rails_blob_url(blob, host: BackInStockSetting::WIDGET_HOST)
+    end
+
+    def client = @template.client
+
+    def live_products(collection, limit)
+      limit = 6 unless [3, 6, 9].include?(limit)
+      Rails.cache.fetch(['email_products', client.id, collection, limit], expires_in: PRODUCTS_CACHE_TTL) do
+        Shopify::CollectionProducts.new(client).products(collection, limit:).map(&:stringify_keys)
+      end
+    rescue StandardError => e
+      Rails.logger.warn("[EmailTemplates] Produtos da coleção #{collection}: #{e.class} #{e.message}")
+      []
     end
   end
 end

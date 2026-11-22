@@ -3,7 +3,8 @@ module Shopify
   class FetchProductService
     REQUEST_TIMEOUT = 10
 
-    # found: produto existe e está publicado; missing: a loja respondeu 404; error: não deu pra saber.
+    # found: produto existe e está publicado; missing: a loja respondeu 404;
+    # throttled: a Shopify limitou as consultas (429); error: não deu pra saber.
     Result = Struct.new(:status, :product) do
       def found? = status == :found
       def missing? = status == :missing
@@ -23,7 +24,7 @@ module Shopify
       return Result.new(:found, JSON.parse(response.body)) if response.success?
 
       log("#{client.id}/#{handle} respondeu #{response.code}")
-      Result.new(response.code == 404 ? :missing : :error, nil)
+      Result.new({ 404 => :missing, 429 => :throttled }.fetch(response.code, :error), nil)
     rescue SystemCallError, SocketError, Timeout::Error, OpenSSL::SSL::SSLError, JSON::ParserError, HTTParty::Error => e
       log("#{client.id}/#{handle} falhou: #{e.class}")
       Result.new(:error, nil)

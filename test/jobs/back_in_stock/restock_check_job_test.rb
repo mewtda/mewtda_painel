@@ -1,25 +1,18 @@
 require 'test_helper'
 
 class BackInStock::RestockCheckJobTest < ActiveSupport::TestCase
-  Result = Shopify::FetchProductService::Result
+  class FakeProducts
+    attr_reader :ids
 
-  class FakeFetcher
-    attr_reader :handles
-
-    def initialize(results)
-      @results = results
-      @handles = []
+    def initialize(products)
+      @products = products
+      @ids = []
     end
 
-    def lookup(handle)
-      @handles << handle
-      @results.fetch(handle) { Result.new(:error, nil) }
+    def call(ids)
+      @ids.concat(ids)
+      ids.select { |id| @products.key?(id) }.index_with { |id| @products[id] }
     end
-  end
-
-  class FakeAdmin
-    def initialize(nodes) = @nodes = nodes
-    def query(_graphql) = { 'nodes' => @nodes }
   end
 
   setup do
@@ -37,69 +30,75 @@ class BackInStock::RestockCheckJobTest < ActiveSupport::TestCase
                                          product_handle: handle, email: "c-#{SecureRandom.hex(3)}@example.com")
   end
 
-  def run_job(results, admin_nodes: [])
-    fetcher = FakeFetcher.new(results)
-    Shopify::FetchProductService.stub(:new, fetcher) do
-      Shopify::Client.stub(:new, FakeAdmin.new(admin_nodes)) do
-        BackInStock::NotifyJob.stub(:perform_now, ->(id, _snapshot) { @notified << id }) do
-          BackInStock::RestockCheckJob.perform_now
-        end
+  def run_job(products)
+    fake = FakeProducts.new(products)
+    Shopify::ProductsByIds.stub(:new, ->(*) { fake }) do
+      BackInStock::NotifyJob.stub(:perform_now, ->(id, _snapshot) { @notified << id }) do
+        BackInStock::RestockCheckJob.perform_now
       end
     end
-    fetcher
+    fake
   end
 
-  def product(available: true)
-    { 'id' => 10, 'title' => 'Vestido', 'variants' => [{ 'id' => 101, 'title' => 'M', 'available' => available }] }
+  def product(available: true, handle: 'vestido', live: true)
+    { 'id' => 10, 'handle' => handle, 'title' => 'Vestido', 'live' => live,
+      'variants' => [{ 'id' => 101, 'title' => 'M', 'available' => available }] }
   end
 
   test 'notifies when the variant is back and marks the product as checked' do
     alert = alert!
-    run_job({ 'vestido' => Result.new(:found, product) })
+    run_job({ 10 => product })
     assert_equal [alert.id], @notified
     assert alert.reload.checked_at.present?
   end
 
   test 'does not notify while still sold out' do
     alert!
-    run_job({ 'vestido' => Result.new(:found, product(available: false)) })
+    run_job({ 10 => product(available: false) })
     assert_empty @notified
   end
 
   test 'cancels alerts for a product deleted from the store' do
-    alert = alert!(handle: 'inventado')
-    run_job({ 'inventado' => Result.new(:missing, nil) }, admin_nodes: [nil])
+    alert = alert!
+    run_job({ 10 => nil })
     assert alert.reload.cancelled?
   end
 
-  test 'keeps waiting when the product is only unpublished (draft)' do
+  test 'keeps waiting without notifying while the product is a draft / off the store' do
     alert = alert!
-    run_job({ 'vestido' => Result.new(:missing, nil) }, admin_nodes: [{ 'handle' => 'vestido' }])
+    run_job({ 10 => product(live: false) })
     assert alert.reload.pending?
+    assert_empty @notified
   end
 
   test 'follows a product whose link (handle) changed' do
     alert = alert!
-    run_job({ 'vestido' => Result.new(:missing, nil) }, admin_nodes: [{ 'handle' => 'vestido-novo' }])
+    run_job({ 10 => product(available: false, handle: 'vestido-novo') })
     assert_equal 'vestido-novo', alert.reload.product_handle
     assert alert.pending?
   end
 
-  test 'keeps alerts when the store could not be reached' do
+  test 'cancels alerts for a variant removed from the product' do
+    alert = alert!(variant_id: 999)
+    run_job({ 10 => product })
+    assert alert.reload.cancelled?
+  end
+
+  test 'keeps alerts when Shopify did not return the product' do
     alert = alert!
-    run_job({}, admin_nodes: [nil])
+    run_job({})
     assert alert.reload.pending?
+    assert_nil alert.checked_at
   end
 
   test 'checks at most a fixed number of products per store, least recently checked first' do
-    old = alert!(handle: 'antigo', variant_id: 1)
-    old.update_columns(checked_at: 1.hour.ago)
-    alert!(handle: 'novo', variant_id: 2)
-    alert!(handle: 'recente', variant_id: 3).update_columns(checked_at: 1.minute.ago)
+    alert!(product_id: 1, variant_id: 1).update_columns(checked_at: 1.hour.ago)
+    alert!(product_id: 2, variant_id: 2)
+    alert!(product_id: 3, variant_id: 3).update_columns(checked_at: 1.minute.ago)
 
-    fetcher = nil
-    with_max_handles(2) { fetcher = run_job({}) }
-    assert_equal %w[novo antigo], fetcher.handles
+    fake = nil
+    with_max_products(2) { fake = run_job({}) }
+    assert_equal [2, 1], fake.ids
   end
 
   test 'skips the run when the previous one is still going' do
@@ -111,8 +110,8 @@ class BackInStock::RestockCheckJobTest < ActiveSupport::TestCase
                        user: config[:username], password: config[:password])
     begin
       assert_equal 't', other.exec("SELECT pg_try_advisory_lock(#{key})").getvalue(0, 0)
-      fetcher = run_job({ 'vestido' => Result.new(:found, product) })
-      assert_empty fetcher.handles
+      fake = run_job({ 10 => product })
+      assert_empty fake.ids
       assert_empty @notified
     ensure
       other.close
@@ -121,13 +120,13 @@ class BackInStock::RestockCheckJobTest < ActiveSupport::TestCase
 
   private
 
-  def with_max_handles(value)
-    original = BackInStock::RestockCheckJob::MAX_HANDLES_PER_CLIENT
-    BackInStock::RestockCheckJob.send(:remove_const, :MAX_HANDLES_PER_CLIENT)
-    BackInStock::RestockCheckJob.const_set(:MAX_HANDLES_PER_CLIENT, value)
+  def with_max_products(value)
+    original = BackInStock::RestockCheckJob::MAX_PRODUCTS_PER_CLIENT
+    BackInStock::RestockCheckJob.send(:remove_const, :MAX_PRODUCTS_PER_CLIENT)
+    BackInStock::RestockCheckJob.const_set(:MAX_PRODUCTS_PER_CLIENT, value)
     yield
   ensure
-    BackInStock::RestockCheckJob.send(:remove_const, :MAX_HANDLES_PER_CLIENT)
-    BackInStock::RestockCheckJob.const_set(:MAX_HANDLES_PER_CLIENT, original)
+    BackInStock::RestockCheckJob.send(:remove_const, :MAX_PRODUCTS_PER_CLIENT)
+    BackInStock::RestockCheckJob.const_set(:MAX_PRODUCTS_PER_CLIENT, original)
   end
 end

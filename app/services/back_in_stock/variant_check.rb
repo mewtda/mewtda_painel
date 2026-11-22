@@ -13,15 +13,17 @@ module BackInStock
       @fetcher = fetcher || Shopify::FetchProductService.new(client, timeout: TIMEOUT)
     end
 
-    # true: existe; false: não existe; nil: a loja não respondeu (quem chama decide).
-    def valid?(handle:, product_id:, variant_id:)
-      return false unless handle.to_s.match?(/\A[a-z0-9-]{1,255}\z/)
+    # :ok existe; :unknown não existe na loja; :throttled a Shopify limitou as consultas (volume anormal);
+    # :error a loja não respondeu (quem chama decide).
+    def call(handle:, product_id:, variant_id:)
+      return :unknown unless handle.to_s.match?(/\A[a-z0-9-]{1,255}\z/)
 
       info = product_info(handle)
-      return if info.nil?
-      return false if info['missing']
+      return info if info.is_a?(Symbol)
+      return :unknown if info['missing']
 
-      info['id'].to_s == product_id.to_s && info['variant_ids'].map(&:to_s).include?(variant_id.to_s)
+      matches = info['id'].to_s == product_id.to_s && info['variant_ids'].map(&:to_s).include?(variant_id.to_s)
+      matches ? :ok : :unknown
     end
 
     private
@@ -32,12 +34,14 @@ module BackInStock
       return cached if cached
 
       result = @fetcher.lookup(handle)
+      return result.status unless result.found? || result.missing?
+
       info = if result.found?
                { 'id' => result.product['id'], 'variant_ids' => Array(result.product['variants']).pluck('id') }
-             elsif result.missing?
+             else
                { 'missing' => true }
              end
-      Rails.cache.write(key, info, expires_in: info['missing'] ? MISSING_TTL : FOUND_TTL) if info
+      Rails.cache.write(key, info, expires_in: info['missing'] ? MISSING_TTL : FOUND_TTL)
       info
     end
   end

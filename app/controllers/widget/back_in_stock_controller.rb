@@ -22,7 +22,10 @@ module Widget
     def create_alert
       return head :no_content if bot?
       return daily_limit_reached! if BackInStockAlert.daily_limit_reached?(@setting.client)
-      return render_unknown_product if unknown_product?
+      case variant_check
+      when :unknown then return render_unknown_product
+      when :throttled then return head :too_many_requests
+      end
 
       alert = @setting.client.back_in_stock_alerts.register(alert_params)
 
@@ -53,12 +56,13 @@ module Widget
       head :too_many_requests
     end
 
-    # A loja não respondeu (nil): aceita, pra não perder o pedido de um cliente de verdade.
-    def unknown_product?
-      BackInStock::VariantCheck.new(@setting.client).valid?(
+    # Se a loja só não respondeu (:error), aceita, pra não perder o pedido de um cliente de verdade.
+    # Se a Shopify está limitando as consultas (:throttled), recusa: é sinal de volume anormal.
+    def variant_check
+      BackInStock::VariantCheck.new(@setting.client).call(
         handle: alert_params[:product_handle], product_id: alert_params[:shopify_product_id],
         variant_id: alert_params[:shopify_variant_id]
-      ) == false
+      )
     end
 
     def render_unknown_product

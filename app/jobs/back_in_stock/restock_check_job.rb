@@ -1,13 +1,12 @@
 module BackInStock
-  # Roda a cada 10 minutos: confere na loja se as variações com pedido de aviso voltaram e manda o e-mail.
-  # Protegido contra volume anormal: uma rodada por vez, tempo máximo por rodada, número máximo de
-  # produtos por loja em cada rodada (os menos conferidos primeiro, em rodízio) e consulta com tempo curto.
+  # Roda a cada 10 minutos: confere na Shopify (Admin API, em lotes) se as variações com pedido de aviso
+  # voltaram e manda o e-mail. Protegido contra volume anormal: uma rodada por vez, tempo máximo por rodada
+  # e número máximo de produtos por loja em cada rodada (os menos conferidos primeiro, em rodízio).
   class RestockCheckJob < ApplicationJob
     DEFAULT_VARIANT_TITLE = 'Default Title'.freeze
     LOCK_KEY = 7_204_311_001
     MAX_RUN_TIME = 8.minutes
-    MAX_HANDLES_PER_CLIENT = 150
-    FETCH_TIMEOUT = 5
+    MAX_PRODUCTS_PER_CLIENT = 150
 
     queue_as :default
 
@@ -45,29 +44,35 @@ module BackInStock
     end
 
     def check(setting)
-      fetcher = Shopify::FetchProductService.new(setting.client, timeout: FETCH_TIMEOUT)
       pending = setting.client.back_in_stock_alerts.pending
+      ids = product_ids_to_check(pending)
+      return if ids.empty?
 
-      handles_to_check(pending).each do |handle|
-        break if out_of_time?
+      products = Shopify::ProductsByIds.new(setting.client).call(ids)
+      ids.each do |id|
+        next unless products.key?(id)
 
-        alerts = pending.where(product_handle: handle)
-        result = fetcher.lookup(handle)
-        if result.found?
-          process(alerts, result.product)
-        elsif result.missing?
-          handle_missing(setting.client, alerts, handle)
-        end
+        alerts = pending.where(shopify_product_id: id)
+        update_product(alerts, products[id])
         alerts.update_all(checked_at: Time.current)
       end
     end
 
     # Rodízio: os produtos conferidos há mais tempo (ou nunca) primeiro.
-    def handles_to_check(pending)
-      pending.group(:product_handle)
-             .order(Arel.sql("MIN(COALESCE(checked_at, 'epoch'::timestamp))"), :product_handle)
-             .limit(MAX_HANDLES_PER_CLIENT)
-             .pluck(:product_handle)
+    def product_ids_to_check(pending)
+      pending.group(:shopify_product_id)
+             .order(Arel.sql("MIN(COALESCE(checked_at, 'epoch'::timestamp))"), :shopify_product_id)
+             .limit(MAX_PRODUCTS_PER_CLIENT)
+             .pluck(:shopify_product_id)
+    end
+
+    # Apagado na Shopify → cancela. Link trocado → atualiza. Rascunho/fora da loja → continua esperando.
+    def update_product(alerts, product)
+      return cancel(alerts) if product.nil?
+
+      alerts.where.not(product_handle: product['handle'])
+            .update_all(product_handle: product['handle'], updated_at: Time.current)
+      process(alerts, product) if product['live']
     end
 
     def process(alerts, product)
@@ -77,33 +82,6 @@ module BackInStock
       cancel(alerts.where.not(shopify_variant_id: variants.keys))
       alerts.where(shopify_variant_id: variants.keys).order(:created_at).pluck(:id, :shopify_variant_id)
             .each { |id, variant_id| notify(id, product, variants[variant_id]) }
-    end
-
-    # A página do produto deu 404. Pode ser produto apagado, rascunho/despublicado ou link trocado:
-    # pergunta à Shopify pelo id. Apagado → cancela; link novo → atualiza; rascunho → continua esperando.
-    def handle_missing(client, alerts, handle)
-      ids = alerts.distinct.pluck(:shopify_product_id)
-      products = admin_products(client, ids)
-      return unless products
-
-      ids.each do |id|
-        scope = alerts.where(shopify_product_id: id)
-        node = products[id]
-        if node.nil?
-          cancel(scope)
-        elsif node['handle'].present? && node['handle'] != handle
-          scope.update_all(product_handle: node['handle'], updated_at: Time.current)
-        end
-      end
-    end
-
-    def admin_products(client, ids)
-      gids = ids.map { |id| "gid://shopify/Product/#{id}" }
-      data = Shopify::Client.new(client).query("{ nodes(ids: #{gids.to_json}) { ... on Product { handle } } }")
-      ids.zip(Array(data['nodes'])).to_h
-    rescue StandardError => e
-      Rails.logger.warn "[BackInStock::RestockCheck] Shopify Admin indisponível (client #{client.id}): #{e.message}"
-      nil
     end
 
     def cancel(alerts)

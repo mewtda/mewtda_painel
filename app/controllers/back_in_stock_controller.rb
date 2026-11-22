@@ -62,6 +62,7 @@ class BackInStockController < ApplicationController
     @filters = { status: selected_status, q: search_term, sort: selected_sort }.merge(@alert_filter.to_params)
     @filter_options = filter_options
     @status_counts = alerts.group(:status).count
+    @daily_limit_reached = BackInStockAlert.daily_limit_reached?(@client)
     @pending_value = alerts.pending.sum(:price)
     @pending_variants = alerts.pending.distinct.count(:shopify_variant_id)
     @groups = paginated_groups(filtered)

@@ -21,6 +21,8 @@ module Widget
 
     def create_alert
       return head :no_content if bot?
+      return daily_limit_reached! if BackInStockAlert.daily_limit_reached?(@setting.client)
+      return render_unknown_product if unknown_product?
 
       alert = @setting.client.back_in_stock_alerts.register(alert_params)
 
@@ -43,6 +45,26 @@ module Widget
 
       Rails.logger.warn("[BackInStock] origin bloqueada: #{request.origin} (client #{@setting.client_id})")
       head :forbidden
+    end
+
+    # Teto de pedidos novos por dia: um pico de cadastros falsos para aqui e não pesa no resto do painel.
+    def daily_limit_reached!
+      Rails.logger.warn("[BackInStock] limite diário de pedidos atingido (client #{@setting.client_id})")
+      head :too_many_requests
+    end
+
+    # A loja não respondeu (nil): aceita, pra não perder o pedido de um cliente de verdade.
+    def unknown_product?
+      BackInStock::VariantCheck.new(@setting.client).valid?(
+        handle: alert_params[:product_handle], product_id: alert_params[:shopify_product_id],
+        variant_id: alert_params[:shopify_variant_id]
+      ) == false
+    end
+
+    def render_unknown_product
+      Rails.logger.warn("[BackInStock] produto/variação inexistente: #{alert_params[:product_handle]} " \
+                        "(client #{@setting.client_id})")
+      render json: { errors: ['Produto não encontrado na loja.'] }, status: :unprocessable_entity
     end
 
     def bot?

@@ -27,4 +27,45 @@ class Widget::BackInStockControllerTest < ActionDispatch::IntegrationTest
     assert_match ' async></script>', snippet
     assert_no_match 'defer', snippet
   end
+
+  def post_alert(variant_id: 101, valid: true)
+    params = { token: @setting.public_token, elapsed_ms: 5000,
+               alert: { shopify_product_id: 10, shopify_variant_id: variant_id, product_handle: 'vestido',
+                        product_title: 'Vestido', email: "ana-#{SecureRandom.hex(3)}@example.com" } }
+    check = Object.new
+    check.define_singleton_method(:valid?) { |**| valid }
+    BackInStock::VariantCheck.stub(:new, check) do
+      post widget_back_in_stock_alerts_path, params:, as: :json, headers: { 'Origin' => 'https://loja.com' }
+    end
+  end
+
+  test 'registers an alert for a product that exists in the store' do
+    assert_difference -> { BackInStockAlert.count }, 1 do
+      post_alert
+    end
+    assert_response :created
+  end
+
+  test 'refuses an alert for a product or variant the store does not have' do
+    assert_no_difference -> { BackInStockAlert.count } do
+      post_alert(valid: false)
+    end
+    assert_response :unprocessable_entity
+  end
+
+  test 'keeps the alert when the store did not answer (real customer is not lost)' do
+    assert_difference -> { BackInStockAlert.count }, 1 do
+      post_alert(valid: nil)
+    end
+    assert_response :created
+  end
+
+  test 'stops accepting new alerts after the daily limit for the store' do
+    BackInStockAlert.stub(:daily_limit_reached?, true) do
+      assert_no_difference -> { BackInStockAlert.count } do
+        post_alert
+      end
+    end
+    assert_response :too_many_requests
+  end
 end

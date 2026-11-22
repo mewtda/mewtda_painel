@@ -21,6 +21,16 @@
       </div>
     <% end %>
 
+    <% if @daily_limit_reached %>
+      <div class="scr-banner scr-banner--danger">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+          <strong>Novos pedidos de aviso pausados até amanhã</strong>
+          <p>A loja recebeu <%= BackInStockAlert::DAILY_LIMIT_PER_CLIENT %> pedidos hoje, muito acima do normal. Pode ser cadastro em massa por robô. Os pedidos já feitos continuam valendo.</p>
+        </div>
+      </div>
+    <% end %>
+
     <nav class="scr-tabs" role="tablist">
       <button type="button" class="scr-tab" role="tab" data-tab="alertas">
         <i class="fa-solid fa-bell"></i><span>Alertas</span>

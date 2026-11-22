@@ -1,5 +1,7 @@
 class BackInStockAlert < ApplicationRecord
   PENDING_LIMIT_PER_EMAIL = 20
+  # Bem acima do uso real (a OneWay chega a ~8 por dia); serve de trava contra cadastro em massa.
+  DAILY_LIMIT_PER_CLIENT = 300
   TRENDING_WINDOW = 7.days
   AGE_BUCKETS = [['lt3', 'Menos de 3 dias', 0...3], ['3_10', '3 a 10 dias', 3...10], ['10_30', '10 a 30 dias', 10...30],
                  ['30_90', '1 a 3 meses', 30...90], ['gt90', 'Mais de 3 meses', 90..]].freeze
@@ -39,6 +41,14 @@ class BackInStockAlert < ApplicationRecord
     pending.create_or_find_by(attributes.slice(:shopify_variant_id, :email)) do |alert|
       alert.assign_attributes(attributes)
     end
+  end
+
+  def self.created_today_count(client)
+    where(client:).where(created_at: Time.current.beginning_of_day..).count
+  end
+
+  def self.daily_limit_reached?(client)
+    created_today_count(client) >= DAILY_LIMIT_PER_CLIENT
   end
 
   def self.grouped_by_variant(sort)

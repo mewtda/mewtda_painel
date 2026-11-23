@@ -114,4 +114,45 @@ class CustomersAreaControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_match 'pelo menos uma condição', response.body
   end
+
+  test 'static list imports customers from an email spreadsheet (xlsx and csv)' do
+    get new_segment_path(kind: 'static')
+    assert_response :success
+    assert_match 'Baixar planilha modelo', response.body
+
+    get import_template_segments_path
+    assert_response :success
+    template = RubyXL::Parser.parse_buffer(response.body)
+    assert_equal 'email', template[0][0][0].value
+
+    workbook = RubyXL::Workbook.new
+    workbook[0].add_cell(0, 0, 'email')
+    workbook[0].add_cell(1, 0, ' ANA@example.com ')
+    workbook[0].add_cell(2, 0, 'ninguem@example.com')
+    workbook[0].add_cell(3, 0, 'zeca@example.com')
+    xlsx = Rack::Test::UploadedFile.new(StringIO.new(workbook.stream.string), Spreadsheets::Base::CONTENT_TYPE,
+                                        original_filename: 'clientes.xlsx')
+
+    post segments_path, params: { segment: { name: 'Importados', kind: 'static', emails_file: xlsx } }
+
+    list = @client.segments.find_by!(name: 'Importados')
+    assert_redirected_to customers_path(segment_id: list.id)
+    assert_match '1 cliente adicionado de 3 e-mails', flash[:notice]
+    assert_match 'ninguem@example.com', flash[:notice]
+    assert_equal [@ana.id], list.segment_memberships.pluck(:customer_id)
+    assert_equal 1, list.reload.customers_count
+
+    csv = Rack::Test::UploadedFile.new(StringIO.new("email\nana@example.com\nbia@example.com\n"), 'text/csv',
+                                       original_filename: 'clientes.csv')
+    patch segment_path(list), params: { segment: { name: 'Importados', emails_file: csv } }
+
+    assert_redirected_to segments_path
+    assert_match '1 cliente adicionado de 2 e-mails', flash[:notice]
+    assert_equal [@ana.id, @bia.id].sort, list.segment_memberships.pluck(:customer_id).sort
+
+    bad = Rack::Test::UploadedFile.new(StringIO.new('x'), 'application/pdf', original_filename: 'clientes.pdf')
+    patch segment_path(list), params: { segment: { name: 'Importados', emails_file: bad } }
+    assert_redirected_to edit_segment_path(list)
+    assert_match '.xlsx ou .csv', flash[:alert]
+  end
 end

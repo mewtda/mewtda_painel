@@ -230,6 +230,7 @@ Rails.application.routes.draw do
     resources :segments, path: 'segmentos', except: [:show] do
       collection do
         get :templates, path: 'sugeridos'
+        get :import_template, path: 'planilha-modelo'
         post :preview
       end
       member do

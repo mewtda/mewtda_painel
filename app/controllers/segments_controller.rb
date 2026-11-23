@@ -35,7 +35,11 @@ class SegmentsController < ApplicationController
     @segment = @client.segments.new(segment_params)
     if @segment.save
       @segment.recount!
-      redirect_to customers_path(segment_id: @segment.id), notice: "#{@segment.kind_label} \"#{@segment.name}\" criado."
+      import_notice = import_emails
+      return if performed?
+
+      redirect_to customers_path(segment_id: @segment.id),
+                  notice: ["#{@segment.kind_label} \"#{@segment.name}\" criado.", import_notice].compact.join(' ')
     else
       render :new, status: :unprocessable_entity
     end
@@ -46,7 +50,10 @@ class SegmentsController < ApplicationController
   def update
     if @segment.update(segment_params.except(:kind))
       @segment.recount!
-      redirect_to segments_path, notice: "#{@segment.kind_label} atualizado."
+      import_notice = import_emails
+      return if performed?
+
+      redirect_to segments_path, notice: ["#{@segment.kind_label} atualizado.", import_notice].compact.join(' ')
     else
       render :edit, status: :unprocessable_entity
     end
@@ -67,6 +74,12 @@ class SegmentsController < ApplicationController
     redirect_to edit_segment_path(copy), notice: "#{copy.kind_label} duplicado. Ajuste o nome e as regras."
   end
 
+  # Planilha modelo para importar clientes por e-mail numa lista estática.
+  def import_template
+    send_data Segments::EmailImport.template_xlsx, filename: 'modelo_lista_clientes.xlsx',
+                                                   type: Spreadsheets::Base::CONTENT_TYPE
+  end
+
   # Contagem ao vivo no construtor ("Resumo do seu segmento").
   def preview
     segment = @client.segments.find_by(id: params[:id]) || @client.segments.new
@@ -81,6 +94,24 @@ class SegmentsController < ApplicationController
   end
 
   private
+
+  # Adiciona à lista estática os clientes dos e-mails da planilha enviada (se houver).
+  def import_emails
+    file = params.dig(:segment, :emails_file)
+    return unless file.respond_to?(:path) && @segment.static?
+
+    result = Segments::EmailImport.new(@segment, file).call
+    message = "Planilha: #{helpers.pluralize(result.added, 'cliente adicionado', plural: 'clientes adicionados')}"
+    message += " de #{helpers.pluralize(result.found, 'e-mail', plural: 'e-mails')}"
+    if result.not_found.any?
+      message += "; #{result.not_found.size} sem cadastro na loja (#{result.not_found.first(3).join(', ')}" \
+                 "#{result.not_found.size > 3 ? '…' : ''})"
+    end
+    "#{message}."
+  rescue Segments::EmailImport::InvalidFile => e
+    redirect_to edit_segment_path(@segment), alert: "Lista salva, mas a planilha não foi importada: #{e.message}"
+    nil
+  end
 
   def set_product_options
     options = Segments::ProductOptions.new(@client)

@@ -250,6 +250,10 @@
 .sg-steps { margin: 0.5rem 0 0; padding-left: 1.2rem; color: var(--fg-alt); font-size: 0.85rem; line-height: 1.7; }
 .sg-steps a { font-size: inherit; }
 .sg-steps strong { color: var(--fg); font-size: inherit; }
+.sg-import { margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid var(--outline); }
+.sg-import .cx-link { white-space: nowrap; }
+.sg-static-hint .sg-import i { color: inherit; font-size: inherit; margin: 0; }
+.sg-import__file { margin-top: 0.5rem; max-width: 420px; }
 
 @media (max-width: 700px) {
   .cx-page .clients-table-header { flex-wrap: wrap; gap: 0.75rem; padding: 0.9rem 1rem; }

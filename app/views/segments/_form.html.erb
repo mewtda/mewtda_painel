@@ -46,6 +46,14 @@
           <li>Vá em <%= link_to 'Clientes', customers_path %> e marque as pessoas (ou use <strong>Selecionar todos do filtro</strong>).</li>
           <li>Clique em <strong>Adicionar à lista</strong>.</li>
         </ol>
+        <div class="sg-import">
+          <strong>Ou importe por planilha</strong>
+          <p class="cx-muted">
+            Envie uma planilha (.xlsx ou .csv) com uma coluna de e-mails: os clientes da loja com esses e-mails entram na lista ao salvar.
+            <%= link_to import_template_segments_path, class: 'cx-link' do %><i class="fa-solid fa-download"></i> Baixar planilha modelo<% end %>
+          </p>
+          <%= form.file_field :emails_file, accept: '.xlsx,.csv', class: 'crm-input sg-import__file' %>
+        </div>
         <% if segment.persisted? %>
           <p class="cx-muted">Hoje a lista tem <strong><%= segment.segment_memberships.count %></strong> clientes.</p>
         <% end %>

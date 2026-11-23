@@ -106,6 +106,21 @@
                 <span class="cform-field__hint">Com CPF/CNPJ preenchido, a Fatura do mês fechado vira uma cobrança no Asaas (Pix, boleto ou cartão), com vencimento em 5 dias.</span>
               </div>
             </div>
+            <div class="cform-row">
+              <div class="cform-field">
+                <%= form.label :billing_email, 'E-mail para cobrança', class: 'crm-label' %>
+                <%= form.email_field :billing_email, class: 'crm-input', placeholder: 'Ex.: financeiro@loja.com.br', disabled: read_only %>
+              </div>
+              <div class="cform-field">
+                <%= form.label :billing_phone, 'Celular para cobrança', class: 'crm-label' %>
+                <%= form.telephone_field :billing_phone, class: 'crm-input', placeholder: 'Ex.: (31) 99999-9999', disabled: read_only %>
+              </div>
+            </div>
+            <div class="cform-row">
+              <div class="cform-field">
+                <span class="cform-field__hint">Para onde o Asaas manda a cobrança (pode ser o financeiro da loja). Obrigatórios quando há CPF/CNPJ.</span>
+              </div>
+            </div>
           </div>
           <div class="cform-section">
             <div class="cform-section__header"><i class="fa-solid fa-gauge-high"></i> Limites diários de envio</div>

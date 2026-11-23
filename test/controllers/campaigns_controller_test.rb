@@ -206,6 +206,17 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match 'ec-details__message"', response.body
   end
 
+  test 'details lists each channel messages in sending order even when positions are out of order' do
+    campaign = @client.campaigns.create!(name: 'Black', status: 'scheduled', started_at: 1.hour.ago)
+    campaign.messages.create!(channel: 'whatsapp', status: 'scheduled', position: 0, send_at: 2.days.from_now,
+                              whatsapp_template: nil)
+    campaign.messages.create!(channel: 'whatsapp', status: 'sent', position: 5, started_at: 1.hour.ago)
+
+    get details_campaign_path(campaign)
+
+    assert_operator response.body.index('Começou em'), :<, response.body.index('Sai em')
+  end
+
   test 'create makes a draft and goes to the editor' do
     assert_difference '@client.campaigns.count', 1 do
       post campaigns_path

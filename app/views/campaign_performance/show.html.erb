@@ -37,10 +37,15 @@
       <div class="cp-grid cp-grid--5">
         <%= render 'card', icon: 'fa-sack-dollar', tone: 'primary', label: 'Receita gerada', value: campaign_cost_label(result.revenue),
                            hint: 'Soma dos pedidos de quem recebeu a campanha e comprou em até 7 dias depois do envio.' %>
-        <%= render 'card', icon: 'fa-coins', tone: 'primary', label: 'Investimento', value: campaign_cost_label(result.investment),
-                           hint: 'Quanto os envios custaram. Entra na sua fatura do mês.' %>
+        <%= render 'card', icon: 'fa-coins', tone: 'primary', label: 'Investimento no painel', value: campaign_cost_label(result.investment),
+                           hint: 'Quanto os envios custaram no painel (e-mail e taxa de R$ 0,10 por WhatsApp). Entra na sua fatura do mês.' %>
+        <% if result.meta_investment.positive? %>
+          <%= render 'card', icon: 'fa-comment-dollar', tone: 'primary', label: 'Tarifa da Meta (estimada)', value: campaign_cost_label(result.meta_investment),
+                             detail: 'Cobrada no cartão da conta do WhatsApp',
+                             hint: 'Estimativa de cerca de R$ 0,32 por mensagem de marketing enviada. A Meta cobra só as entregues, direto no cartão da conta do WhatsApp da loja; o valor exato está no Gerenciador do WhatsApp.' %>
+        <% end %>
         <%= render 'card', icon: 'fa-chart-line', tone: 'success', label: 'Retorno financeiro', value: campaign_cost_label(result.net),
-                           hint: 'Receita gerada menos o investimento: o que sobrou.' %>
+                           hint: 'Receita gerada menos o investimento no painel e a tarifa estimada da Meta: o que sobrou.' %>
         <%= render 'card', icon: 'fa-bag-shopping', tone: 'primary', label: 'Quantidade de compras', value: count.call(result.purchases),
                            hint: 'Pedidos feitos em até 7 dias por quem recebeu a campanha.' %>
         <%= render 'card', icon: 'fa-receipt', tone: 'primary', label: 'Ticket médio', value: campaign_cost_label(result.avg_ticket),

@@ -138,4 +138,15 @@ class Campaigns::PerformanceTest < ActiveSupport::TestCase
     assert_equal 300, outcome.sent
     assert_equal BigDecimal('20.4'), outcome.investment
   end
+
+  test 'the estimated Meta fee for WhatsApp is shown apart and comes out of the return' do
+    mixed = campaign(recipients_count: 300, sent_count: 300)
+    mixed.messages.create!(channel: 'email', status: 'sent', sent_count: 100)
+    mixed.messages.create!(channel: 'whatsapp', status: 'sent', sent_count: 200)
+
+    outcome = result(mixed)
+
+    assert_equal BigDecimal('64'), outcome.meta_investment
+    assert_equal outcome.revenue - BigDecimal('20.4') - BigDecimal('64'), outcome.net
+  end
 end

@@ -102,6 +102,45 @@ class Campaign < ApplicationRecord
     end
   end
 
+  # Boas-vindas numa campanha que já está rodando (ou terminou): quem entrar no segmento até `deadline`
+  # recebe as mensagens com boas-vindas (que voltam a enviar se já tinham terminado) e as que ainda não
+  # saíram e saem antes do prazo. Mensagens já enviadas sem boas-vindas não saem de novo.
+  # Devolve quantas mensagens passaram a valer até o prazo.
+  def welcome_until!(deadline, now = Time.current)
+    changed = 0
+    transaction do
+      messages.reload.each do |message|
+        next unless welcome_target?(message, deadline)
+
+        message.update!(welcome_changes(message, deadline, now))
+        changed += 1
+      end
+    end
+    refresh_from_messages! if changed.positive?
+    changed
+  end
+
+  def welcome_editable? = status.in?(RUNNABLE + ['sent'])
+
+  # Prazo de boas-vindas da campanha: o maior entre as mensagens ativas.
+  def welcome_deadline = active_messages.filter_map(&:continuous_until).max
+
+  # Ao confirmar: mensagem sem boas-vindas que sai antes do prazo da campanha herda o prazo, para quem
+  # entrar depois do envio dela (e antes do fim das boas-vindas) também receber.
+  def inherited_welcome_until(message)
+    deadline = welcome_deadline
+    return if deadline.nil? || message.continuous? || (message.send_at && message.send_at >= deadline)
+
+    deadline
+  end
+
+  def inherit_welcome!
+    active_messages.each do |message|
+      deadline = inherited_welcome_until(message)
+      message.update!(continuous_until: deadline) if deadline
+    end
+  end
+
   def sent_cost = messages.sum(&:sent_cost)
 
   def progress_label
@@ -139,6 +178,26 @@ class Campaign < ApplicationRecord
     return 'paused' if statuses.include?('paused')
 
     'scheduled'
+  end
+
+  def welcome_target?(message, deadline)
+    return false unless message.status.in?(RUNNABLE + ['sent'])
+    return false if message.send_at && message.send_at >= deadline
+
+    message.continuous? || message.audience_frozen_at.nil?
+  end
+
+  # Mensagem que já terminou volta a olhar o segmento agora; a que espera novos confere de novo agora
+  # (pega o prazo novo). Enviando ou pausada segue como está: a reserva e o horário de retomada valem.
+  def welcome_changes(message, deadline, now)
+    changes = { continuous_until: deadline }
+    if message.status == 'sent'
+      changes.merge(status: 'scheduled', next_run_at: now, finished_at: nil)
+    elsif message.status == 'scheduled' && message.audience_frozen_at
+      changes.merge(next_run_at: now)
+    else
+      changes
+    end
   end
 
   def message_steps(message, number, now)

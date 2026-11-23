@@ -172,4 +172,84 @@ class CampaignTest < ActiveSupport::TestCase
     assert_nil message.send_at
     assert(campaign.missing_steps.any? { |s| s.include?('data e a hora') })
   end
+
+  # Cenário da Black: msg 1 com boas-vindas já terminada, msg 2 enviada sem boas-vindas,
+  # msg 3 agendada antes do novo prazo e msg 4 depois dele.
+  def black_campaign(now)
+    campaign = ready_campaign(status: 'sent')
+    welcome = campaign.messages.first
+    sent_once = campaign.messages.create!(channel: 'email', email_template: template)
+    welcome.update_columns(status: 'sent', audience_frozen_at: now - 1.day, started_at: now - 1.day,
+                           finished_at: now - 10.minutes, continuous_until: now - 10.minutes)
+    sent_once.update_columns(status: 'sent', send_at: now - 1.hour, audience_frozen_at: now - 1.hour,
+                             finished_at: now - 1.hour)
+    later = campaign.messages.create!(channel: 'email', email_template: template, status: 'scheduled',
+                                      send_at: now + 1.hour, next_run_at: now + 1.hour)
+    after = campaign.messages.create!(channel: 'email', email_template: template, status: 'scheduled',
+                                      send_at: now + 3.days, next_run_at: now + 3.days)
+    [campaign, welcome, sent_once, later, after]
+  end
+
+  test 'welcome_until! extends the welcome and covers messages not sent yet, leaving the others alone' do
+    campaign, welcome, sent_once, later, after = black_campaign(NOW)
+    deadline = NOW + 2.hours
+
+    assert_equal 2, campaign.welcome_until!(deadline, NOW)
+
+    welcome.reload
+    assert_equal [deadline, 'scheduled', NOW, nil],
+                 [welcome.continuous_until, welcome.status, welcome.next_run_at, welcome.finished_at]
+    assert_equal [deadline, 'scheduled', NOW + 1.hour], [later.reload.continuous_until, later.status, later.next_run_at]
+    assert_nil sent_once.reload.continuous_until
+    assert_equal 'sent', sent_once.status
+    assert_nil after.reload.continuous_until
+    assert_equal 'scheduled', campaign.reload.status
+  end
+
+  test 'welcome_until! does not touch a message that is sending right now, other than the deadline' do
+    campaign, welcome, = black_campaign(NOW)
+    welcome.update_columns(status: 'sending', next_run_at: NOW + 5.minutes, finished_at: nil)
+
+    campaign.welcome_until!(NOW + 2.hours, NOW)
+
+    assert_equal ['sending', NOW + 5.minutes, NOW + 2.hours],
+                 welcome.reload.slice(:status, :next_run_at, :continuous_until).values
+  end
+
+  test 'welcome_until! ignores cancelled messages' do
+    campaign, welcome, = black_campaign(NOW)
+    welcome.update_columns(status: 'cancelled')
+
+    assert_equal 1, campaign.welcome_until!(NOW + 2.hours, NOW)
+    assert_equal NOW - 10.minutes, welcome.reload.continuous_until
+  end
+
+  test 'on confirmation, messages that go out before the welcome deadline inherit it' do
+    campaign = ready_campaign
+    first = campaign.messages.first
+    first.update!(continuous_until: NOW + 4.hours)
+    before = campaign.messages.create!(channel: 'email', email_template: template, send_at: NOW + 3.hours)
+    on_time = campaign.messages.create!(channel: 'email', email_template: template, send_at: NOW + 4.hours)
+    later = campaign.messages.create!(channel: 'email', email_template: template, send_at: NOW + 1.day)
+    off = campaign.messages.create!(channel: 'whatsapp', send_at: NOW + 1.hour)
+    campaign.messages.reload
+
+    assert_equal NOW + 4.hours, campaign.inherited_welcome_until(campaign.messages.find { |m| m.id == before.id })
+
+    campaign.inherit_welcome!
+
+    assert_equal NOW + 4.hours, before.reload.continuous_until
+    assert_nil on_time.reload.continuous_until
+    assert_nil later.reload.continuous_until
+    assert_nil off.reload.continuous_until
+  end
+
+  test 'without a welcome message nothing is inherited' do
+    campaign = ready_campaign
+    campaign.messages.create!(channel: 'email', email_template: template, send_at: NOW + 1.hour)
+
+    campaign.inherit_welcome!
+
+    assert(campaign.messages.reload.none?(&:continuous?))
+  end
 end

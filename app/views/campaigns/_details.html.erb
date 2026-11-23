@@ -93,6 +93,7 @@
             <span class="ec-msg__meta">
               <%= message.started_at ? "Começou em #{l(message.started_at, format: '%d/%m/%Y às %H:%M')}" : (message.send_at ? "Sai em #{message.when_label}" : message.when_label) %>
               <% if message.progress_label %> · <%= message.progress_label %><% end %>
+              <% if message.continuous? %><span class="ec-sub">Boas-vindas até <%= l(message.continuous_until, format: '%d/%m às %H:%M') %></span><% end %>
               <% if message.note.present? && message.status == 'paused' %><span class="ec-sub ec-details__note"><%= message.note %></span><% end %>
               <% links = { 'sent' => 'enviados', 'failed' => 'falhas', 'blocked' => 'bloqueios' }.select { |status, _| message.public_send("#{status}_count").to_i.positive? } %>
               <% if links.any? %>
@@ -109,6 +110,31 @@
         <% end %>
       </ol>
     </section>
+  <% end %>
+<% end %>
+
+<% if campaign.welcome_editable? %>
+  <% deadline = campaign.welcome_deadline %>
+  <% suggested = [deadline, Time.current].compact.max.change(min: 0) + 1.hour %>
+  <%= form_with url: welcome_campaign_path(campaign), method: :post, class: 'ec-welcome' do %>
+    <h3 class="ec-details__subtitle">Boas-vindas</h3>
+    <p class="ec-sub">
+      <% if deadline %>
+        <%= deadline.future? ? 'Quem entrar no segmento até' : 'Recebeu quem entrou no segmento até' %>
+        <%= l(deadline, format: '%d/%m às %H:%M') %>.
+      <% else %>
+        Esta campanha não tem boas-vindas.
+      <% end %>
+      Mude o prazo para quem entrar depois receber as mensagens de boas-vindas e as que ainda não saíram.
+      As que já saíram sem boas-vindas não são enviadas de novo.
+    </p>
+    <div class="ec-welcome__row">
+      <%= date_field_tag :welcome_on, suggested.to_date.iso8601, class: 'crm-input', min: Time.zone.today.iso8601,
+                         required: true, aria: { label: 'Data do fim das boas-vindas' } %>
+      <%= time_field_tag :welcome_time, suggested.strftime('%H:%M'), class: 'crm-input', required: true,
+                         aria: { label: 'Hora do fim das boas-vindas' } %>
+      <button type="submit" class="crm-btn crm-btn--primary">Salvar prazo</button>
+    </div>
   <% end %>
 <% end %>
 

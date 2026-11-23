@@ -247,6 +247,10 @@
 .ec-msg__meta { grid-column: 2 / -1; font-size: 0.72rem; color: var(--fg-alt); }
 .ec-msg__meta .ec-details__download { margin-left: 0; margin-right: 0.6rem; }
 .ec-details__note { color: var(--warning-fg); }
+.ec-welcome { margin-top: 0.75rem; }
+.ec-welcome .ec-sub { display: block; margin: 0 0 0.5rem; }
+.ec-welcome__row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ec-welcome__row .crm-input { flex: 1 1 130px; min-width: 0; }
 
 /* Campanhas › Quem recebeu */
 .cd-head { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; }

@@ -4,7 +4,7 @@ class CampaignsController < ApplicationController
   before_action :set_client
   before_action :require_client!
   before_action :set_campaign, only: %i[edit update destroy preview send_test send_test_whatsapp schedule cancel details
-                                        recipients deliveries add_message remove_message]
+                                        recipients deliveries add_message remove_message welcome]
   before_action :require_draft!, only: %i[edit update schedule add_message remove_message]
 
   rate_limit to: 5, within: 1.minute, only: %i[send_test send_test_whatsapp],
@@ -96,6 +96,19 @@ class CampaignsController < ApplicationController
     redirect_to campaigns_path, notice: 'Campanha cancelada. Quem já recebeu não é afetado e o restante não será enviado.'
   end
 
+  # Boas-vindas numa campanha já confirmada: estende (ou liga) o prazo para quem entrar no segmento.
+  def welcome
+    deadline = welcome_deadline_param
+    error = welcome_error(deadline)
+    return redirect_to(campaigns_path, alert: error) if error
+
+    changed = @campaign.welcome_until!(deadline)
+    return redirect_to(campaigns_path, alert: WELCOME_NO_MESSAGE) if changed.zero?
+
+    redirect_to campaigns_path, notice: "Boas-vindas até #{l(deadline, format: '%d/%m às %H:%M')} em " \
+                                        "#{changed} #{'mensagem'.pluralize(changed)}. Quem entrar no segmento até lá recebe."
+  end
+
   def destroy
     return redirect_to campaigns_path, alert: 'Só dá para excluir rascunhos e campanhas canceladas.' unless deletable?
 
@@ -167,6 +180,23 @@ class CampaignsController < ApplicationController
 
   def deletable? = @campaign.status.in?(%w[draft cancelled])
 
+  WELCOME_NO_MESSAGE = 'Nenhuma mensagem pode receber esse prazo: as que já saíram sem boas-vindas não são ' \
+                       'enviadas de novo e as que saem depois dele não mudam.'
+
+  def welcome_error(deadline)
+    return 'Só dá para mudar as boas-vindas de campanhas confirmadas e não canceladas.' unless @campaign.welcome_editable?
+
+    'Informe uma data e hora no futuro para as boas-vindas.' unless deadline&.future?
+  end
+
+  def welcome_deadline_param
+    date = params[:welcome_on].to_s
+    time = params[:welcome_time].to_s
+    Time.zone.parse("#{date} #{time}") if date.present? && time.present?
+  rescue ArgumentError
+    nil
+  end
+
   def load_editor_options
     @email_templates = @client.email_templates.order(:name)
     @whatsapp_templates = @client.whatsapp_templates.sendable.order(:label)
@@ -222,6 +252,7 @@ class CampaignsController < ApplicationController
     now = Time.current
     email = audiences['email']
     Campaign.transaction do
+      @campaign.inherit_welcome!
       @campaign.messages.each do |message|
         if @campaign.channel_enabled?(message.channel)
           message.update!(status: 'scheduled', next_run_at: message.first_send_at(now), note: nil)
@@ -283,9 +314,14 @@ class CampaignsController < ApplicationController
       messages: @campaign.active_messages.map do |message|
         { id: message.id, channel: message.channel, channel_label: message.channel_label,
           template: message.template_name,
-          when: [message.when_label, message.continuous_label].compact.join(' ') }
+          when: [message.when_label, message.continuous_label, inherited_welcome_label(message)].compact.join(' ') }
       end
     }
+  end
+
+  def inherited_welcome_label(message)
+    deadline = @campaign.inherited_welcome_until(message)
+    "· recebe também quem entrar até #{l(deadline, format: '%d/%m às %H:%M')} (boas-vindas da campanha)" if deadline
   end
 
   def messages_done?

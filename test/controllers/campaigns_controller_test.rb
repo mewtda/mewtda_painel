@@ -515,6 +515,18 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_in_delta Time.current.to_f, email.reload.next_run_at.to_f, 5
   end
 
+  test 'schedule makes the messages that go out before the welcome deadline inherit it' do
+    campaign = ready_campaign
+    deadline = 1.day.from_now.change(sec: 0)
+    campaign.messages.first.update!(continuous_until: deadline)
+    reminder = campaign.messages.create!(channel: 'email', email_template: template(@client),
+                                         send_at: 2.hours.from_now.change(sec: 0))
+
+    post schedule_campaign_path(campaign)
+
+    assert_equal deadline, reminder.reload.continuous_until
+  end
+
   test 'schedule cancels messages of a channel turned off' do
     campaign = ready_campaign
     off = campaign.messages.create!(channel: 'whatsapp', whatsapp_template: wa_template)
@@ -577,5 +589,53 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     incomplete = @client.campaigns.create!
     patch campaign_path(incomplete), params: { campaign: { name: 'Só o nome' } }, as: :json
     assert_equal false, response.parsed_body['ready']
+  end
+
+  def welcome_params(time) = { welcome_on: time.to_date.iso8601, welcome_time: time.strftime('%H:%M') }
+
+  test 'welcome extends the deadline of a running campaign from the details' do
+    campaign = @client.campaigns.create!(status: 'sent')
+    welcome = campaign.messages.create!(channel: 'email', status: 'sent', audience_frozen_at: 1.day.ago,
+                                        finished_at: 10.minutes.ago)
+    welcome.update_columns(continuous_until: 10.minutes.ago)
+    deadline = 2.hours.from_now.change(sec: 0)
+
+    get details_campaign_path(campaign)
+    assert_includes response.body, welcome_campaign_path(campaign)
+
+    post welcome_campaign_path(campaign), params: welcome_params(deadline)
+
+    assert_redirected_to campaigns_path
+    assert_match 'Boas-vindas até', flash[:notice]
+    assert_equal deadline, welcome.reload.continuous_until
+    assert_equal 'scheduled', welcome.status
+    assert_equal 'scheduled', campaign.reload.status
+  end
+
+  test 'welcome refuses a past deadline, drafts and cancelled campaigns' do
+    campaign = @client.campaigns.create!(status: 'sent')
+    welcome = campaign.messages.create!(channel: 'email', status: 'sent', audience_frozen_at: 1.day.ago)
+    welcome.update_columns(continuous_until: 10.minutes.ago)
+
+    post welcome_campaign_path(campaign), params: welcome_params(1.hour.ago)
+    assert_match 'futuro', flash[:alert]
+
+    post welcome_campaign_path(campaign), params: { welcome_on: 'x', welcome_time: '' }
+    assert_match 'futuro', flash[:alert]
+
+    %w[draft cancelled].each do |status|
+      other = @client.campaigns.create!(status:)
+      post welcome_campaign_path(other), params: welcome_params(1.hour.from_now)
+      assert_match 'boas-vindas', flash[:alert]
+    end
+  end
+
+  test 'welcome says so when no message can take it' do
+    campaign = @client.campaigns.create!(status: 'sent')
+    campaign.messages.create!(channel: 'email', status: 'sent', audience_frozen_at: 1.day.ago)
+
+    post welcome_campaign_path(campaign), params: welcome_params(1.hour.from_now)
+
+    assert_match 'Nenhuma mensagem', flash[:alert]
   end
 end

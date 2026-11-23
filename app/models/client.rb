@@ -26,6 +26,22 @@ class Client < ApplicationRecord
   validates :daily_whatsapp_limit, :daily_email_limit,
             numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
 
+  # Contato de cobrança: para onde o Asaas manda a Fatura (às vezes é o financeiro, não o dono da loja).
+  # Obrigatório para quem é cobrado (tem CPF/CNPJ); só é checado quando os dados de cobrança mudam, para
+  # não travar outras edições de clientes antigos.
+  validates :billing_email, :billing_phone, presence: true,
+                                            if: -> { billing_document.present? && billing_contact_changing? }
+  validates :billing_email, format: { with: URI::MailTo::EMAIL_REGEXP, message: 'não parece um e-mail válido' },
+                            allow_blank: true
+  validate :billing_phone_must_be_valid, if: -> { billing_phone.present? }
+
+  # Celular de cobrança só com DDD + número (o Asaas não aceita o +55).
+  def billing_phone_digits
+    digits = billing_phone.to_s.gsub(/\D/, '')
+    digits = digits.delete_prefix('55') if digits.length > 11
+    digits.presence
+  end
+
   # Aceita preço no formato brasileiro ("1.299,90") vindo do formulário do admin.
   def plan_price=(value)
     value = value.delete('.').tr(',', '.') if value.is_a?(String) && value.include?(',')
@@ -138,6 +154,14 @@ class Client < ApplicationRecord
   end
 
   private
+
+  def billing_contact_changing?
+    will_save_change_to_billing_document? || will_save_change_to_billing_email? || will_save_change_to_billing_phone?
+  end
+
+  def billing_phone_must_be_valid
+    errors.add(:billing_phone, 'informe com DDD, ex.: (31) 99999-9999') unless billing_phone_digits.to_s.length.between?(10, 11)
+  end
 
   def logo_must_be_png_or_jpeg
     errors.add(:logo, 'deve ser PNG, JPG ou AVIF') unless logo.content_type.in?(LOGO_CONTENT_TYPES)

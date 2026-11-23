@@ -43,14 +43,31 @@ module Billing
                           external_reference: charge.external_reference)
     end
 
+    # Antes de cada cobrança nova, garante que o cliente no Asaas tem o contato de cobrança atual
+    # (o Asaas manda a Fatura para esse e-mail e celular).
     def asaas_customer_id
-      return @client.asaas_customer_id if @client.asaas_customer_id.present?
+      if @client.asaas_customer_id.present?
+        update_contact(@client.asaas_customer_id)
+        return @client.asaas_customer_id
+      end
 
       document = @client.billing_document.gsub(/\D/, '')
-      customer = @api.find_customer(document) ||
-                 @api.create_customer(name: @client.name, cpf_cnpj: document, email: @client.email)
+      customer = @api.find_customer(document)
+      if customer
+        update_contact(customer['id'])
+      else
+        customer = @api.create_customer(name: @client.name, cpf_cnpj: document, email: billing_email,
+                                        mobile_phone: @client.billing_phone_digits)
+      end
       @client.update_columns(asaas_customer_id: customer['id'])
       customer['id']
     end
+
+    def update_contact(customer_id)
+      @api.update_customer(customer_id, email: billing_email, mobile_phone: @client.billing_phone_digits)
+    end
+
+    # Cliente antigo sem e-mail de cobrança continua recebendo no e-mail principal.
+    def billing_email = @client.billing_email.presence || @client.email
   end
 end

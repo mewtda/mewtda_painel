@@ -20,8 +20,13 @@ module Billing
       get('/customers', cpfCnpj: cpf_cnpj).fetch('data', []).first
     end
 
-    def create_customer(name:, cpf_cnpj:, email: nil)
-      post('/customers', { name: name, cpfCnpj: cpf_cnpj, email: email.presence }.compact)
+    def create_customer(name:, cpf_cnpj:, email: nil, mobile_phone: nil)
+      post('/customers', { name: name, cpfCnpj: cpf_cnpj, email: email.presence, mobilePhone: mobile_phone.presence }.compact)
+    end
+
+    # Atualiza o contato de cobrança de um cliente que já existe no Asaas.
+    def update_customer(id, email: nil, mobile_phone: nil)
+      post("/customers/#{id}", { email: email.presence, mobilePhone: mobile_phone.presence }.compact)
     end
 
     def find_payment(external_reference)

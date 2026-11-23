@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Billing::MonthlyChargeTest < ActiveSupport::TestCase
   class FakeAsaas
-    attr_reader :payments_created, :customers_created
+    attr_reader :payments_created, :customers_created, :customers_updated
 
     def initialize(existing_payment: nil, existing_customer: nil, fail_with: nil)
       @existing_payment = existing_payment
@@ -10,6 +10,12 @@ class Billing::MonthlyChargeTest < ActiveSupport::TestCase
       @fail_with = fail_with
       @payments_created = []
       @customers_created = []
+      @customers_updated = []
+    end
+
+    def update_customer(id, **args)
+      @customers_updated << [id, args]
+      { 'id' => id }
     end
 
     def find_customer(_doc) = @existing_customer
@@ -31,7 +37,8 @@ class Billing::MonthlyChargeTest < ActiveSupport::TestCase
 
   def setup
     @client = Client.create!(name: 'OneWay', email: "ow-#{SecureRandom.hex(4)}@example.com",
-                             plan_name: 'Pro', plan_price: '297,00', billing_document: '12.345.678/0001-90')
+                             plan_name: 'Pro', plan_price: '297,00', billing_document: '12.345.678/0001-90',
+                             billing_email: 'financeiro@oneway.test', billing_phone: '(31) 99876-5432')
     @month = Date.new(2026, 10, 1)
   end
 
@@ -44,7 +51,8 @@ class Billing::MonthlyChargeTest < ActiveSupport::TestCase
     assert_equal 'pay_1', charge.asaas_payment_id
     assert_equal 'https://asaas.test/i/pay_1', charge.invoice_url
     assert_equal BigDecimal('297'), charge.amount
-    assert_equal [{ name: 'OneWay', cpf_cnpj: '12345678000190', email: @client.email }], api.customers_created
+    assert_equal [{ name: 'OneWay', cpf_cnpj: '12345678000190', email: 'financeiro@oneway.test',
+                    mobile_phone: '31998765432' }], api.customers_created
     assert_equal 'cus_1', @client.reload.asaas_customer_id
     payment = api.payments_created.first
     assert_equal 'cus_1', payment[:customer]
@@ -76,6 +84,28 @@ class Billing::MonthlyChargeTest < ActiveSupport::TestCase
 
     charge = Billing::MonthlyCharge.new(@client, @month, api: FakeAsaas.new).call
     assert_equal 'created', charge.status
+  end
+
+  test 'updates the billing contact of a customer already in Asaas before a new charge' do
+    @client.update_columns(asaas_customer_id: 'cus_7', billing_email: nil)
+    api = FakeAsaas.new
+
+    Billing::MonthlyCharge.new(@client, @month, api: api).call
+
+    assert_equal [['cus_7', { email: @client.email, mobile_phone: '31998765432' }]], api.customers_updated
+    assert_empty api.customers_created
+  end
+
+  test 'a client with document needs a billing e-mail and phone' do
+    client = Client.new(name: 'Nova', email: 'dona@nova.test', billing_document: '123')
+    assert_not client.valid?
+    assert client.errors.added?(:billing_email, :blank)
+    assert client.errors.added?(:billing_phone, :blank)
+
+    client.assign_attributes(billing_email: 'fin@nova.test', billing_phone: '+55 (31) 3333-4444')
+    client.valid?
+    assert_empty client.errors[:billing_email] + client.errors[:billing_phone]
+    assert_equal '3133334444', client.billing_phone_digits
   end
 
   test 'skips clients without document or with an empty invoice' do

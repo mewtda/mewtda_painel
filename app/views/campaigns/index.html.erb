@@ -79,6 +79,9 @@
                     <i class="fa-solid fa-eye"></i>
                   <% end %>
                   <% if campaign.started_at %>
+                    <%= link_to deliveries_campaign_path(campaign), class: 'crm-btn ec-deliveries-btn', title: 'Quem recebeu e quem não recebeu cada mensagem' do %>
+                      <i class="fa-solid fa-users-viewfinder"></i> Detalhar envios
+                    <% end %>
                     <%= link_to campaign_performance_path(campanha: campaign.id), class: 'crm-btn clients-btn--icon', title: 'Ver desempenho' do %>
                       <i class="fa-solid fa-chart-column"></i>
                     <% end %>

@@ -232,10 +232,20 @@
 
 .ec-channels { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
 .ec-details__subtitle { margin: 1rem 0 0.5rem; font-size: 0.9rem; font-weight: 700; color: var(--fg); }
-.ec-details__messages { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
-.ec-details__message { padding: 0.6rem 0.75rem; border: 1px solid var(--outline); border-radius: var(--radius); font-size: 0.85rem; }
-.ec-details__message-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
-.ec-details__links { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.3rem; }
+/* Mensagens da gaveta, separadas por canal. (Não usar .ec-details__message aqui: é o aviso "Carregando…".) */
+.ec-channel { margin-top: 0.75rem; border: 1px solid var(--outline); border-radius: var(--radius); overflow: hidden; }
+.ec-channel__head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.5rem 0.75rem;
+  background: color-mix(in srgb, var(--fg) 4%, transparent); font-size: 0.78rem; color: var(--fg-alt); }
+.ec-channel__head strong { color: var(--fg); }
+.ec-channel__list { margin: 0; padding: 0; list-style: none; }
+.ec-msg { display: grid; grid-template-columns: 1.4rem 1fr auto; gap: 0.1rem 0.5rem; align-items: baseline; padding: 0.55rem 0.75rem;
+  border-top: 1px solid var(--outline); font-size: 0.8rem; text-align: left; }
+.ec-msg:first-child { border-top: 0; }
+.ec-msg__n { color: var(--fg-alt); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ec-msg__name { font-weight: 600; color: var(--fg); min-width: 0; }
+.ec-msg__status { justify-self: end; }
+.ec-msg__meta { grid-column: 2 / -1; font-size: 0.72rem; color: var(--fg-alt); }
+.ec-msg__meta .ec-details__download { margin-left: 0; margin-right: 0.6rem; }
 .ec-details__note { color: var(--warning-fg); }
 
 /* Campanhas › Quem recebeu */
@@ -246,4 +256,7 @@
 .cd-cell { min-width: 170px; }
 .cd-cell small { display: block; margin-top: 0.2rem; font-size: 0.72rem; }
 .cd-cell__detail { color: var(--fg-alt); white-space: normal; }
+.cd-channels .cx-chip::before { display: none; }
+.cd-channels .cx-chip i { font-size: 0.8rem; }
+.cd-empty-channel { margin: 0.75rem 1rem; }
 .ec-deliveries-btn { background: var(--primary-tint); color: var(--primary); border: 1px solid var(--outline); display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; font-size: 0.75rem; padding: 0.35rem 0.7rem; }

@@ -68,33 +68,46 @@
   </div>
 </dl>
 
-<% messages = campaign.messages.reject { |m| m.status == 'draft' } %>
+<% messages = campaign.messages.reject { |m| m.status == 'draft' }.sort_by { |m| [m.position.to_i, m.id] } %>
 <% if messages.any? %>
   <h3 class="ec-details__subtitle">Mensagens</h3>
-  <ol class="ec-details__messages">
-    <% messages.each do |message| %>
-      <li class="ec-details__message">
-        <div class="ec-details__message-head">
-          <%= campaign_channel_tag(message.channel) %>
-          <strong><%= message.template_name || 'Modelo excluído' %></strong>
-          <span class="crm-tag crm-tag--<%= CampaignsHelper::STATUS_TAGS.fetch(message.status, 'neutral') %>"><%= Campaign::STATUSES.fetch(message.status, message.status) %></span>
-        </div>
-        <small class="cx-muted ec-sub">
-          <%= message.started_at ? "Começou em #{l(message.started_at, format: '%d/%m/%Y às %H:%M')}" : message.when_label %>
-          <% if message.progress_label %> · <%= message.progress_label %><% end %>
-        </small>
-        <% if message.note.present? && message.status == 'paused' %><small class="ec-sub ec-details__note"><%= message.note %></small><% end %>
-        <span class="ec-details__links">
-          <% { 'sent' => 'enviados', 'failed' => 'falhas', 'blocked' => 'bloqueios' }.each do |status, label| %>
-            <% next unless message.public_send("#{status}_count").to_i.positive? %>
-            <%= link_to recipients_campaign_path(campaign, status:, message_id: message.id), class: 'ec-details__download' do %>
-              <i class="fa-solid fa-download"></i> <%= label %>
-            <% end %>
-          <% end %>
+  <% messages.group_by(&:channel).sort_by { |channel, _| CampaignMessage::CHANNELS.index(channel) || 99 }.each do |channel, channel_messages| %>
+    <% sent = channel_messages.sum { |m| m.sent_count.to_i } %>
+    <section class="ec-channel">
+      <header class="ec-channel__head">
+        <%= campaign_channel_tag(channel) %>
+        <span>
+          <strong><%= channel_messages.size %></strong> <%= channel_messages.size == 1 ? 'mensagem' : 'mensagens' %>
+          · <strong><%= number_with_delimiter(sent, delimiter: '.') %></strong> <%= sent == 1 ? 'enviado' : 'enviados' %>
+          · <%= campaign_cost_label(channel_messages.sum(&:sent_cost)) %>
         </span>
-      </li>
-    <% end %>
-  </ol>
+      </header>
+      <ol class="ec-channel__list">
+        <% channel_messages.each_with_index do |message, index| %>
+          <li class="ec-msg">
+            <span class="ec-msg__n"><%= index + 1 %>.</span>
+            <span class="ec-msg__name"><%= message.template_name || 'Modelo excluído' %></span>
+            <span class="ec-msg__status"><%= campaign_message_status_tag(message) %></span>
+            <span class="ec-msg__meta">
+              <%= message.started_at ? "Começou em #{l(message.started_at, format: '%d/%m/%Y às %H:%M')}" : (message.send_at ? "Sai em #{message.when_label}" : message.when_label) %>
+              <% if message.progress_label %> · <%= message.progress_label %><% end %>
+              <% if message.note.present? && message.status == 'paused' %><span class="ec-sub ec-details__note"><%= message.note %></span><% end %>
+              <% links = { 'sent' => 'enviados', 'failed' => 'falhas', 'blocked' => 'bloqueios' }.select { |status, _| message.public_send("#{status}_count").to_i.positive? } %>
+              <% if links.any? %>
+                <span class="ec-sub">
+                  <% links.each do |status, label| %>
+                    <%= link_to recipients_campaign_path(campaign, status:, message_id: message.id), class: 'ec-details__download' do %>
+                      <i class="fa-solid fa-download"></i> <%= label %>
+                    <% end %>
+                  <% end %>
+                </span>
+              <% end %>
+            </span>
+          </li>
+        <% end %>
+      </ol>
+    </section>
+  <% end %>
 <% end %>
 
 <% if campaign.started_at %>

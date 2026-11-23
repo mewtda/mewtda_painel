@@ -6,6 +6,7 @@ module Campaigns
   class Deliveries
     FILTERS = { 'todos' => 'Todo o público', 'receberam' => 'Receberam alguma mensagem',
                 'nao_receberam' => 'Não receberam nenhuma' }.freeze
+    CHANNELS = { 'todos' => 'Todos os canais', 'email' => 'E-mail', 'whatsapp' => 'WhatsApp' }.freeze
 
     Cell = Struct.new(:status, :at, :detail, keyword_init: true) do
       def label = LABELS.fetch(status)
@@ -16,15 +17,21 @@ module Campaigns
     TONES = { 'sent' => 'success', 'failed' => 'danger', 'blocked' => 'warning', 'pending' => 'info',
               'missing' => 'neutral' }.freeze
 
-    attr_reader :campaign
+    attr_reader :campaign, :channel
 
-    def initialize(campaign)
+    # channel: 'email' ou 'whatsapp' mostra só as mensagens desse canal (e "receberam" passa a ser
+    # "recebeu alguma mensagem desse canal"); nil mostra todas.
+    def initialize(campaign, channel: nil)
       @campaign = campaign
+      @channel = channel.presence_in(CampaignMessage::CHANNELS)
     end
 
     def messages
-      @messages ||= campaign.messages.where.not(status: 'draft').includes(:email_template, :whatsapp_template)
-                            .order(:position, :id).to_a
+      @messages ||= begin
+        scope = campaign.messages.where.not(status: 'draft').includes(:email_template, :whatsapp_template)
+        scope = scope.where(channel:) if channel
+        scope.order(:position, :id).to_a
+      end
     end
 
     # Perfis do público, já filtrados; ordene e pagine por fora.
@@ -59,10 +66,11 @@ module Campaigns
       CampaignRecipient.where(campaign_id: campaign.id).where.not(customer_id: nil).select(:customer_id).to_sql
     end
 
-    # Recebeu alguma mensagem: enviada para o cadastro (ou um cadastro mesclado) ou para o e-mail dele.
+    # Recebeu alguma mensagem (do canal escolhido): enviada para o cadastro (ou um cadastro mesclado) ou para o e-mail dele.
     def received_sql
+      channel_sql = channel ? "AND r.channel = #{CampaignRecipient.connection.quote(channel)}" : ''
       Arel.sql(<<~SQL.squish)
-        EXISTS (SELECT 1 FROM campaign_recipients r WHERE r.campaign_id = #{campaign.id.to_i} AND r.status = 'sent'
+        EXISTS (SELECT 1 FROM campaign_recipients r WHERE r.campaign_id = #{campaign.id.to_i} AND r.status = 'sent' #{channel_sql}
           AND (r.customer_id = customer_profiles.customer_id OR r.customer_id = ANY(customer_profiles.merged_customer_ids)
                OR (r.channel = 'email' AND r.email = LOWER(customer_profiles.email))))
       SQL

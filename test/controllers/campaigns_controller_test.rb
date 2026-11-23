@@ -63,6 +63,13 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_match 'Enviada', response.body
     assert_match 'Receberam alguma mensagem (1)', response.body
 
+    get deliveries_campaign_path(campaign, canal: 'email')
+
+    assert_response :success
+    assert_match 'Receberam algum e-mail (0)', response.body
+    assert_match 'Esta campanha não tem mensagens de e-mail', response.body
+    assert_no_match 'crm-tag--success">Enviada', response.body
+
     get deliveries_campaign_path(campaign, format: 'xlsx')
 
     assert_response :success
@@ -181,6 +188,22 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, ERB::Util.html_escape(recipients_campaign_path(campaign, status: 'sent', message_id: message.id))
     assert_includes response.body, ERB::Util.html_escape(recipients_campaign_path(campaign, status: 'failed', message_id: message.id))
     assert_match '2 de 3 enviados', response.body
+  end
+
+  test 'details groups the messages by channel with a welcome that keeps sending shown as active' do
+    campaign = @client.campaigns.create!(name: 'Black', status: 'scheduled', started_at: 1.hour.ago)
+    campaign.messages.create!(channel: 'whatsapp', status: 'scheduled', position: 0, started_at: 1.hour.ago,
+                              continuous_until: 1.day.from_now, recipients_count: 2, sent_count: 2)
+    campaign.messages.create!(channel: 'email', email_template: template(@client), status: 'scheduled', position: 1,
+                              send_at: 1.day.from_now)
+
+    get details_campaign_path(campaign)
+
+    assert_response :success
+    assert_equal 2, response.body.scan('class="ec-channel"').size
+    assert_operator response.body.index('fa-envelope'), :<, response.body.rindex('fa-whatsapp')
+    assert_match 'Boas-vindas ativa', response.body
+    assert_no_match 'ec-details__message"', response.body
   end
 
   test 'create makes a draft and goes to the editor' do

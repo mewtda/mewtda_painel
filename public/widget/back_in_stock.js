@@ -104,9 +104,13 @@
 
   const productForm = (product) => {
     const ids = product.variants.map((variant) => String(variant.id));
-    const forms = document.querySelectorAll('form[action*="/cart/add"]');
+    const forms = [...document.querySelectorAll('form[action*="/cart/add"]')].filter((form) =>
+      ids.includes(form.querySelector('[name="id"]')?.value),
+    );
 
-    return [...forms].find((form) => ids.includes(form.querySelector('[name="id"]')?.value));
+    // Temas como o Dawn têm um form de parcelamento (payment_terms) antes do botão de compra:
+    // ele também aponta para /cart/add, mas não tem botão. O botão vai embaixo do form que tem o "Comprar/Esgotado".
+    return forms.find((form) => form.querySelector('[type="submit"], [name="add"]')) || forms[0];
   };
 
   const selectedVariant = (product, form) => {

@@ -36,6 +36,9 @@ module Campaigns
       end
     end
 
+    # Todo mundo dos segmentos escolhidos, tenha ou não e-mail/celular.
+    def segment_profiles = profiles
+
     private
 
     attr_reader :client, :segments

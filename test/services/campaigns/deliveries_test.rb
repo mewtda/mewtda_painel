@@ -69,4 +69,22 @@ class Campaigns::DeliveriesTest < ActiveSupport::TestCase
     assert_equal 'sent', cell.status
     assert_equal 'Mesmo número ou e-mail de outro cadastro', cell.detail
   end
+
+  test 'filtered by channel shows only that channel messages and who received one of them' do
+    email = @campaign.messages.create!(channel: 'email', status: 'sent', position: 2, audience_frozen_at: 1.hour.ago)
+    recipient(@ana, @welcome, 'sent', sent_at: Time.current)
+    @campaign.recipients.create!(message: email, channel: 'email', customer_id: @bia.customer_id, name: 'Bia',
+                                 email: 'bia@example.com', status: 'sent', sent_at: Time.current)
+
+    whatsapp = Campaigns::Deliveries.new(@campaign, channel: 'whatsapp')
+    assert_equal [@welcome, @later], whatsapp.messages
+    assert_equal %w[Ana], whatsapp.profiles(filter: 'receberam').pluck(:name)
+
+    by_email = Campaigns::Deliveries.new(@campaign, channel: 'email')
+    assert_equal [email], by_email.messages
+    assert_equal %w[Bia], by_email.profiles(filter: 'receberam').pluck(:name)
+    assert_equal %w[Ana Caio], by_email.profiles(filter: 'nao_receberam').order(:name).pluck(:name)
+
+    assert_equal 3, Campaigns::Deliveries.new(@campaign, channel: 'outro').messages.size
+  end
 end

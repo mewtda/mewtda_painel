@@ -1,5 +1,5 @@
 <% title "Quem recebeu · #{@campaign.display_name}" %>
-<% filter_params = params.permit(:filtro, :q).to_h %>
+<% filter_params = params.permit(:filtro, :q, :canal).to_h %>
 <% messages = @deliveries.messages %>
 
 <div class="clients-wrapper cx-page cd-page">
@@ -12,7 +12,7 @@
 
   <div class="clients-table-wrap">
     <%= form_with url: deliveries_campaign_path(@campaign), method: :get, class: 'cx-toolbar',
-                  data: { live_regions: 'cd-toolbar-left,cd-chips,cd-table,cd-footer' } do %>
+                  data: { live_regions: 'cd-toolbar-left,cd-channels,cd-chips,cd-table,cd-footer' } do %>
       <div class="cx-toolbar__left" id="cd-toolbar-left">
         <span class="cx-count"><strong><%= number_with_delimiter(@profiles.total_entries, delimiter: '.') %></strong> pessoas</span>
         <%= link_to deliveries_campaign_path(@campaign, filter_params.merge(format: 'xlsx')), class: 'cx-link' do %>
@@ -26,23 +26,38 @@
                                           autofocus: params[:q].present?, data: { autosubmit_typing: true } %>
         </div>
       </div>
+      <div class="cx-rfm-chips cd-channels" id="cd-channels">
+        <span class="cx-rfm-chips__label">Canal</span>
+        <% Campaigns::Deliveries::CHANNELS.each do |key, label| %>
+          <% value = key == 'todos' ? '' : key %>
+          <label class="cx-chip <%= 'is-on' if (@channel || '') == value %>">
+            <%= radio_button_tag :canal, value, (@channel || '') == value, data: { autosubmit: true }, id: "canal-#{key}" %>
+            <% if key == 'todos' %><i class="fa-solid fa-layer-group"></i><% else %><i class="<%= CampaignsHelper::CHANNEL_ICONS.fetch(key) %>"></i><% end %>
+            <%= label %>
+          </label>
+        <% end %>
+      </div>
       <div class="cx-rfm-chips" id="cd-chips">
+        <span class="cx-rfm-chips__label">Mostrar</span>
         <% Campaigns::Deliveries::FILTERS.each do |key, label| %>
           <label class="cx-chip <%= 'is-on' if @filter == key %>">
             <%= radio_button_tag :filtro, key, @filter == key, data: { autosubmit: true }, id: "filtro-#{key}" %>
-            <%= label %> (<%= number_with_delimiter(@counts[key], delimiter: '.') %>)
+            <%= campaign_deliveries_filter_label(key, @channel) %> (<%= number_with_delimiter(@counts[key], delimiter: '.') %>)
           </label>
         <% end %>
       </div>
     <% end %>
 
     <div class="cx-table-scroll" id="cd-table" data-live-spinner>
+      <% if @channel && messages.empty? %>
+        <p class="cx-muted cd-empty-channel">Esta campanha não tem mensagens de <%= @channel == 'whatsapp' ? 'WhatsApp' : 'e-mail' %>.</p>
+      <% end %>
       <table class="crm-table cx-table">
         <thead>
           <tr>
             <th>Nome</th>
-            <th>Telefone</th>
-            <th>E-mail</th>
+            <% unless @channel == 'email' %><th>Telefone</th><% end %>
+            <% unless @channel == 'whatsapp' %><th>E-mail</th><% end %>
             <% messages.each_with_index do |message, index| %>
               <th class="cd-message-head">
                 <%= index + 1 %>. <%= campaign_channel_tag(message.channel) %>
@@ -53,13 +68,13 @@
         </thead>
         <tbody>
           <% if @profiles.empty? %>
-            <tr><td colspan="<%= 3 + messages.size %>" class="customers-table__empty">Ninguém encontrado.</td></tr>
+            <tr><td colspan="<%= (@channel ? 2 : 3) + messages.size %>" class="customers-table__empty">Ninguém encontrado.</td></tr>
           <% end %>
           <% @profiles.each do |profile| %>
             <tr>
               <td class="cx-name"><%= avatar_tag(profile.name, class: 'customers-avatar') %><span><%= profile.name.presence || 'Sem nome' %></span></td>
-              <td class="cx-nowrap"><%= profile.phone.present? ? phone_link(profile.phone) : '—' %></td>
-              <td class="cx-email"><%= profile.email.presence || '—' %></td>
+              <% unless @channel == 'email' %><td class="cx-nowrap"><%= profile.phone.present? ? phone_link(profile.phone) : '—' %></td><% end %>
+              <% unless @channel == 'whatsapp' %><td class="cx-email"><%= profile.email.presence || '—' %></td><% end %>
               <% @cells.fetch(profile.id).each do |cell| %>
                 <td class="cd-cell">
                   <span class="crm-tag crm-tag--<%= cell.tone %>"><%= cell.label %></span>

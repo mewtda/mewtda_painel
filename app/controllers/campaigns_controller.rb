@@ -34,7 +34,8 @@ class CampaignsController < ApplicationController
 
   # Quem do público recebeu cada mensagem (e quem não recebeu, com o motivo).
   def deliveries
-    @deliveries = Campaigns::Deliveries.new(@campaign)
+    @channel = params[:canal].presence_in(CampaignMessage::CHANNELS)
+    @deliveries = Campaigns::Deliveries.new(@campaign, channel: @channel)
     @filter = params[:filtro].presence_in(Campaigns::Deliveries::FILTERS.keys) || 'todos'
     scope = @deliveries.profiles(filter: @filter, query: params[:q])
                        .order(Arel.sql('customer_profiles.name NULLS LAST, customer_profiles.id'))

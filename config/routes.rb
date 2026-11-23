@@ -189,6 +189,7 @@ Rails.application.routes.draw do
         post :send_test_whatsapp
         post :schedule
         post :cancel
+        post :welcome, path: 'boas-vindas'
         post :add_message, path: 'mensagens'
         delete 'mensagens/:message_id', action: :remove_message, as: :remove_message
       end

@@ -184,6 +184,7 @@ Rails.application.routes.draw do
         get :preview
         get :details
         get :recipients
+        get :deliveries, path: 'quem-recebeu'
         post :send_test
         post :send_test_whatsapp
         post :schedule

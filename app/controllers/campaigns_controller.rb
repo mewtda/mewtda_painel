@@ -4,7 +4,7 @@ class CampaignsController < ApplicationController
   before_action :set_client
   before_action :require_client!
   before_action :set_campaign, only: %i[edit update destroy preview send_test send_test_whatsapp schedule cancel details
-                                        recipients add_message remove_message]
+                                        recipients deliveries add_message remove_message]
   before_action :require_draft!, only: %i[edit update schedule add_message remove_message]
 
   rate_limit to: 5, within: 1.minute, only: %i[send_test send_test_whatsapp],
@@ -30,6 +30,22 @@ class CampaignsController < ApplicationController
     message = @campaign.messages.find_by(id: params[:message_id]) if params[:message_id].present?
     sheet = Spreadsheets::CampaignRecipients.new(@campaign, status, message:)
     send_data sheet.to_xlsx, filename: sheet.filename, type: sheet.content_type
+  end
+
+  # Quem do público recebeu cada mensagem (e quem não recebeu, com o motivo).
+  def deliveries
+    @deliveries = Campaigns::Deliveries.new(@campaign)
+    @filter = params[:filtro].presence_in(Campaigns::Deliveries::FILTERS.keys) || 'todos'
+    scope = @deliveries.profiles(filter: @filter, query: params[:q])
+                       .order(Arel.sql('customer_profiles.name NULLS LAST, customer_profiles.id'))
+    if params[:format] == 'xlsx'
+      sheet = Spreadsheets::CampaignDeliveries.new(@deliveries, scope)
+      return send_data(sheet.to_xlsx, filename: sheet.filename, type: sheet.content_type)
+    end
+
+    @profiles = scope.paginate(page: params[:page], per_page: 50)
+    @cells = @deliveries.cells_for(@profiles)
+    @counts = Campaigns::Deliveries::FILTERS.keys.index_with { |key| @deliveries.profiles(filter: key, query: params[:q]).count }
   end
 
   def create

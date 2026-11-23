@@ -218,3 +218,12 @@
 .ec-details__message-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
 .ec-details__links { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.3rem; }
 .ec-details__note { color: var(--warning-fg); }
+
+/* Campanhas › Quem recebeu */
+.cd-head { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; }
+.cd-title { margin: 0; font-size: 1.25rem; }
+.cd-message-head { min-width: 170px; }
+.cd-message-head small { display: block; font-weight: 500; color: var(--fg-alt); white-space: normal; }
+.cd-cell { min-width: 170px; }
+.cd-cell small { display: block; margin-top: 0.2rem; font-size: 0.72rem; }
+.cd-cell__detail { color: var(--fg-alt); white-space: normal; }

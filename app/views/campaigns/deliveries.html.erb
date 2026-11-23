@@ -1,0 +1,81 @@
+<% title "Quem recebeu · #{@campaign.display_name}" %>
+<% filter_params = params.permit(:filtro, :q).to_h %>
+<% messages = @deliveries.messages %>
+
+<div class="clients-wrapper cx-page cd-page">
+  <div class="cd-head">
+    <%= link_to campaigns_path, class: 'cx-link' do %><i class="fa-solid fa-arrow-left"></i> Campanhas<% end %>
+    <h1 class="cd-title"><%= @campaign.display_name %></h1>
+    <p class="cx-muted">Pessoas dos segmentos <strong><%= @campaign.segments.map(&:name).join(', ').presence || '—' %></strong>
+      e o que aconteceu com cada mensagem. "Enviada" quer dizer que a Meta/AWS aceitou o envio.</p>
+  </div>
+
+  <div class="clients-table-wrap">
+    <%= form_with url: deliveries_campaign_path(@campaign), method: :get, class: 'cx-toolbar',
+                  data: { live_regions: 'cd-toolbar-left,cd-chips,cd-table,cd-footer' } do %>
+      <div class="cx-toolbar__left" id="cd-toolbar-left">
+        <span class="cx-count"><strong><%= number_with_delimiter(@profiles.total_entries, delimiter: '.') %></strong> pessoas</span>
+        <%= link_to deliveries_campaign_path(@campaign, filter_params.merge(format: 'xlsx')), class: 'cx-link' do %>
+          <i class="fa-solid fa-download"></i> Exportar planilha
+        <% end %>
+      </div>
+      <div class="cx-toolbar__right">
+        <div class="cx-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <%= search_field_tag :q, params[:q], class: 'crm-input', placeholder: 'Nome, e-mail ou telefone',
+                                          autofocus: params[:q].present?, data: { autosubmit_typing: true } %>
+        </div>
+      </div>
+      <div class="cx-rfm-chips" id="cd-chips">
+        <% Campaigns::Deliveries::FILTERS.each do |key, label| %>
+          <label class="cx-chip <%= 'is-on' if @filter == key %>">
+            <%= radio_button_tag :filtro, key, @filter == key, data: { autosubmit: true }, id: "filtro-#{key}" %>
+            <%= label %> (<%= number_with_delimiter(@counts[key], delimiter: '.') %>)
+          </label>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="cx-table-scroll" id="cd-table" data-live-spinner>
+      <table class="crm-table cx-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th>E-mail</th>
+            <% messages.each_with_index do |message, index| %>
+              <th class="cd-message-head">
+                <%= index + 1 %>. <%= campaign_channel_tag(message.channel) %>
+                <small><%= message.template_name || 'Modelo excluído' %></small>
+              </th>
+            <% end %>
+          </tr>
+        </thead>
+        <tbody>
+          <% if @profiles.empty? %>
+            <tr><td colspan="<%= 3 + messages.size %>" class="customers-table__empty">Ninguém encontrado.</td></tr>
+          <% end %>
+          <% @profiles.each do |profile| %>
+            <tr>
+              <td class="cx-name"><%= avatar_tag(profile.name, class: 'customers-avatar') %><span><%= profile.name.presence || 'Sem nome' %></span></td>
+              <td class="cx-nowrap"><%= profile.phone.present? ? phone_link(profile.phone) : '—' %></td>
+              <td class="cx-email"><%= profile.email.presence || '—' %></td>
+              <% @cells.fetch(profile.id).each do |cell| %>
+                <td class="cd-cell">
+                  <span class="crm-tag crm-tag--<%= cell.tone %>"><%= cell.label %></span>
+                  <% if cell.at %><small class="cx-muted"><%= l(cell.at, format: '%d/%m %H:%M') %></small><% end %>
+                  <% if cell.detail %><small class="cd-cell__detail"><%= cell.detail %></small><% end %>
+                </td>
+              <% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cx-footer" id="cd-footer">
+      <span class="cx-bulk__spacer"></span>
+      <%= will_paginate @profiles, list_classes: %w[pagination justify-content-center], inner_window: 1, params: filter_params %>
+    </div>
+  </div>
+</div>

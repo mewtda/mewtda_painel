@@ -44,6 +44,31 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, recipients_campaign_path(campaign, status: 'blocked')
   end
 
+  test 'deliveries lists the audience with each message status and exports a spreadsheet' do
+    customer = Customer.create!(first_name: 'Ana', email: 'ana@example.com', shopify_customer_id: SecureRandom.hex(6))
+    CustomerProfile.create!(client: @client, customer:, email: 'ana@example.com', phone: '(31) 99999-0001', name: 'Ana',
+                            refreshed_at: Time.current)
+    segment = @client.segments.create!(name: 'Black', kind: 'static')
+    SegmentMembership.create!(segment:, customer_id: customer.id)
+    campaign = @client.campaigns.create!(name: 'Black Friday', status: 'sent', started_at: 1.hour.ago)
+    campaign.campaign_segments.create!(segment:)
+    message = campaign.messages.create!(channel: 'whatsapp', status: 'sent', audience_frozen_at: 1.hour.ago)
+    campaign.recipients.create!(message:, channel: 'whatsapp', customer_id: customer.id, phone: '+5531999990001',
+                                status: 'sent', sent_at: 30.minutes.ago)
+
+    get deliveries_campaign_path(campaign)
+
+    assert_response :success
+    assert_match 'Ana', response.body
+    assert_match 'Enviada', response.body
+    assert_match 'Receberam alguma mensagem (1)', response.body
+
+    get deliveries_campaign_path(campaign, format: 'xlsx')
+
+    assert_response :success
+    assert_equal Spreadsheets::Base::CONTENT_TYPE, response.media_type
+  end
+
   test 'details of another store campaign is not found' do
     other = build_client.campaigns.create!(name: 'Alheia', status: 'sent')
 

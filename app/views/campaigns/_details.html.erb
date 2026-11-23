@@ -98,6 +98,9 @@
 <% end %>
 
 <% if campaign.started_at %>
+  <%= link_to deliveries_campaign_path(campaign), class: 'ec-details__performance' do %>
+    <i class="fa-solid fa-users-viewfinder"></i> Ver quem recebeu cada mensagem
+  <% end %>
   <%= link_to campaign_performance_path(campanha: campaign.id), class: 'ec-details__performance' do %>
     <i class="fa-solid fa-chart-column"></i> Ver desempenho da campanha
   <% end %>

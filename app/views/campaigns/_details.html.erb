@@ -68,7 +68,9 @@
   </div>
 </dl>
 
-<% messages = campaign.messages.reject { |m| m.status == 'draft' }.sort_by { |m| [m.position.to_i, m.id] } %>
+<%# Em ordem de envio: a que já saiu (ou sai ao confirmar) primeiro, depois pela data agendada. %>
+<% messages = campaign.messages.reject { |m| m.status == 'draft' }
+                      .sort_by { |m| [(m.started_at || m.send_at || Time.at(0)).to_i, m.position.to_i, m.id] } %>
 <% if messages.any? %>
   <h3 class="ec-details__subtitle">Mensagens</h3>
   <% messages.group_by(&:channel).sort_by { |channel, _| CampaignMessage::CHANNELS.index(channel) || 99 }.each do |channel, channel_messages| %>

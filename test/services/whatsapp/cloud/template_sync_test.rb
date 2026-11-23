@@ -107,6 +107,24 @@ class Whatsapp::Cloud::TemplateSyncTest < ActiveSupport::TestCase
     assert template.stats_synced_at
   end
 
+  test 'the analytics window starts at a UTC midnight inside the last 90 UTC days, even late at night in Brasilia' do
+    client = connected_client
+    client.whatsapp_templates.create!(label: 'Um', body: 'Oi', status: 'approved', meta_id: '10')
+    api = fake_api([{ 'name' => 'um', 'status' => 'APPROVED', 'id' => '10' }])
+    api.define_singleton_method(:template_analytics) do |_ids, from:, to:| # rubocop:disable Lint/UnusedBlockArgument
+      @from = from
+      {}
+    end
+    api.define_singleton_method(:analytics_from) { @from }
+
+    # 22/11 às 23h em Brasília já é 23/11 em UTC.
+    travel_to Time.utc(2026, 11, 23, 2, 0) do
+      Whatsapp::Cloud::Api.stub(:new, api) { Whatsapp::Cloud::TemplateSync.new(client).call }
+    end
+
+    assert_equal Time.utc(2026, 8, 26), api.analytics_from.utc
+  end
+
   test 'an analytics error from Meta is returned without breaking the template sync' do
     client = connected_client
     template = client.whatsapp_templates.create!(label: 'Um', body: 'Oi', status: 'pending', meta_id: '10')

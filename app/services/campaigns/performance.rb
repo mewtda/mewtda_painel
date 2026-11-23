@@ -3,7 +3,11 @@ module Campaigns
     ATTRIBUTION_DAYS = 7
     HOUR_BUCKET = 3
     HOUR_SQL = "EXTRACT(HOUR FROM occurred_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo')::int".freeze
-    Result = Struct.new(:campaigns_count, :audience, :blocked, :failed, :sent, :investment, :revenue, :purchases,
+    # Tarifa aproximada da Meta por mensagem de marketing no Brasil. A loja paga direto no cartão da conta do
+    # WhatsApp; aqui é só estimativa (a Meta cobra pelas entregues, e o painel conta as enviadas).
+    META_MARKETING_PRICE = BigDecimal('0.32')
+
+    Result = Struct.new(:campaigns_count, :audience, :blocked, :failed, :sent, :investment, :meta_investment, :revenue, :purchases,
                         :avg_ticket, :net, :tracked, :delivered, :bounced, :complaints, :opened, :clicked, :hours,
                         keyword_init: true) do
       def percent_of_audience(part) = rate(part, audience)
@@ -20,8 +24,10 @@ module Campaigns
       whatsapp = whatsapp_sent
       investment = ((sent - whatsapp) * Billing::Invoice::EMAIL_PRICE_PER_THOUSAND / 1000) +
                    (whatsapp * Billing::Invoice::WHATSAPP_PRICE_PER_MESSAGE)
-      Result.new(campaigns_count: count, audience:, blocked:, failed:, sent:, investment:, revenue:, purchases:,
-                 avg_ticket: purchases.zero? ? 0 : revenue / purchases, net: revenue - investment, **engagement)
+      meta_investment = whatsapp * META_MARKETING_PRICE
+      Result.new(campaigns_count: count, audience:, blocked:, failed:, sent:, investment:, meta_investment:, revenue:,
+                 purchases:, avg_ticket: purchases.zero? ? 0 : revenue / purchases,
+                 net: revenue - investment - meta_investment, **engagement)
     end
 
     private
@@ -34,8 +40,8 @@ module Campaigns
                      Arel.sql('COALESCE(SUM(sent_count), 0)'))&.map(&:to_i) || Array.new(5, 0)
     end
 
-    # Investimento = e-mail (R$ 4/mil) + taxa da plataforma por WhatsApp. A tarifa da Meta não entra
-    # (a loja paga direto no app da Meta).
+    # Investimento = e-mail (R$ 4/mil) + taxa da plataforma por WhatsApp. A tarifa da Meta fica à parte,
+    # em meta_investment (a loja paga direto no app da Meta).
     def whatsapp_sent
       CampaignMessage.where(campaign_id: campaigns.reorder(nil).select(:id), channel: 'whatsapp').sum(:sent_count)
     end

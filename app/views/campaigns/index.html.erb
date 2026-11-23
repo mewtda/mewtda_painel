@@ -52,7 +52,13 @@
               <span class="ec-channels"><% campaign_channels(campaign).each do |channel| %><%= campaign_channel_tag(channel) %> <% end %></span>
             </td>
             <td data-label="Status"><%= campaign_status_tag(campaign) %></td>
-            <td class="cx-muted" data-label="Para quem"><%= campaign.segments.map(&:name).join(', ').presence || '—' %></td>
+            <td class="cx-muted" data-label="Para quem">
+              <% if campaign.segments.any? %>
+                <%= safe_join(campaign.segments.map { |segment| link_to segment.name, customers_path(segment_id: segment.id), class: 'cx-link' }, ', ') %>
+              <% else %>
+                —
+              <% end %>
+            </td>
             <td class="cx-muted" data-label="Envio">
               <span class="ec-cell">
                 <%= campaign.timing_summary %>

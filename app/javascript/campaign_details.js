@@ -32,6 +32,25 @@
     }
   };
 
+  const close = () => {
+    if (!dialog.open || dialog.classList.contains("is-closing")) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return dialog.close();
+    dialog.classList.add("is-closing");
+    const done = (event) => {
+      if (event.target !== dialog) return;
+      dialog.removeEventListener("animationend", done);
+      dialog.classList.remove("is-closing");
+      dialog.close();
+    };
+    dialog.addEventListener("animationend", done);
+  };
+
+  dialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    close();
+  });
+
   document.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-campaign-details]");
     if (trigger) {
@@ -39,6 +58,6 @@
       open(trigger.dataset.campaignDetails);
       return;
     }
-    if (event.target.closest("[data-details-close]") || event.target === dialog) dialog.close();
+    if (event.target.closest("[data-details-close]") || event.target === dialog) close();
   });
 })();

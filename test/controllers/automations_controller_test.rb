@@ -140,6 +140,56 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 'VOLTA15', automation.resend_coupon_code
   end
 
+  def cloud_client
+    Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com",
+                   whatsapp_cloud_phone_number_id: '1', whatsapp_cloud_business_account_id: '2',
+                   whatsapp_cloud_access_token: 't')
+  end
+
+  test 'loja com API Oficial: mensagens mostram só modelos aprovados da Meta' do
+    client = cloud_client
+    client.whatsapp_templates.create!(label: 'Carrinho aprovado', body: 'Ei, {{1}}!', status: 'approved')
+    client.whatsapp_templates.create!(label: 'Carrinho em análise', body: 'Oi', status: 'pending')
+    sign_in build_user(client: client)
+
+    get edit_cart_recovery_automation_path
+
+    assert_response :success
+    assert_includes response.body, 'Carrinho aprovado'
+    assert_not_includes response.body, 'Carrinho em análise'
+    assert_not_includes response.body, 'automation[message]'
+    assert_not_includes response.body, 'Segunda mensagem'
+  end
+
+  test 'loja com API Oficial: salva desligada sem modelo, com início hoje e sem data final' do
+    client = cloud_client
+    sign_in build_user(client: client)
+
+    patch cart_recovery_automation_path, params: {
+      automation: { name: 'Recuperação', start_date: Date.current, no_end_date: '1', active: '0',
+                    send_delay_minutes: 60, include_coupon: '1', coupon_code: 'FARAH' }
+    }
+
+    automation = client.automations.find_by(kind: 'cart_recovery')
+    assert automation.present?
+    assert_not automation.active?
+    assert_nil automation.end_date
+    assert_equal Date.current, automation.start_date
+  end
+
+  test 'loja com API Oficial: não ativa sem modelo aprovado da Meta' do
+    client = cloud_client
+    sign_in build_user(client: client)
+
+    patch cart_recovery_automation_path, params: {
+      automation: { name: 'Recuperação', start_date: Date.current, no_end_date: '1', active: '1',
+                    send_delay_minutes: 60, message: 'texto livre' }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal 0, client.automations.count
+  end
+
   test 'cart_recovery_data lists only abandoned checkouts with a phone number' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
     user = build_user(client: client)

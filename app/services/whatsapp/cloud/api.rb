@@ -35,11 +35,18 @@ module Whatsapp
         phone_id.present? && waba_id.present? && token.present?
       end
 
-      def send_template(to:, name:, language:, body_params: [])
+      # url_button_param: final do link do botão de URL com variável (o botão na posição url_button_index).
+      def send_template(to:, name:, language:, body_params: [], url_button_param: nil, url_button_index: 0)
         template = { name:, language: { code: language } }
+        components = []
         if body_params.present?
-          template[:components] = [{ type: 'body', parameters: body_params.map { |text| { type: 'text', text: text.to_s } } }]
+          components << { type: 'body', parameters: body_params.map { |text| { type: 'text', text: text.to_s } } }
         end
+        if url_button_param.present?
+          components << { type: 'button', sub_type: 'url', index: url_button_index.to_s,
+                          parameters: [{ type: 'text', text: url_button_param.to_s }] }
+        end
+        template[:components] = components if components.any?
         number = Whatsapp::Phone.normalize(to)&.delete_prefix('+') || to.to_s.gsub(/\D/, '')
         data = request(:post, "#{BASE_URL}/#{phone_id}/messages",
                        body: { messaging_product: 'whatsapp', to: number, type: 'template', template: })

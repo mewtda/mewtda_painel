@@ -81,6 +81,27 @@ class ProcessCartRecoveryAutomationsJobTest < ActiveJob::TestCase
       ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
     end
   end
+
+  test 'com modelo da API Oficial envia pelo modelo mesmo sem número da Evolution' do
+    @number.update!(state: 'disconnected')
+    template = @client.whatsapp_templates.create!(label: 'Carrinho', body: 'Ei, {{1}}!', status: 'approved')
+    create_automation(whatsapp_template: template, message: nil)
+    checkout = create_checkout(checkout_created_at: 2.hours.ago)
+
+    assert_enqueued_with(job: SendCartRecoveryTemplateJob, args: [checkout.id]) do
+      ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
+    end
+    assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob)
+  end
+
+  test 'sem data final continua rodando' do
+    create_automation(end_date: nil)
+    checkout = create_checkout(checkout_created_at: 2.hours.ago)
+
+    assert_enqueued_with(job: SendCartRecoveryNotificationJob, args: [checkout.id, 'Oi {nome}', nil, 'first']) do
+      ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
+    end
+  end
 end
 
 class ProcessCartRecoveryEvolutionTest < ActiveJob::TestCase

@@ -21,6 +21,9 @@ Rails.application.routes.draw do
     match 'shopify/events', to: 'shopify_events#create', via: [:post, :options]
   end
 
+  # Botão da mensagem de recuperação de carrinho (API Oficial): leva ao checkout com o cupom aplicado.
+  get 'carrinho/:slug', to: 'cart_recovery_links#show', as: :cart_recovery_link, constraints: { slug: /[a-z0-9]+/ }
+
   # Webhook da Evolution API: autenticado pelo token do número, fora do CRM.
   post 'whatsapp/webhooks/:instance_key', to: 'whatsapp/webhooks#create'
 

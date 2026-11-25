@@ -36,6 +36,23 @@ class Whatsapp::Cloud::ApiTest < ActiveSupport::TestCase
                  body)
   end
 
+  test 'send_template fills the url button variable' do
+    seen = nil
+    post = lambda do |_url, opts|
+      seen = JSON.parse(opts[:body])
+      ok(messages: [{ id: 'wamid.X' }])
+    end
+    HTTParty.stub(:post, post) do
+      @api.send_template(to: '16992375432', name: 'carrinho', language: 'pt_BR', body_params: ['Ana'],
+                         url_button_param: 'abc123')
+    end
+
+    assert_equal [{ 'type' => 'body', 'parameters' => [{ 'type' => 'text', 'text' => 'Ana' }] },
+                  { 'type' => 'button', 'sub_type' => 'url', 'index' => '0',
+                    'parameters' => [{ 'type' => 'text', 'text' => 'abc123' }] }],
+                 seen.dig('template', 'components')
+  end
+
   test 'send_template without params sends no components' do
     seen = nil
     HTTParty.stub(:post, ->(_url, opts) { seen = JSON.parse(opts[:body]) and ok(messages: [{ id: 'w' }]) }) do

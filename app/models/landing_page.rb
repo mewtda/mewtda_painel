@@ -5,7 +5,7 @@ class LandingPage < ApplicationRecord
   # pode usar nenhum deles como prefixo, senão sombreia (ou é sombreada por) eles.
   RESERVED_PREFIXES = %w[
     crm widget integrations assets rails cable sidekiq up api admin
-    shopify google_ads widget-assets packs favicon robots
+    shopify google_ads widget-assets packs favicon robots carrinho
   ].freeze
 
   # Atributo de carrinho gravado pela página ao criar o checkout. O "_" na

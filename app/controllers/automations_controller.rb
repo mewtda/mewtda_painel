@@ -179,7 +179,8 @@ class AutomationsController < ApplicationController
           .permit(
             :name, :message, :start_date, :end_date, :active, :send_delay_minutes,
             :include_coupon, :coupon_code, :resend_enabled, :resend_delay_hours,
-            :resend_message, :resend_include_coupon, :resend_coupon_code, :test_phone
+            :resend_message, :resend_include_coupon, :resend_coupon_code, :test_phone,
+            :no_end_date, :whatsapp_template_id
           )
           .merge(kind: :cart_recovery)
   end

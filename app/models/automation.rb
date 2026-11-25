@@ -3,6 +3,8 @@ class Automation < ApplicationRecord
   friendly_id :name, use: :slugged
 
   belongs_to :client
+  # Recuperação de carrinho pela API Oficial: com modelo escolhido, a 1ª mensagem sai como esse modelo.
+  belongs_to :whatsapp_template, optional: true
   has_many :automation_actions, dependent: :destroy
   has_many :whatsapp_automation_connections, class_name: 'Whatsapp::AutomationConnection', dependent: :destroy
   has_many :whatsapp_connections, through: :whatsapp_automation_connections, source: :connection
@@ -17,7 +19,7 @@ class Automation < ApplicationRecord
 
   validates :name, presence: true
   validates :kind, presence: true
-  validates :message, presence: true
+  validates :message, presence: true, unless: :meta_template_only?
   validates :days_after_purchase, presence: true, numericality: { greater_than: 0 }, unless: -> {
     marketing_notification? || shipping_tracking? || cart_recovery?
   }
@@ -33,8 +35,15 @@ class Automation < ApplicationRecord
   validates :resend_coupon_code, presence: true,
                                  if: -> { cart_recovery? && resend_enabled? && resend_include_coupon? }
   validates :start_date, presence: true
-  validates :end_date, presence: true
+  # A recuperação de carrinho pode ficar sem data final (roda até ser desligada).
+  validates :end_date, presence: true, unless: :cart_recovery?
   validate :end_date_after_start_date
+  validate :whatsapp_template_from_same_client
+  validate :meta_template_when_cloud, if: -> { cart_recovery? && active? && client&.whatsapp_cloud_configured? }
+
+  # Caixa "Sem data final" do formulário: marcada, apaga a data final.
+  attribute :no_end_date, :boolean, default: false
+  before_validation { self.end_date = nil if no_end_date && cart_recovery? }
 
   # Accessors para os filtros armazenados no campo jsonb :filters
   # Exemplo de estrutura:
@@ -49,10 +58,21 @@ class Automation < ApplicationRecord
   end
 
   scope :active,   -> { where(active: true) }
-  scope :running,  -> { active.where('start_date <= ? AND end_date >= ?', Date.current, Date.current) }
+  scope :running,  -> {
+    active.where('start_date <= ?', Date.current).where('end_date IS NULL OR end_date >= ?', Date.current)
+  }
 
   def running?
-    active? && start_date <= Date.current && end_date >= Date.current
+    active? && start_date <= Date.current && (end_date.nil? || end_date >= Date.current)
+  end
+
+  def cloud_template?
+    cart_recovery? && whatsapp_template_id.present?
+  end
+
+  # Recuperação de carrinho de loja com API Oficial: a mensagem é o modelo da Meta, não texto livre.
+  def meta_template_only?
+    cloud_template? || (cart_recovery? && client&.whatsapp_cloud_configured?)
   end
 
   def whatsapp_ready?
@@ -62,7 +82,7 @@ class Automation < ApplicationRecord
   def status
     return :inactive unless active?
     return :pending  if start_date > Date.current
-    return :finished if end_date < Date.current
+    return :finished if end_date && end_date < Date.current
 
     :running
   end
@@ -108,5 +128,21 @@ class Automation < ApplicationRecord
     return if start_date.blank? || end_date.blank?
 
     errors.add(:end_date, 'deve ser posterior à data de início') if end_date < start_date
+  end
+
+  # Loja com API Oficial: a recuperação de carrinho só envia modelo cadastrado e aprovado na Meta.
+  # Desligada, salva sem modelo (para deixar datas e cupom prontos antes da aprovação).
+  def meta_template_when_cloud
+    if whatsapp_template.nil?
+      errors.add(:whatsapp_template, 'precisa ser um modelo cadastrado na Meta para ativar a automação')
+    elsif !whatsapp_template.approved?
+      errors.add(:whatsapp_template, "\"#{whatsapp_template.label}\" ainda não foi aprovado pela Meta")
+    end
+  end
+
+  def whatsapp_template_from_same_client
+    return if whatsapp_template.nil? || whatsapp_template.client_id == client_id
+
+    errors.add(:whatsapp_template, 'não pertence a esta loja')
   end
 end

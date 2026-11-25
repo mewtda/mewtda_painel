@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_21_150000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_24_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -169,11 +169,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_150000) do
     t.string "slug"
     t.datetime "evolution_started_at"
     t.string "test_phone"
+    t.bigint "whatsapp_template_id"
     t.index ["client_id", "kind"], name: "index_automations_on_client_id_and_kind"
     t.index ["client_id"], name: "index_automations_on_client_id"
     t.index ["filters"], name: "index_automations_on_filters", using: :gin
     t.index ["slug"], name: "index_automations_on_slug", unique: true
     t.index ["start_date", "end_date"], name: "index_automations_on_start_date_and_end_date"
+    t.index ["whatsapp_template_id"], name: "index_automations_on_whatsapp_template_id"
   end
 
   create_table "back_in_stock_alerts", force: :cascade do |t|
@@ -195,6 +197,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_150000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "cancelled_at"
+    t.datetime "checked_at"
     t.index "client_id, shopify_variant_id, lower((email)::text)", name: "idx_bis_alerts_pending_unique", unique: true, where: "((status)::text = 'pending'::text)"
     t.index ["client_id", "status"], name: "index_back_in_stock_alerts_on_client_id_and_status"
     t.index ["status", "client_id", "product_handle"], name: "idx_bis_alerts_restock"
@@ -371,6 +374,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_150000) do
     t.string "sales_channels", default: [], null: false, array: true
     t.string "sales_locations", default: [], null: false, array: true
     t.datetime "customers_synced_at"
+    t.string "billing_email"
+    t.string "billing_phone"
     t.index ["shopify_shop_url"], name: "index_clients_on_shopify_shop_url", unique: true
     t.index ["slug"], name: "index_clients_on_slug", unique: true
   end
@@ -1049,6 +1054,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_21_150000) do
   add_foreign_key "automation_actions", "customers"
   add_foreign_key "automation_actions", "orders"
   add_foreign_key "automations", "clients"
+  add_foreign_key "automations", "whatsapp_templates", on_delete: :nullify
   add_foreign_key "back_in_stock_alerts", "clients"
   add_foreign_key "back_in_stock_settings", "clients"
   add_foreign_key "back_in_stock_settings", "email_templates", on_delete: :nullify

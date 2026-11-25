@@ -4,6 +4,10 @@
   brl = ->(value) { number_to_currency(value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') }
   status_label = { running: 'Em execução', pending: 'Aguardando início', finished: 'Finalizada', inactive: 'Inativa' }
   numbers_count = @automation.persisted? ? @automation.whatsapp_connections.count : 0
+  @automation.no_end_date = true if @automation.persisted? && @automation.end_date.nil?
+  no_end_date = @automation.no_end_date
+  cloud = @client.whatsapp_cloud_configured?
+  meta_templates = cloud ? @client.whatsapp_templates.approved.order(:label).to_a : []
   tabs = [
     ['geral', 'Geral', 'fa-sliders'],
     ['mensagens', 'Mensagens', 'fa-comment-dots'],
@@ -46,7 +50,7 @@
     </div>
   </div>
 
-  <% unless @client.whatsapp_ready? %>
+  <% unless @client.whatsapp_ready? || cloud %>
     <div class="scr-banner scr-banner--danger">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><strong>Nenhum número de WhatsApp conectado.</strong>
@@ -91,9 +95,10 @@
               </div>
               <div class="scr-field">
                 <%= form.label :end_date, 'Fim' %>
-                <%= form.date_field :end_date, class: 'crm-input', required: true %>
+                <%= form.date_field :end_date, class: 'crm-input', disabled: no_end_date, data: { end_date_input: true } %>
               </div>
             </div>
+            <%= switch.call(form, :no_end_date, 'Sem data final', 'Roda até ser desligada.') %>
           </div>
 
           <div class="scr-card <%= 'scr-card--primary' if @automation.test_phone.present? %>">
@@ -142,11 +147,33 @@
               <%= form.number_field :send_delay_minutes, class: 'crm-input', min: 1, max: 1440, placeholder: 'Ex: 60' %>
               <small>Tempo desde o checkout até a mensagem.</small>
             </div>
-            <div class="scr-field">
-              <%= form.label :message, 'Texto' %>
-              <%= form.text_area :message, class: 'crm-input', rows: 6, required: true %>
-              <div class="scr-vars">Variáveis: <code>{nome}</code> <code>{cupom}</code> <code>{link}</code></div>
-            </div>
+            <% if cloud %>
+              <div class="scr-field">
+                <%= form.label :whatsapp_template_id, 'Modelo aprovado na Meta' %>
+                <%= form.select :whatsapp_template_id, meta_templates.map { |t| [t.label, t.id] },
+                                { include_blank: 'Escolha um modelo' }, class: 'crm-input', data: { cart_template: true } %>
+                <small>
+                  Esta loja envia pela API Oficial: só modelos cadastrados e aprovados na Meta. Crie no Gerenciador
+                  do WhatsApp e importe em <%= link_to 'Modelos de WhatsApp', whatsapp_templates_path %>.
+                  <code>{{1}}</code> do texto vira o primeiro nome; o botão de link com <code>{{1}}</code> deve apontar
+                  para <code><%= cart_recovery_link_url(slug: 'x').delete_suffix('x') %>{{1}}</code>, que abre o
+                  checkout com o cupom abaixo já aplicado.
+                </small>
+              </div>
+              <% meta_templates.each do |t| %>
+                <div class="scr-field" data-cart-template-preview="<%= t.id %>" <%= 'hidden' unless t.id == @automation.whatsapp_template_id %>>
+                  <label>Texto do modelo</label>
+                  <div class="crm-input" style="white-space: pre-wrap; height: auto"><%= t.preview_body('Maria') %></div>
+                  <% if t.button_text.present? %><small>Botão: <strong><%= t.button_text %></strong></small><% end %>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="scr-field">
+                <%= form.label :message, 'Texto' %>
+                <%= form.text_area :message, class: 'crm-input', rows: 6, required: true %>
+                <div class="scr-vars">Variáveis: <code>{nome}</code> <code>{cupom}</code> <code>{link}</code></div>
+              </div>
+            <% end %>
             <%= switch.call(form, :include_coupon, 'Incluir cupom', 'O cupom precisa já existir na Shopify.') %>
             <div class="scr-field">
               <%= form.label :coupon_code, 'Código do cupom' %>
@@ -154,6 +181,7 @@
             </div>
           </div>
 
+          <% unless cloud %>
           <div class="scr-card">
             <h2 class="scr-card__title"><i class="fa-solid fa-2"></i> Segunda mensagem</h2>
             <p class="scr-card__hint">Se o cliente ainda não comprou, uma segunda mensagem pelo mesmo número da primeira.</p>
@@ -172,11 +200,14 @@
               <%= form.text_field :resend_coupon_code, class: 'crm-input', placeholder: 'Ex: VOLTA15' %>
             </div>
           </div>
+          <% end %>
         </div>
 
-        <div class="scr-stack" style="position: sticky; top: 16px;">
-          <%= render 'automations/whatsapp_preview' %>
-        </div>
+        <% unless cloud %>
+          <div class="scr-stack" style="position: sticky; top: 16px;">
+            <%= render 'automations/whatsapp_preview' %>
+          </div>
+        <% end %>
       </div>
     </section>
 
@@ -248,8 +279,23 @@
     });
     show((location.hash || '').slice(1) || <%= raw params[:tab].to_s.to_json %>);
 
+    var noEnd = document.getElementById('automation_no_end_date');
+    var endInput = root.querySelector('[data-end-date-input]');
+    if (noEnd && endInput) {
+      noEnd.addEventListener('change', function () { endInput.disabled = noEnd.checked; });
+    }
+
+    var templateSelect = root.querySelector('[data-cart-template]');
+    if (templateSelect) {
+      templateSelect.addEventListener('change', function () {
+        root.querySelectorAll('[data-cart-template-preview]').forEach(function (el) {
+          el.hidden = el.dataset.cartTemplatePreview !== templateSelect.value;
+        });
+      });
+    }
+
     var samples = { '{nome}': 'Maria Silva', '{cupom}': 'VOLTA10', '{link}': 'https://loja.exemplo.com/checkouts/abc123' };
-    initWhatsappPreviewMulti([
+    if (typeof initWhatsappPreviewMulti === 'function') initWhatsappPreviewMulti([
       { id: 'automation_message', samples: samples },
       { id: 'automation_resend_message', samples: samples }
     ]);

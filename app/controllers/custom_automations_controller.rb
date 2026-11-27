@@ -7,9 +7,12 @@ class CustomAutomationsController < ApplicationController
   before_action :set_run, only: [:show, :spreadsheet, :emit, :discard]
   before_action :set_routine, only: [:edit_routine, :update_routine, :preview_routine]
 
+  # Uma aba por automação/rotina do cliente; ?tab=<kind> escolhe qual mostrar.
   def index
-    @routines = CustomAutomations::Registry.routines_for(@client)
-    @runs = CustomAutomationRun.where(client: @client).recent.limit(50)
+    @current_tab = @tabs.key?(params[:tab].to_s) ? params[:tab].to_s : @tabs.keys.first
+    return unless @automations.key?(@current_tab)
+
+    @runs = CustomAutomationRun.where(client: @client, kind: @current_tab).recent.limit(50)
   end
 
   # Rotinas automáticas já rodam pelo Scheduler; aqui só adianta a próxima.
@@ -25,7 +28,7 @@ class CustomAutomationsController < ApplicationController
       redirect_to edit_routine_custom_automations_path(kind:), notice: 'Enviando agora para a lista de destinatários.'
     else
       CustomAutomations::RoutineJob.perform_later(kind, @client.id)
-      redirect_to custom_automations_path, notice: 'Rotina enfileirada — roda em instantes.'
+      redirect_to custom_automations_path(tab: kind), notice: 'Rotina enfileirada — roda em instantes.'
     end
   end
 
@@ -103,7 +106,7 @@ class CustomAutomationsController < ApplicationController
       @run.update!(status: 'discarded')
       notice = 'Execução descartada.'
       notice += ' Exclua também a nota pendente no Tiny da matriz.' if @run.tiny_note_id.present?
-      redirect_to custom_automations_path, notice: notice
+      redirect_to custom_automations_path(tab: @run.kind), notice: notice
     else
       redirect_to custom_automation_path(@run), alert: 'Esta execução não pode ser descartada.'
     end
@@ -117,6 +120,8 @@ class CustomAutomationsController < ApplicationController
 
   def set_automations
     @automations = CustomAutomations::Registry.for_client(@client)
+    @routines = CustomAutomations::Registry.routines_for(@client)
+    @tabs = @automations.merge(@routines)
   end
 
   def set_routine

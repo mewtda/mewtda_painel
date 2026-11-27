@@ -10,55 +10,52 @@
     </p>
   </div>
 
-  <% if @routines.any? %>
-    <div class="automations-grid">
-      <% @routines.each do |kind, routine| %>
-        <div class="automations-card">
-          <div class="automations-card__icon">
-            <i class="<%= routine[:icon] %>"></i>
-          </div>
-          <div class="automations-card__body">
-            <div class="automations-card__title"><%= routine[:title] %></div>
-            <p class="automations-card__description"><%= routine[:description] %></p>
-            <span class="crm-tag crm-tag--success">Ativa · <%= routine[:frequency] %></span>
-          </div>
-          <div class="automations-card__cta-row">
-            <% if routine[:configurable] %>
-              <%= link_to 'Configurar', edit_routine_custom_automations_path(kind: kind),
-                          class: 'crm-btn crm-btn--primary automations-card__cta' %>
-            <% else %>
-              <%= button_to 'Rodar agora', run_routine_custom_automations_path(kind: kind),
-                            class: 'crm-btn crm-btn--secondary automations-card__cta' %>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-    </div>
-  <% end %>
+  <%= render 'tabs', active: @current_tab %>
 
-  <% if @automations.empty? && @routines.empty? %>
+  <% if @tabs.empty? %>
     <div class="crm-card custom-automations-empty">
       <i class="fa-solid fa-wand-magic-sparkles"></i>
       <p>Nenhuma automação personalizada disponível para <strong><%= @client.name %></strong> ainda.</p>
     </div>
-  <% elsif @automations.any? %>
+  <% elsif (routine = @routines[@current_tab]) %>
     <div class="automations-grid">
-      <% @automations.each do |kind, automation| %>
-        <div class="automations-card">
-          <div class="automations-card__icon">
-            <i class="<%= automation[:icon] %>"></i>
-          </div>
-          <div class="automations-card__body">
-            <div class="automations-card__title"><%= automation[:title] %></div>
-            <p class="automations-card__description"><%= automation[:description] %></p>
-          </div>
-          <div class="automations-card__cta-row">
-            <%= link_to new_custom_automation_path(kind: kind), class: 'crm-btn crm-btn--primary automations-card__cta' do %>
-              Gerar nova nota
-            <% end %>
-          </div>
+      <div class="automations-card">
+        <div class="automations-card__icon">
+          <i class="<%= routine[:icon] %>"></i>
         </div>
-      <% end %>
+        <div class="automations-card__body">
+          <div class="automations-card__title"><%= routine[:title] %></div>
+          <p class="automations-card__description"><%= routine[:description] %></p>
+          <span class="crm-tag crm-tag--success">Ativa · <%= routine[:frequency] %></span>
+        </div>
+        <div class="automations-card__cta-row">
+          <% if routine[:configurable] %>
+            <%= link_to 'Configurar', edit_routine_custom_automations_path(kind: @current_tab),
+                        class: 'crm-btn crm-btn--primary automations-card__cta' %>
+          <% else %>
+            <%= button_to 'Rodar agora', run_routine_custom_automations_path(kind: @current_tab),
+                          class: 'crm-btn crm-btn--secondary automations-card__cta' %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <% automation = @automations[@current_tab] %>
+    <div class="automations-grid">
+      <div class="automations-card">
+        <div class="automations-card__icon">
+          <i class="<%= automation[:icon] %>"></i>
+        </div>
+        <div class="automations-card__body">
+          <div class="automations-card__title"><%= automation[:title] %></div>
+          <p class="automations-card__description"><%= automation[:description] %></p>
+        </div>
+        <div class="automations-card__cta-row">
+          <%= link_to new_custom_automation_path(kind: @current_tab), class: 'crm-btn crm-btn--primary automations-card__cta' do %>
+            Gerar nova nota
+          <% end %>
+        </div>
+      </div>
     </div>
 
     <div class="crm-card custom-automations-history">

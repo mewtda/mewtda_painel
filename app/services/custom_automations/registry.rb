@@ -6,6 +6,7 @@ module CustomAutomations
     AUTOMATIONS = {
       'fernanda_farah_transfer_note' => {
         title: 'Nota de transferência mensal (matriz → e-commerce)',
+        tab_label: 'Nota de transferência',
         description: 'Lê os pedidos do período na Shopify, monta uma NF de transferência (CFOP 5152) no Tiny da ' \
                      'matriz em nome da filial do e-commerce, gera a planilha de conferência e só emite depois ' \
                      'da aprovação.',
@@ -22,6 +23,7 @@ module CustomAutomations
     ROUTINES = {
       'oneway_address_number_fix' => {
         title: 'Correção de endereço de entrega',
+        tab_label: 'Correção de endereço',
         description: 'Nos pedidos ainda não enviados: leva o número da casa do complemento para a rua, ' \
                      'remove número e complemento repetidos e corrige acento maiúsculo ("SÃo Paulo").',
         icon: 'fa-solid fa-location-dot',
@@ -32,6 +34,7 @@ module CustomAutomations
       },
       'weekly_sales_report' => {
         title: 'Resumo semanal por e-mail',
+        tab_label: 'Resumo semanal',
         description: 'Toda segunda às 8h manda por e-mail o que a loja vendeu na semana anterior (faturamento, ' \
                      'pedidos, produtos mais vendidos) e as variantes com estoque baixo no site.',
         icon: 'fa-solid fa-envelope-open-text',

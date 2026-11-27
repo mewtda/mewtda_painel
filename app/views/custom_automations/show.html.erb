@@ -5,7 +5,7 @@
 
   <div class="custom-automations-header">
     <div>
-      <%= link_to custom_automations_path, class: 'custom-automations-header__back' do %>
+      <%= link_to custom_automations_path(tab: @run.kind), class: 'custom-automations-header__back' do %>
         <i class="fa-solid fa-arrow-left"></i> Automações personalizadas
       <% end %>
       <h1 class="automations-intro__title">

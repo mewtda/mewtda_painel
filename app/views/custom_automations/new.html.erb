@@ -70,7 +70,7 @@
       </div>
 
       <div class="cpform-card__footer">
-        <%= link_to 'Voltar', custom_automations_path, class: 'crm-btn crm-btn--secondary' %>
+        <%= link_to 'Voltar', custom_automations_path(tab: @run.kind), class: 'crm-btn crm-btn--secondary' %>
         <%= form.submit 'Gerar nota para conferência', class: 'crm-btn crm-btn--primary',
                         data: { disable_with: 'Enviando...' } %>
       </div>

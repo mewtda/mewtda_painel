@@ -1,0 +1,10 @@
+<%# Uma aba por automação/rotina do cliente (só aparece quando há mais de uma). %>
+<% if @tabs.size > 1 %>
+  <div class="popups-tabs automations-tabs">
+    <% @tabs.each do |kind, config| %>
+      <%= link_to custom_automations_path(tab: kind), class: "popups-tabs__link #{'active' if kind == active}" do %>
+        <i class="<%= config[:icon] %>"></i> <%= config[:tab_label] || config[:title] %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

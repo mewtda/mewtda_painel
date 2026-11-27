@@ -52,7 +52,23 @@ class CustomAutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: CustomAutomations::RoutineJob, args: ['oneway_address_number_fix', client.id]) do
       post run_routine_custom_automations_path(kind: 'oneway_address_number_fix')
     end
-    assert_redirected_to custom_automations_path
+    assert_redirected_to custom_automations_path(tab: 'oneway_address_number_fix')
+  end
+
+  test 'shows one tab per automation and only the selected one' do
+    client = sign_in_client_user('Fernanda Farah')
+    create_run(client)
+
+    get custom_automations_path
+    assert_includes response.body, 'popups-tabs'
+    assert_includes response.body, 'Nota de transferência mensal'
+    assert_includes response.body, 'Histórico'
+    assert_not_includes response.body, 'Resumo semanal por e-mail'
+
+    get custom_automations_path(tab: 'weekly_sales_report')
+    assert_includes response.body, 'Resumo semanal por e-mail'
+    assert_not_includes response.body, 'Nota de transferência mensal'
+    assert_not_includes response.body, 'Histórico'
   end
 
   test 'does not run a routine for a client it is not registered for' do
@@ -116,7 +132,7 @@ class CustomAutomationsControllerTest < ActionDispatch::IntegrationTest
 
   test 'configures the weekly report recipients and previews the email' do
     client = sign_in_client_user('Fernanda Farah')
-    get custom_automations_path
+    get custom_automations_path(tab: 'weekly_sales_report')
     assert_includes response.body, 'Resumo semanal por e-mail'
 
     get edit_routine_custom_automations_path(kind: 'weekly_sales_report')

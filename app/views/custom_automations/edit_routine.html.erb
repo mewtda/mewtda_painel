@@ -71,7 +71,7 @@
       </div>
 
       <div class="cpform-card__footer">
-        <%= link_to 'Voltar', custom_automations_path, class: 'crm-btn crm-btn--secondary' %>
+        <%= link_to 'Voltar', custom_automations_path(tab: @kind), class: 'crm-btn crm-btn--secondary' %>
         <%= link_to 'Ver prévia do e-mail', preview_routine_custom_automations_path(kind: @kind),
                     class: 'crm-btn crm-btn--secondary', target: '_blank', rel: 'noopener' %>
         <%= form.submit 'Salvar', class: 'crm-btn crm-btn--primary', data: { disable_with: 'Salvando...' } %>

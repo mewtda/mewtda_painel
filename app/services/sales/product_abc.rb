@@ -99,8 +99,20 @@ module Sales
       'C'
     end
 
+    # Item sem product_id (comum em pedidos importados antes do produto existir) acha o produto da loja pelo SKU;
+    # LIMIT 1 evita contar duas vezes quando o SKU se repete no catálogo.
+    PRODUCT_JOIN = <<~SQL.squish.freeze
+      LEFT JOIN LATERAL (
+        SELECT p.shopify_product_id, p.shopify_product_name, p.image_url FROM products p
+        WHERE p.client_id = orders.client_id
+          AND (p.id = order_items.product_id OR (order_items.product_id IS NULL AND p.sku = order_items.sku))
+        ORDER BY (p.id = order_items.product_id) DESC, p.id
+        LIMIT 1
+      ) products ON TRUE
+    SQL
+
     def sales_rows
-      item_scope.left_joins(:product)
+      item_scope.joins(PRODUCT_JOIN)
                 .group(Arel.sql(KEY_SQL))
                 .order(Arel.sql('SUM(order_items.price * order_items.quantity) DESC'))
                 .pluck(Arel.sql(KEY_SQL),

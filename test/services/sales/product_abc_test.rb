@@ -46,6 +46,21 @@ class Sales::ProductAbcTest < ActiveSupport::TestCase
     assert_equal 5, abc.orders_count
   end
 
+  test 'order items without product_id find the product by SKU' do
+    vestido = product('Vestido', '100', 'VES-P')
+    product('Vestido', '100', 'VES-M')
+    sale(vestido, 100)
+    order = Order.create!(client: @client, shopify_order_id: 'x', shopify_creation_date: 1.day.ago)
+    OrderItem.create!(order:, product: nil, sku: 'VES-M', price: 50, quantity: 1)
+    OrderItem.create!(order:, product: nil, sku: 'SEM-CADASTRO', price: 10, quantity: 1)
+
+    abc = Sales::ProductAbc.new(client: @client)
+
+    assert_equal(%w[Vestido SEM-CADASTRO], abc.items.map(&:name))
+    assert_in_delta 150.0, abc.items.first.revenue
+    assert_equal 2, abc.items.first.units
+  end
+
   test 'the top product is always A, even when it alone passes 80%' do
     sale(product('Único', '1', 'U'), 100)
 

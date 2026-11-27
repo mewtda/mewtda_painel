@@ -1,0 +1,18 @@
+<%# locals: presets (hash chave => rótulo), period (objeto com from, to, preset, days), path (lambda: params => URL), base_params (hash) %>
+<div class="ss-filters">
+  <div class="ss-presets">
+    <% presets.each do |key, label| %>
+      <%= link_to label, path.call(base_params.merge(p: key)), class: "ss-preset #{'ss-preset--active' if period.preset == key}" %>
+    <% end %>
+  </div>
+  <%= form_with url: path.call({}), method: :get, class: 'ss-range' do %>
+    <% base_params.each do |name, value| %><%= hidden_field_tag name, value %><% end %>
+    <%= date_field_tag :de, period.from, class: 'crm-input' %>
+    <span>até</span>
+    <%= date_field_tag :ate, period.to, class: 'crm-input' %>
+    <button type="submit" class="crm-btn crm-btn--secondary">Aplicar</button>
+  <% end %>
+  <span class="ss-range__label">
+    <%= l(period.from, format: '%d/%m/%Y') %> a <%= l(period.to, format: '%d/%m/%Y') %> · <%= pluralize(period.days, 'dia', plural: 'dias') %>
+  </span>
+</div>

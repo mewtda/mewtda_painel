@@ -1,0 +1,8 @@
+<%# locals: tabs (array de [chave, rótulo, ícone]), current (chave ativa), path (lambda que recebe a chave e devolve a URL) %>
+<nav class="pa-tabs" aria-label="Seções da página">
+  <% tabs.each do |key, label, icon| %>
+    <%= link_to path.call(key), class: "pa-tab #{'is-active' if key == current}", 'aria-current': (key == current ? 'page' : nil) do %>
+      <i class="fa-solid <%= icon %>"></i> <%= label %>
+    <% end %>
+  <% end %>
+</nav>

@@ -1,0 +1,39 @@
+// Dashboards de Produtos (curva ABC) e Pedidos: abas no topo e peças próprias. O resto vem do Resumo do site (.ss-*).
+.pa-page { display: flex; flex-direction: column; gap: 20px; padding: 24px 28px; }
+@media (max-width: 768px) { .pa-page { padding: 16px 12px; } }
+.pa-page .products-wrapper, .pa-page .orders-wrapper { padding: 0; }
+
+.pa-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--outline); }
+.pa-tab {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; margin-bottom: -1px;
+  border-bottom: 2px solid transparent; color: var(--fg-alt); font-weight: 600; font-size: 14px; text-decoration: none;
+}
+.pa-tab:hover { color: var(--fg); }
+.pa-tab.is-active { color: var(--primary); border-bottom-color: var(--primary); }
+
+.pa-curve {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: 6px; font-size: 12px; font-weight: 700; color: #fff; vertical-align: middle;
+}
+.pa-curve--a { background: #16a34a; }
+.pa-curve--b { background: #f59e0b; }
+.pa-curve--c { background: #dc2626; }
+.ss-kpi__label .pa-curve { min-width: 18px; height: 18px; font-size: 11px; margin-right: 4px; }
+.pa-kpi-unit { font-size: 12px; font-weight: 500; color: var(--fg-alt); }
+
+.pa-curve-list dt { display: flex; align-items: center; gap: 8px; }
+.pa-tips { margin: 14px 0 0; padding-left: 18px; font-size: 12px; color: var(--fg-alt); line-height: 1.6; }
+
+.pa-table-card { overflow: hidden; }
+.pa-table td, .pa-table th { white-space: nowrap; }
+.pa-table__name { display: flex; align-items: center; gap: 10px; white-space: normal !important; min-width: 220px; }
+.pa-table .text-right { text-align: right; font-variant-numeric: tabular-nums; }
+
+.po-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 1100px) { .po-grid-3 { grid-template-columns: minmax(0, 1fr); } }
+.po-bar { height: 6px; border-radius: 999px; background: var(--hover); overflow: hidden; margin-top: 4px; }
+.po-bar > span { display: block; height: 100%; background: var(--primary); }
+.pa-subtitle { margin-top: 18px; }
+.ss-grid--even { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1000px) { .ss-grid--even { grid-template-columns: minmax(0, 1fr); } }
+.po-state dt { flex: 1; min-width: 0; }

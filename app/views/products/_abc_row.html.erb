@@ -1,0 +1,16 @@
+<% brl = ->(v) { number_to_currency(v || 0, unit: 'R$', separator: ',', delimiter: '.', precision: 2) } %>
+<% pct = ->(v) { "#{number_with_precision(v || 0, precision: 1, separator: ',')}%" } %>
+<tr>
+  <td class="text-center cx-muted"><%= item.rank %></td>
+  <td class="pa-table__name">
+    <% if item.image_url.present? %><%= image_tag item.image_url, class: 'products-table__thumb', alt: '' %><% end %>
+    <%= item.name %>
+  </td>
+  <td class="text-center"><span class="pa-curve pa-curve--<%= item.curve.downcase %>"><%= item.curve %></span></td>
+  <td class="text-right"><%= brl.call(item.revenue) %></td>
+  <td class="text-right"><%= pct.call(item.share) %></td>
+  <td class="text-right cx-muted"><%= pct.call(item.cumulative) %></td>
+  <td class="text-right"><%= number_with_delimiter(item.units, delimiter: '.') %></td>
+  <td class="text-right"><%= number_with_delimiter(item.orders, delimiter: '.') %></td>
+  <td class="text-right"><%= brl.call(item.average_price) %></td>
+</tr>

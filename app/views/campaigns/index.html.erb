@@ -24,6 +24,28 @@
     </div>
 
     <div id="ec-table" data-live-spinner>
+    <% spent = @investment.spent_total %>
+    <% forecast = @investment.forecast_total %>
+    <% count = ->(value) { number_with_delimiter(value, delimiter: '.') } %>
+    <section class="ec-investment" aria-label="Investimento nas campanhas">
+      <div class="cp-grid cp-grid--4">
+        <%= render 'campaign_performance/card', icon: 'fa-sack-dollar', tone: 'primary', label: 'Total investido',
+                   value: campaign_cost_label(spent.total),
+                   detail: "#{count.call(spent.emails)} e-mails · #{count.call(spent.whatsapps)} WhatsApps enviados",
+                   hint: 'Tarifa estimada da Meta mais o custo de envio no painel, somando as mensagens já enviadas das campanhas listadas.' %>
+        <%= render 'campaign_performance/card', icon: 'fa-comment-dollar', tone: 'primary', label: 'Tarifa da Meta (estimada)',
+                   value: campaign_cost_label(spent.meta), detail: 'Cobrada no cartão da conta do WhatsApp',
+                   hint: "Cerca de #{campaign_cost_label(Campaigns::Performance::META_MARKETING_PRICE)} por WhatsApp de marketing enviado. A Meta cobra só as entregues, direto no cartão da conta do WhatsApp da loja; o valor exato está no Gerenciador do WhatsApp." %>
+        <%= render 'campaign_performance/card', icon: 'fa-coins', tone: 'primary', label: 'Envio pelo painel',
+                   value: campaign_cost_label(spent.panel), detail: 'Entra na fatura do painel',
+                   hint: 'R$ 4,00 por mil e-mails e R$ 0,10 por WhatsApp enviados.' %>
+        <%= render 'campaign_performance/card', icon: 'fa-calendar-check', tone: 'success', label: 'Previsão das agendadas',
+                   value: campaign_cost_label(forecast.total),
+                   detail: "Meta #{campaign_cost_label(forecast.meta)} · painel #{campaign_cost_label(forecast.panel)}",
+                   hint: 'O que ainda vai sair das campanhas agendadas, enviando ou pausadas, com o público de agora. Pode mudar até o envio.' %>
+      </div>
+    </section>
+
     <table class="crm-table">
       <thead>
         <tr>
@@ -32,6 +54,7 @@
           <th>Status</th>
           <th>Para quem</th>
           <th>Envio</th>
+          <th>Investimento</th>
           <th>Criada por</th>
           <th class="text-center">Ações</th>
         </tr>
@@ -64,6 +87,22 @@
                 <%= campaign.timing_summary %>
                 <% if campaign.progress_label %><small class="ec-sub"><%= campaign.progress_label %></small><% end %>
                 <% if campaign.status_note %><small class="ec-sub"><%= campaign.status_note %></small><% end %>
+              </span>
+            </td>
+            <td class="cx-nowrap" data-label="Investimento">
+              <% row = @investment.for(campaign) %>
+              <span class="ec-cell">
+                <% if row.spent.zero? && row.forecast.zero? %>
+                  <span class="cx-muted">—</span>
+                <% end %>
+                <% unless row.spent.zero? %>
+                  <strong><%= campaign_cost_label(row.spent.total) %></strong>
+                  <small class="cx-muted ec-sub">Meta <%= campaign_cost_label(row.spent.meta) %> · painel <%= campaign_cost_label(row.spent.panel) %></small>
+                <% end %>
+                <% unless row.forecast.zero? %>
+                  <span>Previsão <%= campaign_cost_label(row.forecast.total) %></span>
+                  <small class="cx-muted ec-sub">Meta <%= campaign_cost_label(row.forecast.meta) %> · painel <%= campaign_cost_label(row.forecast.panel) %></small>
+                <% end %>
               </span>
             </td>
             <td class="cx-nowrap" data-label="Criada por">
@@ -112,7 +151,7 @@
         <% end %>
         <% if @campaigns.empty? %>
           <tr>
-            <td colspan="7" class="clients-table__empty">
+            <td colspan="8" class="clients-table__empty">
               Você ainda não criou nenhuma campanha. Clique em <strong>Criar campanha</strong> para começar.
             </td>
           </tr>

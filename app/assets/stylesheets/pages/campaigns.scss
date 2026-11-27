@@ -261,3 +261,7 @@
 .cpform-card__footer { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; padding: 1.25rem 1.75rem; border-top: 1px solid var(--outline); background: var(--primary-tint); }
 
 .cpform-btn--outline { background: var(--bg); color: var(--primary); border: 1px solid var(--primary); }
+
+// Cards de investimento no topo da lista de campanhas.
+.ec-investment { padding: 1rem 1.25rem 1.1rem; border-bottom: 1px solid var(--outline); }
+@media (max-width: 768px) { .ec-investment { padding: 0.75rem; } }

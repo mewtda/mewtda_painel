@@ -31,6 +31,18 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match 'De outra loja', response.body
   end
 
+  test 'index shows the investment dashboard and what each sent campaign cost' do
+    campaign = @client.campaigns.create!(name: 'Black Friday', status: 'sent')
+    campaign.messages.create!(channel: 'whatsapp', status: 'sent', sent_count: 10)
+
+    get campaigns_path
+
+    assert_response :success
+    assert_match 'Total investido', response.body
+    assert_match 'Previsão das agendadas', response.body
+    assert_match 'R$ 4,20', response.body # 10 WhatsApps x (R$ 0,10 do painel + R$ 0,32 da Meta)
+  end
+
   test 'details shows the campaign summary with download links only when there is something to download' do
     campaign = @client.campaigns.create!(name: 'Black Friday', status: 'sent', recipients_count: 3, sent_count: 2, failed_count: 1)
 

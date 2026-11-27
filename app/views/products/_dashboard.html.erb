@@ -7,6 +7,8 @@
     pct = ->(v) { "#{number_with_precision(v || 0, precision: 1, separator: ',')}%" }
     count = ->(v) { number_with_delimiter(v.to_i, delimiter: '.') }
     summary = abc.summary
+    period_params = { p: abc.preset, de: (abc.from.iso8601 unless abc.preset), ate: (abc.to.iso8601 unless abc.preset) }.compact
+    curve_path = ->(curve) { products_path(period_params.merge(aba: 'produtos', curva: curve)) }
     items = abc.items
     shown = items.first(50)
   %>
@@ -34,11 +36,11 @@
         <span class="ss-kpi__change ss-kpi__change--neutral">de <%= count.call(abc.catalog_count) %> no catálogo</span>
       </div>
       <% { 'A' => 'up', 'B' => 'neutral', 'C' => 'down' }.each do |curve, tone| %>
-        <div class="ss-kpi">
-          <div class="ss-kpi__label"><span class="pa-curve pa-curve--<%= curve.downcase %>"><%= curve %></span> <%= Sales::ProductAbc::CLASSES[curve][:label] %></div>
+        <%= link_to curve_path.call(curve), class: 'ss-kpi pa-kpi-link', title: "Ver os produtos da #{Sales::ProductAbc::CLASSES[curve][:label]}" do %>
+          <div class="ss-kpi__label"><span class="pa-curve pa-curve--<%= curve.downcase %>"><%= curve %></span> <%= Sales::ProductAbc::CLASSES[curve][:label] %> <i class="fa-solid fa-arrow-right pa-kpi-link__arrow"></i></div>
           <div class="ss-kpi__value"><%= count.call(summary[curve][:count]) %> <small class="pa-kpi-unit">produtos</small></div>
           <span class="ss-kpi__change ss-kpi__change--<%= tone %>"><%= pct.call(summary[curve][:share_of_revenue]) %> do faturamento</span>
-        </div>
+        <% end %>
       <% end %>
     </div>
 
@@ -54,12 +56,14 @@
         <div id="pa-curve-donut"></div>
         <dl class="ss-result pa-curve-list">
           <% Sales::ProductAbc::CLASSES.each do |curve, info| %>
-            <div>
+            <%= link_to curve_path.call(curve), class: 'pa-curve-row', title: "Ver os produtos da #{info[:label]}" do %>
               <dt><span class="pa-curve pa-curve--<%= curve.downcase %>"><%= curve %></span> <%= count.call(summary[curve][:count]) %> produtos · <%= pct.call(summary[curve][:share_of_products]) %></dt>
-              <dd><%= brl.call(summary[curve][:revenue]) %></dd>
-            </div>
+              <dd><%= brl.call(summary[curve][:revenue]) %> <i class="fa-solid fa-chevron-right"></i></dd>
+            <% end %>
           <% end %>
-          <div><dt>Sem venda no período</dt><dd><%= count.call(abc.unsold_count) %> produtos</dd></div>
+          <%= link_to curve_path.call('sem_venda'), class: 'pa-curve-row', title: 'Ver os produtos sem venda no período' do %>
+            <dt>Sem venda no período</dt><dd><%= count.call(abc.unsold_count) %> produtos <i class="fa-solid fa-chevron-right"></i></dd>
+          <% end %>
         </dl>
         <ul class="pa-tips">
           <li><strong>A:</strong> nunca deixe faltar estoque e use nas campanhas e anúncios.</li>
@@ -82,7 +86,7 @@
             </tr>
           </thead>
           <tbody>
-            <%= render partial: 'abc_row', collection: shown, as: :item %>
+            <%= render partial: 'abc_row', collection: shown, as: :item, locals: { curve_path: } %>
           </tbody>
         </table>
       </div>
@@ -91,7 +95,7 @@
           <summary>Ver os outros <%= count.call(items.size - shown.size) %> produtos</summary>
           <div class="ss-table-wrap">
             <table class="crm-table pa-table">
-              <tbody><%= render partial: 'abc_row', collection: items.drop(shown.size), as: :item %></tbody>
+              <tbody><%= render partial: 'abc_row', collection: items.drop(shown.size), as: :item, locals: { curve_path: } %></tbody>
             </table>
           </div>
         </details>

@@ -37,3 +37,15 @@
 .ss-grid--even { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 1000px) { .ss-grid--even { grid-template-columns: minmax(0, 1fr); } }
 .po-state dt { flex: 1; min-width: 0; }
+
+// Curvas clicáveis no dashboard de produtos: levam à aba Produtos filtrada.
+.pa-kpi-link { display: block; color: inherit; text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+.pa-kpi-link:hover { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-tint); color: inherit; }
+.pa-kpi-link__arrow { float: right; font-size: 10px; opacity: 0; transition: opacity .15s; }
+.pa-kpi-link:hover .pa-kpi-link__arrow { opacity: 1; }
+.ss-result > a.pa-curve-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--outline);
+  font-size: 13px; color: inherit; text-decoration: none; }
+.ss-result > a.pa-curve-row:hover dt, .ss-result > a.pa-curve-row:hover dd { color: var(--primary); }
+.pa-curve-row dd i { font-size: 10px; margin-left: 4px; color: var(--fg-alt); }
+a.pa-curve { text-decoration: none; }
+a.pa-curve:hover { filter: brightness(1.1); color: #fff; }

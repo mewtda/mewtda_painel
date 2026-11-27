@@ -29,6 +29,27 @@ class ProductsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'pa-curve--a'
   end
 
+  test 'products tab filters by curve and the dashboard links to it' do
+    Product.create!(client: @client, shopify_product_name: 'Blusa Parada', shopify_product_id: '20', sku: 'B1')
+
+    get products_path
+    assert_select 'a.pa-kpi-link[href*="aba=produtos"][href*="curva=A"]'
+
+    get products_path(aba: 'produtos', curva: 'A')
+    assert_includes response.body, 'Vestido Poá'
+    assert_not_includes response.body, 'Blusa Parada'
+
+    get products_path(aba: 'produtos', curva: 'sem_venda')
+    assert_includes response.body, 'Blusa Parada'
+    assert_not_includes response.body, 'Vestido Poá'
+  end
+
+  test 'products tab searches by SKU too' do
+    get products_path(aba: 'produtos', search: 'v1')
+
+    assert_includes response.body, 'Vestido Poá'
+  end
+
   test 'dashboard with no sales explains why the curve is empty' do
     get products_path(p: '30', de: 3.years.ago.to_date.iso8601, ate: (3.years.ago.to_date + 1).iso8601)
 

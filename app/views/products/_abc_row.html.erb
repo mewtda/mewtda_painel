@@ -6,7 +6,7 @@
     <% if item.image_url.present? %><%= image_tag item.image_url, class: 'products-table__thumb', alt: '' %><% end %>
     <%= item.name %>
   </td>
-  <td class="text-center"><span class="pa-curve pa-curve--<%= item.curve.downcase %>"><%= item.curve %></span></td>
+  <td class="text-center"><%= link_to item.curve, curve_path.call(item.curve), class: "pa-curve pa-curve--#{item.curve.downcase}", title: "Ver os produtos da curva #{item.curve}" %></td>
   <td class="text-right"><%= brl.call(item.revenue) %></td>
   <td class="text-right"><%= pct.call(item.share) %></td>
   <td class="text-right cx-muted"><%= pct.call(item.cumulative) %></td>

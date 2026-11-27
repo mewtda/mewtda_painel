@@ -27,23 +27,23 @@
     <% spent = @investment.spent_total %>
     <% forecast = @investment.forecast_total %>
     <% count = ->(value) { number_with_delimiter(value, delimiter: '.') } %>
+    <% kpis = [
+         ['Total investido', spent.total, "#{count.call(spent.emails)} e-mails · #{count.call(spent.whatsapps)} WhatsApps enviados",
+          'Tarifa estimada da Meta mais o custo de envio no painel, somando as mensagens já enviadas das campanhas listadas.', true],
+         ['Tarifa da Meta (estimada)', spent.meta, 'Cobrada no cartão da conta do WhatsApp',
+          "Cerca de #{campaign_cost_label(Campaigns::Performance::META_MARKETING_PRICE)} por WhatsApp de marketing enviado. A Meta cobra só as entregues, direto no cartão da conta do WhatsApp da loja; o valor exato está no Gerenciador do WhatsApp.", false],
+         ['Envio pelo painel', spent.panel, 'Entra na fatura do painel', 'R$ 4,00 por mil e-mails e R$ 0,10 por WhatsApp enviados.', false],
+         ['Previsão das agendadas', forecast.total, "Meta #{campaign_cost_label(forecast.meta)} · painel #{campaign_cost_label(forecast.panel)}",
+          'O que ainda vai sair das campanhas agendadas, enviando ou pausadas, com o público de agora. Pode mudar até o envio.', false]
+       ] %>
     <section class="ec-investment" aria-label="Investimento nas campanhas">
-      <div class="cp-grid cp-grid--4">
-        <%= render 'campaign_performance/card', icon: 'fa-sack-dollar', tone: 'primary', label: 'Total investido',
-                   value: campaign_cost_label(spent.total),
-                   detail: "#{count.call(spent.emails)} e-mails · #{count.call(spent.whatsapps)} WhatsApps enviados",
-                   hint: 'Tarifa estimada da Meta mais o custo de envio no painel, somando as mensagens já enviadas das campanhas listadas.' %>
-        <%= render 'campaign_performance/card', icon: 'fa-comment-dollar', tone: 'primary', label: 'Tarifa da Meta (estimada)',
-                   value: campaign_cost_label(spent.meta), detail: 'Cobrada no cartão da conta do WhatsApp',
-                   hint: "Cerca de #{campaign_cost_label(Campaigns::Performance::META_MARKETING_PRICE)} por WhatsApp de marketing enviado. A Meta cobra só as entregues, direto no cartão da conta do WhatsApp da loja; o valor exato está no Gerenciador do WhatsApp." %>
-        <%= render 'campaign_performance/card', icon: 'fa-coins', tone: 'primary', label: 'Envio pelo painel',
-                   value: campaign_cost_label(spent.panel), detail: 'Entra na fatura do painel',
-                   hint: 'R$ 4,00 por mil e-mails e R$ 0,10 por WhatsApp enviados.' %>
-        <%= render 'campaign_performance/card', icon: 'fa-calendar-check', tone: 'success', label: 'Previsão das agendadas',
-                   value: campaign_cost_label(forecast.total),
-                   detail: "Meta #{campaign_cost_label(forecast.meta)} · painel #{campaign_cost_label(forecast.panel)}",
-                   hint: 'O que ainda vai sair das campanhas agendadas, enviando ou pausadas, com o público de agora. Pode mudar até o envio.' %>
-      </div>
+      <% kpis.each do |label, value, detail, hint, main| %>
+        <div class="ss-kpi <%= 'ss-kpi--main' if main %>">
+          <div class="ss-kpi__label"><%= label %> <span class="ec-info" tabindex="0" title="<%= hint %>"><i class="fa-solid fa-circle-info"></i></span></div>
+          <div class="ss-kpi__value"><%= campaign_cost_label(value) %></div>
+          <span class="ss-kpi__change ss-kpi__change--neutral"><%= detail %></span>
+        </div>
+      <% end %>
     </section>
 
     <table class="crm-table">

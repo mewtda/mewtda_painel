@@ -4,11 +4,19 @@
   <%# Filtros %>
   <%= form_tag(products_path, method: 'get', data: { live_regions: 'products-actions,products-table-wrap,products-pagination' }) do %>
     <%= hidden_field_tag :aba, 'produtos' %>
+    <% %i[p de ate].each do |key| %><%= hidden_field_tag key, params[key] if params[key].present? %><% end %>
     <div class="products-filters">
       <div class="products-filters__field">
         <label class="crm-label">Buscar</label>
         <%= text_field_tag :search, params[:search], class: 'crm-input', placeholder: 'Nome do produto ou SKU...',
                            autofocus: params[:search].present?, data: { autosubmit_typing: true } %>
+      </div>
+
+      <div class="products-filters__field">
+        <label class="crm-label">Curva ABC <span class="cx-muted">(<%= @abc ? "#{@abc.days} dias" : '—' %>)</span></label>
+        <%= select_tag :curva,
+              options_for_select([['Todas', '']] + ProductsController::CURVE_FILTERS.invert.to_a, params[:curva]),
+              class: 'crm-input', data: { autosubmit: true, custom_select: true } %>
       </div>
 
       <div class="products-filters__field">
@@ -33,7 +41,7 @@
       </div>
 
       <div class="products-filters__actions" id="products-actions">
-        <%= link_to export_xlsx_products_path(params.permit(:search, :vendor, :option1, :option2)),
+        <%= link_to export_xlsx_products_path(params.permit(:search, :vendor, :option1, :option2, :curva, :p, :de, :ate)),
             class: 'crm-btn products-btn--export' do %>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />

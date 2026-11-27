@@ -4,11 +4,11 @@ class ProductsController < ApplicationController
   before_action :set_filter_scope, only: [:index, :export_xlsx]
 
   TABS = %w[dashboard produtos].freeze
+  CURVE_FILTERS = { 'A' => 'Curva A', 'B' => 'Curva B', 'C' => 'Curva C', 'sem_venda' => 'Sem venda no período' }.freeze
 
   def index
     @tab = params[:aba].presence_in(TABS) || 'dashboard'
-    @client = Client.find_by(id: @client_id)
-    @abc = Sales::ProductAbc.new(client: @client, preset: params[:p], from: params[:de], to: params[:ate]) if @client
+    @abc = abc
     return if @tab == 'dashboard'
 
     @products = @products_scope
@@ -64,6 +64,25 @@ class ProductsController < ApplicationController
 
   def set_client_scope
     @client_id = current_client_id
+    @client = Client.find_by(id: @client_id)
+  end
+
+  # Curva ABC do período escolhido (p/de/ate); a mesma do dashboard, para o filtro e a coluna Curva.
+  def abc
+    return unless @client
+
+    @abc ||= Sales::ProductAbc.new(client: @client, preset: params[:p], from: params[:de], to: params[:ate])
+  end
+
+  # Curva A/B/C = produtos da Shopify com essa curva; "sem venda" = produtos que não venderam no período.
+  def filter_by_curve(scope)
+    curve = params[:curva].presence_in(CURVE_FILTERS.keys)
+    return scope unless curve && abc
+
+    curves = abc.curve_by_product_id.reject { |key, _| key.start_with?('sku:') }
+    return scope.where.not(shopify_product_id: curves.keys).or(scope.where(shopify_product_id: nil)) if curve == 'sem_venda'
+
+    scope.where(shopify_product_id: curves.select { |_, value| value == curve }.keys)
   end
 
   def set_filter_scope
@@ -73,8 +92,10 @@ class ProductsController < ApplicationController
     @products_scope = @products_scope.where(option2: params[:option2]) if params[:option2].present?
 
     if params[:search].present?
-      @products_scope = @products_scope.where('shopify_product_name ILIKE ?', "%#{params[:search]}%")
+      term = "%#{Product.sanitize_sql_like(params[:search].to_s.strip)}%"
+      @products_scope = @products_scope.where('shopify_product_name ILIKE :term OR sku ILIKE :term', term:)
     end
+    @products_scope = filter_by_curve(@products_scope)
   end
 
   def load_form_references

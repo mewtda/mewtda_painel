@@ -24,7 +24,24 @@ class Shopify::CheckoutsTest < ActiveSupport::TestCase
     { 'id' => id, 'token' => "tok#{id}", 'email' => "c#{id}@example.com", 'phone' => '+5531999990000',
       'total_price' => '100.00', 'currency' => 'BRL', 'created_at' => created_at.iso8601,
       'updated_at' => created_at.iso8601, 'abandoned_checkout_url' => "https://loja.test/recover/#{id}",
-      'completed_at' => nil, 'line_items' => [] }
+      'completed_at' => nil, 'line_items' => [],
+      'billing_address' => { 'first_name' => 'Maria', 'last_name' => 'Souza', 'phone' => '+5531999990000' } }
+  end
+
+  test 'guarda o nome de quem abandonou o checkout (endereço de cobrança, entrega ou cliente)' do
+    client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
+    no_billing = checkout_payload(2, 1.hour.ago).merge('billing_address' => nil,
+                                                       'shipping_address' => { 'first_name' => 'Ana', 'last_name' => '' })
+    only_customer = checkout_payload(3, 1.hour.ago).merge('billing_address' => nil,
+                                                          'customer' => { 'first_name' => 'Bia', 'last_name' => 'Lima' })
+    api = FakeApi.new([FakeApi::Response.new({ 'checkouts' => [checkout_payload(1, 1.hour.ago), no_billing, only_customer] }, nil)])
+
+    ShopifyAPI::Clients::Rest::Admin.stub(:new, api) do
+      Shopify::Checkouts.sync_abandoned_checkouts_to_rails(session: nil, client: client)
+    end
+
+    names = client.abandoned_checkouts.order(:shopify_checkout_id).pluck(:customer_name)
+    assert_equal ['Maria Souza', 'Ana', 'Bia Lima'], names
   end
 
   test 'segue a paginação só com page_info (a Shopify recusa status junto com page_info)' do

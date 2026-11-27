@@ -157,6 +157,7 @@
 .campaign-show-table__status--cancelled { background: var(--outline); color: var(--fg-alt); }
 .campaign-show-table__status--info { background: var(--info-bg); color: var(--info-fg); }
 .campaign-show-table__status--recovered { background: var(--success-bg); color: #0f5132; font-weight: 700; }
+.campaign-show-table__error { display: block; max-width: 260px; margin-top: 0.25rem; font-size: 0.7rem; color: var(--danger-fg); white-space: normal; }
 
 .campaign-show-table__message-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; border-radius: var(--radius); font-size: 0.75rem; font-weight: 500; background: var(--primary-tint); color: var(--primary); border: 1px solid var(--outline); cursor: pointer; transition: background 0.15s; }
 .campaign-show-table__message-btn:hover { background: var(--primary-tint); filter: brightness(.95); }

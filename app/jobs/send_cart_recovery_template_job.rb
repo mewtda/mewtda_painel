@@ -28,15 +28,16 @@ class SendCartRecoveryTemplateJob < ApplicationJob
     coupon_code = automation.include_coupon? ? automation.coupon_code.presence : nil
     # O cupom vai antes do envio: o link do botão já pode ser aberto assim que a mensagem chega.
     checkout.update!(first_coupon_code: coupon_code)
-    first_name = checkout.customer&.name.to_s.split.first.presence || 'cliente'
+    first_name = first_name_for(checkout)
 
-    Whatsapp::Cloud::Api.new(client).send_template(
+    message_id = Whatsapp::Cloud::Api.new(client).send_template(
       to: checkout.phone, name: template.name, language: template.language,
       body_params: template.uses_variable? ? [first_name] : [],
       url_button_param: (checkout.slug if template.button_url.to_s.include?(WhatsappTemplate::VARIABLE))
     )
     checkout.update!(first_notified_at: Time.current, first_message_sent: template.preview_body(first_name),
-                     whatsapp_provider: 'cloud', skip_reason: nil)
+                     whatsapp_provider: 'cloud', skip_reason: nil, whatsapp_message_id: message_id,
+                     whatsapp_status: 'sent', whatsapp_status_at: Time.current, whatsapp_error: nil)
   rescue Whatsapp::Cloud::Api::Blocked => e
     mark_failed(checkout, e)
   rescue Whatsapp::Cloud::Api::RateLimited, Whatsapp::Cloud::Api::Paused, Whatsapp::Cloud::Api::NotConfigured => e
@@ -46,6 +47,12 @@ class SendCartRecoveryTemplateJob < ApplicationJob
     return Rails.logger.warn("[SendCartRecoveryTemplate] checkout #{checkout.id} sem resposta da Meta") if e.code.nil?
 
     mark_failed(checkout, e)
+  end
+
+  # Cliente vinculado ou o nome guardado no checkout; "cliente" quando não há nenhum.
+  def first_name_for(checkout)
+    name = checkout.customer&.first_name.presence || checkout.customer&.name.presence || checkout.customer_name
+    name.to_s.split.first&.capitalize || 'cliente'
   end
 
   def mark_failed(checkout, error)

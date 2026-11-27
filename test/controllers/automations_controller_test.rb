@@ -293,6 +293,23 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, '1 registros'
   end
 
+  test 'a fila mostra o status de entrega e o motivo da falha da Meta' do
+    client = cloud_client
+    saved_cart_automation(client).update_columns(start_date: Date.current)
+    base = { phone: '+5511999999999', checkout_created_at: Time.current, first_notified_at: Time.current,
+             whatsapp_provider: 'cloud' }
+    client.abandoned_checkouts.create!(base.merge(shopify_checkout_id: 'a', whatsapp_status: 'delivered'))
+    client.abandoned_checkouts.create!(base.merge(shopify_checkout_id: 'b', whatsapp_status: 'failed',
+                                                  whatsapp_error: '131049: limite de marketing'))
+    sign_in build_user(client: client)
+
+    get cart_recovery_data_automation_path
+
+    assert_select '.campaign-show-table__status', text: 'Entregue'
+    assert_select '.campaign-show-table__status', text: 'Falhou'
+    assert_includes response.body, '131049: limite de marketing'
+  end
+
   test 'cashback e rastreio aparecem como desativados' do
     client = cloud_client
     sign_in build_user(client: client)

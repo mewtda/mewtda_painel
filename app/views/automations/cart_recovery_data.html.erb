@@ -50,10 +50,10 @@
             <td>
               <div class="campaign-show-table__customer">
                 <div class="campaign-show-table__avatar">
-                  <%= (checkout.customer&.name.presence || checkout.email.presence || '?').to_s.split(' ').first(2).map { |w| w[0] }.join.upcase %>
+                  <%= (checkout.customer&.name.presence || checkout.customer_name.presence || checkout.email.presence || '?').to_s.split(' ').first(2).map { |w| w[0] }.join.upcase %>
                 </div>
                 <div>
-                  <div class="campaign-show-table__name"><%= checkout.customer&.name.presence || checkout.email.presence || 'Cliente sem nome' %></div>
+                  <div class="campaign-show-table__name"><%= checkout.customer&.name.presence || checkout.customer_name.presence || checkout.email.presence || 'Cliente sem nome' %></div>
                   <div class="campaign-show-table__email"><%= checkout.email %></div>
                 </div>
               </div>
@@ -76,7 +76,17 @@
               <% when :second_sent %>
                 <span class="campaign-show-table__status campaign-show-table__status--info">2ª enviada</span>
               <% when :first_sent %>
-                <span class="campaign-show-table__status campaign-show-table__status--sent">Enviada</span>
+                <% case checkout.whatsapp_status %>
+                <% when 'failed' %>
+                  <span class="campaign-show-table__status campaign-show-table__status--failed" title="<%= checkout.whatsapp_error %>">Falhou</span>
+                  <% if checkout.whatsapp_error.present? %><small class="campaign-show-table__error"><%= checkout.whatsapp_error %></small><% end %>
+                <% when 'read' %>
+                  <span class="campaign-show-table__status campaign-show-table__status--sent">Lida</span>
+                <% when 'delivered' %>
+                  <span class="campaign-show-table__status campaign-show-table__status--info">Entregue</span>
+                <% else %>
+                  <span class="campaign-show-table__status campaign-show-table__status--cancelled" title="Aceita pela Meta; aguardando confirmação de entrega">Enviada</span>
+                <% end %>
               <% else %>
                 <% if checkout.checkout_created_at && checkout.checkout_created_at < ProcessCartRecoveryAutomationsJob::FIRST_MESSAGE_MAX_AGE.ago %>
                   <span class="campaign-show-table__status campaign-show-table__status--pending" title="Só checkouts das últimas 24 horas recebem a mensagem">Expirado</span>

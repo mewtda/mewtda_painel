@@ -25,6 +25,9 @@ Rails.application.routes.draw do
   get 'carrinho/:slug', to: 'cart_recovery_links#show', as: :cart_recovery_link, constraints: { slug: /[a-z0-9]+/ }
 
   post 'webhooks/ses', to: 'webhooks/ses#create'
+  # Webhook da API Oficial do WhatsApp: status das mensagens (entregue, lida, falhou).
+  get  'webhooks/whatsapp', to: 'webhooks/whatsapp_cloud#verify', as: :whatsapp_cloud_webhook
+  post 'webhooks/whatsapp', to: 'webhooks/whatsapp_cloud#create'
 
   namespace :widget do
     get  'popup/config',      to: 'popup#show_config'

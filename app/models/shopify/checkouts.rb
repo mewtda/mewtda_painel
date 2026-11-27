@@ -43,6 +43,7 @@ class Shopify::Checkouts
         customer_id: find_customer_id(checkout),
         email: checkout['email'],
         phone: extract_phone(checkout),
+        customer_name: extract_name(checkout),
         total_price: checkout['total_price'],
         currency: checkout['currency'],
         checkout_created_at: parse_time(checkout['created_at']),
@@ -59,6 +60,15 @@ class Shopify::Checkouts
       checkout.dig('billing_address', 'phone').presence ||
         checkout.dig('shipping_address', 'phone').presence ||
         checkout['phone'].presence
+    end
+
+    # Nome de quem preencheu o checkout: cobrança, entrega ou o cliente da Shopify, nessa ordem.
+    def extract_name(checkout)
+      [checkout['billing_address'], checkout['shipping_address'], checkout['customer']].each do |source|
+        name = [source&.dig('first_name'), source&.dig('last_name')].map { |part| part.to_s.strip }.compact_blank.join(' ')
+        return name if name.present?
+      end
+      nil
     end
 
     def find_customer_id(checkout)

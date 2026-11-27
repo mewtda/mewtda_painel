@@ -49,9 +49,18 @@ class SendCartRecoveryTemplateJobTest < ActiveJob::TestCase
                     url_button_param: @checkout.slug }], api.calls
     assert @checkout.first_notified_at
     assert_equal 'cloud', @checkout.whatsapp_provider
+    assert_equal 'wamid.1', @checkout.whatsapp_message_id
+    assert_equal 'sent', @checkout.whatsapp_status
     assert_equal 'FARAH', @checkout.first_coupon_code
     assert_equal 'Ei, Ana! Seu cupom está no link.', @checkout.first_message_sent
     assert_nil @checkout.skip_reason
+  end
+
+  test 'sem cliente vinculado usa o nome guardado no checkout' do
+    @checkout.update!(customer: nil, customer_name: 'daniel fernandes')
+    api = run_job
+
+    assert_equal ['Daniel'], api.calls.first[:body_params]
   end
 
   test 'não envia de novo um checkout já notificado' do

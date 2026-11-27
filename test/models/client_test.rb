@@ -64,4 +64,23 @@ class ClientTest < ActiveSupport::TestCase
     assert build_client.whatsapp_evolution?
     assert_not build_client.whatsapp_ready?
   end
+
+  test 'destroy removes the store data that points to the client' do
+    client = Client.create!(name: 'Loja Fim', email: "fim-#{SecureRandom.hex(4)}@example.com")
+    product = Product.create!(client:, shopify_product_name: 'Vestido', shopify_product_id: '1', sku: 'V')
+    landing = client.landing_pages.create!(name: 'Drop', slug: "drop-#{SecureRandom.hex(3)}", template: 'drop_01_1822')
+    order = Order.create!(client:, shopify_order_id: '1', shopify_creation_date: Time.current, landing_page: landing)
+    OrderItem.create!(order:, product:, sku: 'V', price: 10, quantity: 1)
+    integration_user = IntegrationUser.create!(client:, name: 'Site', slug: 'site')
+    campaign = client.campaigns.create!(name: 'Black')
+    EmailEvent.create!(client:, campaign:, event_type: 'delivery', source: 'campaign', ses_message_id: 'm1',
+                       occurred_at: Time.current)
+
+    client.destroy!
+
+    assert_not Client.exists?(client.id)
+    assert_not Order.exists?(order.id)
+    assert_not Product.exists?(product.id)
+    assert_not IntegrationUser.exists?(integration_user.id)
+  end
 end

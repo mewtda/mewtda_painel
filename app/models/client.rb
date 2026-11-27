@@ -1,4 +1,8 @@
 class Client < ApplicationRecord
+  # Roda antes dos `dependent:` abaixo: os pedidos apontam para landing pages e os eventos de e-mail para
+  # campanhas, então os dados da loja saem primeiro.
+  before_destroy :purge_store_data, prepend: true
+
   has_many :users, dependent: :nullify
   has_many :automations, dependent: :destroy
   has_many :ad_costs, dependent: :destroy
@@ -19,6 +23,7 @@ class Client < ApplicationRecord
   has_many :landing_pages, dependent: :destroy
   has_many :billing_charges, dependent: :destroy
   has_many :conversion_insights, dependent: :destroy
+  has_many :custom_automation_settings, dependent: :delete_all
   has_many :whatsapp_connections, class_name: 'Whatsapp::Connection', dependent: :restrict_with_exception
   has_one_attached :logo
 
@@ -154,6 +159,22 @@ class Client < ApplicationRecord
   end
 
   private
+
+  # Dados da loja sem associação com `dependent:` (volumosos, apagados direto no banco), na ordem das
+  # chaves estrangeiras.
+  def purge_store_data
+    purge_order_references
+    [EmailEvent, Order, Product, Location, ShopifyEvent, IntegrationUser, CustomAutomationRun,
+     AdCostSnapshot].each { |model| model.where(client_id: id).delete_all }
+  end
+
+  def purge_order_references
+    orders = Order.where(client_id: id).select(:id)
+    AutomationAction.where(order_id: orders).delete_all
+    Refund.where(order_id: orders).or(Refund.where(client_id: id)).delete_all
+    OrderItem.where(order_id: orders).or(OrderItem.where(product_id: Product.where(client_id: id).select(:id)))
+             .delete_all
+  end
 
   def billing_contact_changing?
     will_save_change_to_billing_document? || will_save_change_to_billing_email? || will_save_change_to_billing_phone?

@@ -51,8 +51,10 @@ class ClientsController < ApplicationController
   end
 
   def destroy
-    @client.destroy
+    @client.destroy!
     redirect_to clients_path, notice: 'Cliente excluído com sucesso.'
+  rescue ActiveRecord::DeleteRestrictionError
+    redirect_to clients_path, alert: 'Desconecte o WhatsApp do cliente antes de excluí-lo.'
   end
 
   def update_selected_client

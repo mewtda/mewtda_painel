@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_24_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_27_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -415,6 +415,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_24_000000) do
     t.index ["client_id", "kind", "created_at"], name: "idx_on_client_id_kind_created_at_22125b7406"
     t.index ["client_id"], name: "index_custom_automation_runs_on_client_id"
     t.index ["user_id"], name: "index_custom_automation_runs_on_user_id"
+  end
+
+  create_table "custom_automation_settings", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.string "kind", null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "last_run_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id", "kind"], name: "index_custom_automation_settings_on_client_id_and_kind", unique: true
+    t.index ["client_id"], name: "index_custom_automation_settings_on_client_id"
   end
 
   create_table "customer_profiles", force: :cascade do |t|
@@ -1075,6 +1086,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_24_000000) do
   add_foreign_key "conversion_insights", "clients"
   add_foreign_key "custom_automation_runs", "clients"
   add_foreign_key "custom_automation_runs", "users"
+  add_foreign_key "custom_automation_settings", "clients"
   add_foreign_key "customer_profiles", "clients"
   add_foreign_key "customer_profiles", "customers"
   add_foreign_key "customers", "clients", validate: false

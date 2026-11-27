@@ -106,6 +106,9 @@ Rails.application.routes.draw do
     resources :custom_automations, path: 'custom-automations', only: [:index, :new, :create, :show] do
       collection do
         post 'rotinas/:kind/rodar', action: :run_routine, as: :run_routine
+        get 'rotinas/:kind/configurar', action: :edit_routine, as: :edit_routine
+        patch 'rotinas/:kind', action: :update_routine, as: :update_routine
+        get 'rotinas/:kind/previa', action: :preview_routine, as: :preview_routine
       end
       member do
         get  :spreadsheet

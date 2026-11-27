@@ -29,6 +29,16 @@ module CustomAutomations
         service: 'CustomAutomations::OnewayAddressNumberFix',
         options: { lookback_hours: 72 },
         client_keys: %w[oneway]
+      },
+      'weekly_sales_report' => {
+        title: 'Resumo semanal por e-mail',
+        description: 'Toda segunda às 8h manda por e-mail o que a loja vendeu na semana anterior (faturamento, ' \
+                     'pedidos, produtos mais vendidos) e as variantes com estoque baixo no site.',
+        icon: 'fa-solid fa-envelope-open-text',
+        frequency: 'Toda segunda às 8h',
+        service: 'CustomAutomations::WeeklySalesReport',
+        configurable: true,
+        client_keys: %w[fernandafarah]
       }
     }.freeze
 

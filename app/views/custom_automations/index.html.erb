@@ -23,8 +23,13 @@
             <span class="crm-tag crm-tag--success">Ativa · <%= routine[:frequency] %></span>
           </div>
           <div class="automations-card__cta-row">
-            <%= button_to 'Rodar agora', run_routine_custom_automations_path(kind: kind),
-                          class: 'crm-btn crm-btn--secondary automations-card__cta' %>
+            <% if routine[:configurable] %>
+              <%= link_to 'Configurar', edit_routine_custom_automations_path(kind: kind),
+                          class: 'crm-btn crm-btn--primary automations-card__cta' %>
+            <% else %>
+              <%= button_to 'Rodar agora', run_routine_custom_automations_path(kind: kind),
+                            class: 'crm-btn crm-btn--secondary automations-card__cta' %>
+            <% end %>
           </div>
         </div>
       <% end %>

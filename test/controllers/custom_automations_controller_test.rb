@@ -113,4 +113,41 @@ class CustomAutomationsControllerTest < ActionDispatch::IntegrationTest
     get custom_automation_path(run)
     assert_response :not_found
   end
+
+  test 'configures the weekly report recipients and previews the email' do
+    client = sign_in_client_user('Fernanda Farah')
+    get custom_automations_path
+    assert_includes response.body, 'Resumo semanal por e-mail'
+
+    get edit_routine_custom_automations_path(kind: 'weekly_sales_report')
+    assert_response :success
+
+    patch update_routine_custom_automations_path(kind: 'weekly_sales_report'),
+          params: { routine: { recipients: "dona@ff.com.br\nfinanceiro@ff.com.br", low_stock_limit: '5', enabled: '1' } }
+    assert_redirected_to edit_routine_custom_automations_path(kind: 'weekly_sales_report')
+    setting = CustomAutomationSetting.for(client, 'weekly_sales_report')
+    assert_equal %w[dona@ff.com.br financeiro@ff.com.br], setting.recipients
+    assert_equal 5, setting.low_stock_limit
+
+    patch update_routine_custom_automations_path(kind: 'weekly_sales_report'),
+          params: { routine: { recipients: 'nao-e-email', low_stock_limit: '5', enabled: '1' } }
+    assert_response :unprocessable_entity
+    assert_includes response.body, 'E-mail inválido: nao-e-email'
+
+    get preview_routine_custom_automations_path(kind: 'weekly_sales_report')
+    assert_response :success
+    assert_includes response.body, 'Resumo da semana'
+    assert_includes response.body, 'Não foi possível ler o estoque na Shopify'
+
+    assert_enqueued_with(job: CustomAutomations::RoutineJob, args: ['weekly_sales_report', client.id, true]) do
+      post run_routine_custom_automations_path(kind: 'weekly_sales_report')
+    end
+  end
+
+  test 'other clients cannot configure the weekly report' do
+    sign_in_client_user('Outra Loja')
+    get edit_routine_custom_automations_path(kind: 'weekly_sales_report')
+
+    assert_redirected_to custom_automations_path
+  end
 end

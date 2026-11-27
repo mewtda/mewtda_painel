@@ -10,8 +10,9 @@ module CustomAutomations
   class RoutineJob < ApplicationJob
     queue_as :default
 
-    def perform(kind = nil, client_id = nil)
-      return run(kind, Client.find(client_id)) if kind && client_id
+    # force: "Rodar agora" na tela — rotinas configuráveis (ex.: resumo semanal) enviam mesmo fora do horário.
+    def perform(kind = nil, client_id = nil, force = false)
+      return run(kind, Client.find(client_id), force) if kind && client_id
 
       kinds = kind ? [kind.to_s] : Registry::ROUTINES.keys
       Client.where(active: true).find_each do |client|
@@ -25,13 +26,15 @@ module CustomAutomations
 
     private
 
-    def run(kind, client)
+    def run(kind, client, force)
       config = Registry.routine(kind)
       raise ArgumentError, "Rotina desconhecida: #{kind}" unless config
       return unless client.active? && client.shopify_configured?
       return unless Registry.routines_for(client).key?(kind.to_s)
 
-      config[:service].constantize.new(client, **config.fetch(:options, {})).call
+      options = config.fetch(:options, {})
+      options = options.merge(force: true) if force && config[:configurable]
+      config[:service].constantize.new(client, **options).call
     end
   end
 end

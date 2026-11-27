@@ -5,6 +5,7 @@ class CustomAutomationsController < ApplicationController
   before_action :require_client!
   before_action :set_automations
   before_action :set_run, only: [:show, :spreadsheet, :emit, :discard]
+  before_action :set_routine, only: [:edit_routine, :update_routine, :preview_routine]
 
   def index
     @routines = CustomAutomations::Registry.routines_for(@client)
@@ -19,8 +20,35 @@ class CustomAutomationsController < ApplicationController
                          alert: 'Rotina indisponível para este cliente.')
     end
 
-    CustomAutomations::RoutineJob.perform_later(kind, @client.id)
-    redirect_to custom_automations_path, notice: 'Rotina enfileirada — roda em instantes.'
+    if CustomAutomations::Registry.routine(kind)[:configurable]
+      CustomAutomations::RoutineJob.perform_later(kind, @client.id, true)
+      redirect_to edit_routine_custom_automations_path(kind:), notice: 'Enviando agora para a lista de destinatários.'
+    else
+      CustomAutomations::RoutineJob.perform_later(kind, @client.id)
+      redirect_to custom_automations_path, notice: 'Rotina enfileirada — roda em instantes.'
+    end
+  end
+
+  def edit_routine
+    @setting = CustomAutomationSetting.for(@client, @kind)
+  end
+
+  def update_routine
+    @setting = CustomAutomationSetting.for(@client, @kind)
+    @setting.recipients_text = params.dig(:routine, :recipients)
+    @setting.low_stock_limit = params.dig(:routine, :low_stock_limit)
+    @setting.enabled = params.dig(:routine, :enabled)
+
+    if @setting.save
+      redirect_to edit_routine_custom_automations_path(kind: @kind), notice: 'Configuração salva.'
+    else
+      render :edit_routine, status: :unprocessable_entity
+    end
+  end
+
+  # Mostra o e-mail como sai hoje, sem enviar (lê o estoque da Shopify na hora).
+  def preview_routine
+    render html: @routine[:service].constantize.new(@client).to_html.html_safe # rubocop:disable Rails/OutputSafety
   end
 
   def new
@@ -89,6 +117,14 @@ class CustomAutomationsController < ApplicationController
 
   def set_automations
     @automations = CustomAutomations::Registry.for_client(@client)
+  end
+
+  def set_routine
+    @kind = params[:kind].to_s
+    @routine = CustomAutomations::Registry.routines_for(@client)[@kind]
+    return if @routine&.dig(:configurable)
+
+    redirect_to custom_automations_path, alert: 'Rotina indisponível para este cliente.'
   end
 
   def set_run

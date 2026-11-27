@@ -1,0 +1,91 @@
+<% title @routine[:title] %>
+
+<div class="cpform-wrapper">
+  <div class="cpform-card">
+
+    <div class="cpform-card__header">
+      <div class="cpform-card__header-icon">
+        <i class="<%= @routine[:icon] %>"></i>
+      </div>
+      <div>
+        <h2 class="cpform-card__title"><%= @routine[:title] %></h2>
+        <p class="cpform-card__subtitle">Cliente: <%= @client.name %> · <%= @routine[:frequency] %></p>
+      </div>
+    </div>
+
+    <% if @setting.errors.any? %>
+      <div class="cpform-errors">
+        <div>
+          <strong>Corrija os erros abaixo:</strong>
+          <ul>
+            <% @setting.errors.full_messages.each do |msg| %>
+              <li><%= msg %></li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    <% end %>
+
+    <%= form_with scope: :routine, url: update_routine_custom_automations_path(kind: @kind), method: :patch,
+                  data: { turbo: false }, html: { autocomplete: 'off' } do |form| %>
+      <div class="cpform-card__body">
+
+        <div class="cpform-section">
+          <div class="cpform-section__header">Quem recebe</div>
+          <p class="cpform-section__description">
+            <%= @routine[:description] %> Coloque um e-mail por linha (ou separados por vírgula).
+          </p>
+          <div class="cpform-field">
+            <%= form.label :recipients, 'E-mails', class: 'crm-label' %>
+            <%= form.text_area :recipients, value: @setting.recipients_text, rows: 6, class: 'crm-input',
+                               placeholder: "dona@loja.com.br\nfinanceiro@loja.com.br" %>
+          </div>
+        </div>
+
+        <div class="cpform-section">
+          <div class="cpform-section__header">Estoque baixo</div>
+          <p class="cpform-section__description">
+            Entram no e-mail as variantes de produtos ativos com esta quantidade ou menos em estoque.
+          </p>
+          <div class="cpform-field">
+            <%= form.label :low_stock_limit, 'Avisar com até (unidades)', class: 'crm-label' %>
+            <%= form.number_field :low_stock_limit, value: @setting.low_stock_limit, min: 1, max: 1000,
+                                  class: 'crm-input cpform-field__input--half', required: true %>
+          </div>
+        </div>
+
+        <div class="cpform-section">
+          <label class="crm-label" style="display:flex;align-items:center;gap:8px;">
+            <%= form.check_box :enabled, { checked: @setting.enabled? }, '1', '0' %>
+            Enviar automaticamente toda segunda às 8h
+          </label>
+          <p class="cpform-section__description">
+            <% if @setting.last_run_at %>
+              Último envio: <%= l(@setting.last_run_at, format: '%d/%m/%Y %H:%M') %>.
+            <% else %>
+              Ainda não foi enviado.
+            <% end %>
+            O e-mail sai de <strong><%= @client.tools_email_domain || 'domínio não configurado' %></strong>.
+          </p>
+        </div>
+      </div>
+
+      <div class="cpform-card__footer">
+        <%= link_to 'Voltar', custom_automations_path, class: 'crm-btn crm-btn--secondary' %>
+        <%= link_to 'Ver prévia do e-mail', preview_routine_custom_automations_path(kind: @kind),
+                    class: 'crm-btn crm-btn--secondary', target: '_blank', rel: 'noopener' %>
+        <%= form.submit 'Salvar', class: 'crm-btn crm-btn--primary', data: { disable_with: 'Salvando...' } %>
+      </div>
+    <% end %>
+
+    <% if @setting.persisted? && @setting.recipients.any? %>
+      <div class="cpform-card__footer">
+        <span class="cpform-section__description" style="margin:0;margin-right:auto;">
+          Manda o resumo da semana passada agora para <%= pluralize(@setting.recipients.size, 'destinatário', plural: 'destinatários') %>.
+        </span>
+        <%= button_to 'Enviar agora', run_routine_custom_automations_path(kind: @kind),
+                      class: 'crm-btn crm-btn--secondary', form: { data: { turbo: false } } %>
+      </div>
+    <% end %>
+  </div>
+</div>

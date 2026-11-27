@@ -8,11 +8,6 @@ landing_pages_products_sync:
   class: "LandingPagesProductsSyncJob"
   queue: default
 
-whatsapp_recovery:
-  cron: "* * * * *"
-  class: "Whatsapp::RecoveryJob"
-  queue: whatsapp
-
 abandoned_checkouts_sync:
   cron: "*/10 * * * *"
   class: "DailyAbandonedCheckoutsSyncJob"

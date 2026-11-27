@@ -18,8 +18,8 @@
         </svg>
       </div>
       <div class="campaigns-alert__content">
-        <strong>Nenhum número de WhatsApp conectado!</strong>
-        <p>As automações não serão executadas enquanto não houver um número conectado.</p>
+        <strong>API Oficial do WhatsApp não configurada!</strong>
+        <p>A recuperação de carrinho não envia nada enquanto a API Oficial não estiver configurada na loja.</p>
       </div>
     </div>
   <% end %>
@@ -36,13 +36,7 @@
           até o limite configurado.
         </p>
         <div class="automations-card__tags">
-          <% if @tracking_automation.nil? %>
-            <span class="crm-tag crm-tag--neutral">Não configurada</span>
-          <% elsif @tracking_automation.active? %>
-            <span class="crm-tag crm-tag--success">Ativa</span>
-          <% else %>
-            <span class="crm-tag crm-tag--danger">Inativa</span>
-          <% end %>
+          <span class="crm-tag crm-tag--neutral">Desativada por enquanto</span>
           <% if @tracking_automation %>
             <span class="crm-tag crm-tag--info"><%= @tracking_automation.sent_count %> enviadas</span>
           <% end %>
@@ -71,13 +65,7 @@
           voltar e comprar de novo.
         </p>
         <div class="automations-card__tags">
-          <% if @cashback_automation.nil? %>
-            <span class="crm-tag crm-tag--neutral">Não configurada</span>
-          <% elsif @cashback_automation.active? %>
-            <span class="crm-tag crm-tag--success">Ativa</span>
-          <% else %>
-            <span class="crm-tag crm-tag--danger">Inativa</span>
-          <% end %>
+          <span class="crm-tag crm-tag--neutral">Desativada por enquanto</span>
           <% if @cashback_automation %>
             <span class="crm-tag crm-tag--info"><%= @cashback_automation.sent_count %> enviadas</span>
           <% end %>

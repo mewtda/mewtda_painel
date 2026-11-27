@@ -33,7 +33,7 @@ module Billing
       first = Time.zone.today - (days - 1)
       counts =
         if channel == 'whatsapp'
-          whatsapp_scope(first.beginning_of_day..).group(day_sql('whatsapp_messages.sent_at')).count
+          whatsapp_scope(first.beginning_of_day..).group(day_sql('abandoned_checkouts.first_notified_at')).count
                                                    .transform_keys(&:to_date)
                                                    .merge(campaign_whatsapp_scope(first.beginning_of_day..)
                                                      .group(day_sql('campaign_recipients.sent_at')).count
@@ -53,14 +53,9 @@ module Billing
       channel == 'whatsapp' ? today.all_day : today..today
     end
 
-    # Só mensagens que saíram pela plataforma (equipe, automações e IA) e que
-    # o WhatsApp aceitou (têm provider_id). Mensagens do celular não contam.
+    # Recuperação de carrinho enviada pela API Oficial e aceita pela Meta (sem motivo de falha).
     def whatsapp_scope(range)
-      Whatsapp::Message.joins(:connection)
-                       .where(whatsapp_connections: { client_id: client.id })
-                       .where(direction: 'outgoing', historical: false, origin: %w[team automation ai])
-                       .where.not(provider_id: nil)
-                       .where(sent_at: range)
+      client.abandoned_checkouts.where(whatsapp_provider: 'cloud', skip_reason: nil, first_notified_at: range)
     end
 
     # Mensagens de campanha enviadas pela API Oficial (Cloud API) e aceitas pela Meta.

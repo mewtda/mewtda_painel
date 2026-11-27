@@ -6,11 +6,15 @@ class Shopify::Checkouts
     # a mesma fonte que a Shopify usa pro relatório "Abandoned checkouts".
     # Exige o escopo read_checkouts (não incluído por padrão) e, pra trazer
     # telefone/e-mail, aprovação de "Protected Customer Data" da Shopify.
-    def sync_abandoned_checkouts_to_rails(session:, client:, limit: 250)
+    #
+    # Só busca os criados nos últimos `since` (a recuperação usa as últimas 24h; os 7 dias cobrem falhas
+    # do job). Nas páginas seguintes vai só page_info: a Shopify recusa status/filtros junto com ele.
+    def sync_abandoned_checkouts_to_rails(session:, client:, limit: 250, since: 7.days.ago)
       api_client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
       total = 0
 
-      response = api_client.get(path: 'checkouts', query: { limit: limit, status: 'open' })
+      response = api_client.get(path: 'checkouts',
+                                query: { limit: limit, status: 'open', created_at_min: since.iso8601 })
 
       loop do
         Array(response.body['checkouts']).each do |checkout|
@@ -20,10 +24,7 @@ class Shopify::Checkouts
 
         break unless response.next_page_info
 
-        response = api_client.get(
-          path: 'checkouts',
-          query: { limit: limit, status: 'open', page_info: response.next_page_info }
-        )
+        response = api_client.get(path: 'checkouts', query: { limit: limit, page_info: response.next_page_info })
       end
 
       total

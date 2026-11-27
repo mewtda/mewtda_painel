@@ -162,7 +162,7 @@
     <% end %>
 
     <% unless current_user.profile_id == Profile::AFFILIATE %>
-      <% whatsapp_active = request.path.start_with?(automations_path) || request.path.start_with?(whatsapp_conversations_path) %>
+      <% whatsapp_active = request.path.start_with?(automations_path) %>
       <details class="crm-sidebar__submenu" <%= 'open' if whatsapp_active %>>
         <summary class="crm-sidebar__link crm-sidebar__link--parent">
           <i class="fa-brands fa-whatsapp crm-fa"></i>
@@ -173,11 +173,6 @@
           <%= link_to automations_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if current_page?(automations_path)}" do %>
             <i class="fa-solid fa-robot crm-fa"></i>
             Automações
-          <% end %>
-
-          <%= link_to whatsapp_conversations_path, class: "crm-sidebar__link crm-sidebar__link--sub #{'active' if request.path.start_with?(whatsapp_conversations_path)}" do %>
-            <i class="fa-solid fa-comments crm-fa"></i>
-            Conversas
           <% end %>
         </div>
       </details>

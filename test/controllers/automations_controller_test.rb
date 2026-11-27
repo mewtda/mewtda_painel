@@ -114,30 +114,27 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, client.automations.count
   end
 
-  test 'update_cart_recovery creates the cart_recovery automation with resend config' do
-    client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
-    user = build_user(client: client)
-    sign_in user
+  test 'update_cart_recovery creates the cart_recovery automation with the approved template' do
+    client = cloud_client
+    template = client.whatsapp_templates.create!(label: 'Carrinho', body: 'Ei, {{1}}!', status: 'approved')
+    sign_in build_user(client: client)
 
     patch cart_recovery_automation_path, params: {
       automation: {
-        name: 'Recuperação de Carrinho', message: 'Oi {nome}, finalize sua compra! {link}',
+        name: 'Recuperação de Carrinho', whatsapp_template_id: template.id,
         start_date: Date.current, end_date: Date.current + 1.year,
-        active: '1', send_delay_minutes: 60,
-        include_coupon: '1', coupon_code: 'VOLTA10',
-        resend_enabled: '1', resend_delay_hours: 24, resend_message: 'Ainda dá tempo, {nome}! {cupom}',
-        resend_include_coupon: '1', resend_coupon_code: 'VOLTA15'
+        active: '1', send_delay_minutes: 5,
+        include_coupon: '1', coupon_code: 'VOLTA10'
       },
       tab: 'mensagens'
     }
 
     assert_redirected_to edit_cart_recovery_automation_path(anchor: 'mensagens')
     automation = client.automations.find_by(kind: 'cart_recovery')
-    assert automation.present?
     assert automation.active?
-    assert_equal 60, automation.send_delay_minutes
-    assert automation.resend_enabled?
-    assert_equal 'VOLTA15', automation.resend_coupon_code
+    assert_equal 5, automation.send_delay_minutes
+    assert_equal template, automation.whatsapp_template
+    assert_equal 'VOLTA10', automation.coupon_code
   end
 
   def cloud_client
@@ -210,80 +207,49 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_match with_phone.email, response.body
   end
 
-  test 'resend_cart_recovery enqueues SendCartRecoveryNotificationJob for an already-notified checkout' do
-    client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
-    automation = client.automations.create!(
-      name: 'Recuperação', kind: 'cart_recovery', message: 'Oi {nome}',
-      start_date: Date.current, end_date: Date.current + 1.year, send_delay_minutes: 60
-    )
-    number = client.whatsapp_connections.create!(name: 'Loja', state: 'connected')
-    Whatsapp::AutomationConnection.create!(automation: automation, connection: number)
-    checkout = client.abandoned_checkouts.create!(
-      shopify_checkout_id: SecureRandom.hex(6), phone: '+5511999999999',
-      checkout_created_at: Time.current, first_notified_at: Time.current,
-      whatsapp_provider: 'evolution', whatsapp_connection_id: number.id
-    )
-    user = build_user(client: client)
-    sign_in user
-
-    assert_enqueued_with(job: SendCartRecoveryNotificationJob, args: [checkout.id, 'Oi {nome}', nil, 'first', true]) do
-      post resend_cart_recovery_automation_path(checkout, slot: 'first')
-    end
-
-    assert_redirected_to cart_recovery_data_automation_path
-  end
-
-  def evolution_client
-    Client.create!(name: 'Loja Evo', email: "evo-#{SecureRandom.hex(4)}@example.com", whatsapp_provider: 'evolution')
-  end
-
-  def saved_cart_automation(client)
+  def saved_cart_automation(client, template: nil)
     client.automations.create!(
-      name: 'Recuperação', kind: 'cart_recovery', message: 'Oi',
+      name: 'Recuperação', kind: 'cart_recovery', whatsapp_template: template, active: template.present?,
       start_date: Date.current - 1.day, end_date: Date.current + 1.year, send_delay_minutes: 60
     )
   end
 
-  test 'update_numbers links only numbers of the same client' do
-    client = evolution_client
-    automation = saved_cart_automation(client)
-    mine = client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
-    other_client = evolution_client
-    foreign = other_client.whatsapp_connections.create!(name: 'Alheio', state: 'connected')
-    sign_in build_user(client: client)
-
-    patch automation_numbers_path(kind: 'cart-recovery'), params: { connection_ids: [mine.id, foreign.id] }
-
-    assert_redirected_to edit_cart_recovery_automation_path(anchor: 'numeros')
-    assert_equal [mine.id], automation.reload.whatsapp_connections.pluck(:id)
+  def notified_checkout(client)
+    client.abandoned_checkouts.create!(
+      shopify_checkout_id: SecureRandom.hex(6), phone: '+5511999999999',
+      checkout_created_at: Time.current, first_notified_at: Time.current, whatsapp_provider: 'cloud'
+    )
   end
 
-  test 'update_numbers removes numbers that were unchecked' do
-    client = evolution_client
-    automation = saved_cart_automation(client)
-    mine = client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
-    Whatsapp::AutomationConnection.create!(automation: automation, connection: mine)
+  test 'resend_cart_recovery reenvia o modelo aprovado para um checkout já avisado' do
+    client = cloud_client
+    template = client.whatsapp_templates.create!(label: 'Carrinho', body: 'Ei, {{1}}!', status: 'approved')
+    saved_cart_automation(client, template:)
+    checkout = notified_checkout(client)
     sign_in build_user(client: client)
 
-    patch automation_numbers_path(kind: 'cart-recovery')
-
-    assert_empty automation.reload.whatsapp_connections
+    assert_enqueued_with(job: SendCartRecoveryTemplateJob, args: [checkout.id, true]) do
+      post resend_cart_recovery_automation_path(checkout)
+    end
+    assert_redirected_to cart_recovery_data_automation_path
+    assert_equal 'Reenvio agendado com sucesso.', flash[:notice]
   end
 
-  test 'update_numbers asks to save the automation first when it is not persisted' do
-    client = evolution_client
-    client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
+  test 'resend_cart_recovery avisa quando não há modelo aprovado' do
+    client = cloud_client
+    saved_cart_automation(client)
+    checkout = notified_checkout(client)
     sign_in build_user(client: client)
 
-    patch automation_numbers_path(kind: 'tracking'), params: { connection_ids: [client.whatsapp_connections.first.id] }
-
-    assert_redirected_to edit_tracking_automation_path
-    assert_equal 'Salve a automação antes de importar números.', flash[:alert]
-    assert_equal 0, Whatsapp::AutomationConnection.count
+    assert_no_enqueued_jobs only: SendCartRecoveryTemplateJob do
+      post resend_cart_recovery_automation_path(checkout)
+    end
+    assert_redirected_to cart_recovery_data_automation_path
+    assert_match 'modelo aprovado', flash[:alert]
   end
 
-  test 'cart recovery edit page shows metrics and the numbers partial for evolution clients' do
-    client = evolution_client
+  test 'cart recovery edit page shows metrics and warns when the official API is missing' do
+    client = Client.create!(name: 'Loja', email: "m-#{SecureRandom.hex(4)}@example.com")
     saved_cart_automation(client)
     client.abandoned_checkouts.create!(shopify_checkout_id: 'a', total_price: 150, checkout_created_at: 1.day.ago)
     sign_in build_user(client: client)
@@ -293,8 +259,8 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'Ticket médio'
     assert_includes response.body, 'R$ 150,00'
-    assert_includes response.body, 'Importe um número responsável'
-    assert_includes response.body, 'Nenhum número de WhatsApp conectado'
+    assert_includes response.body, 'API Oficial do WhatsApp não configurada'
+    assert_not_includes response.body, 'Evolution'
   end
 
   test 'cart recovery data page shows metrics and honors period' do
@@ -311,83 +277,61 @@ class AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'R$ 200,00'
   end
 
-  test 'client without a connected number sees the WhatsApp warning and no Zapi text' do
-    client = Client.create!(name: 'Loja', email: "w-#{SecureRandom.hex(4)}@example.com")
+  test 'a fila mostra só checkouts a partir do início da automação' do
+    client = cloud_client
+    saved_cart_automation(client).update_columns(start_date: Date.current)
+    client.abandoned_checkouts.create!(shopify_checkout_id: 'old', phone: '+5511999999998', email: 'antigo@example.com',
+                                       checkout_created_at: 3.days.ago)
+    client.abandoned_checkouts.create!(shopify_checkout_id: 'new', phone: '+5511999999999', email: 'hoje@example.com',
+                                       checkout_created_at: Time.current)
+    sign_in build_user(client: client)
+
+    get cart_recovery_data_automation_path
+
+    assert_includes response.body, 'hoje@example.com'
+    assert_not_includes response.body, 'antigo@example.com'
+    assert_includes response.body, '1 registros'
+  end
+
+  test 'cashback e rastreio aparecem como desativados' do
+    client = cloud_client
     sign_in build_user(client: client)
 
     get edit_cashback_automation_path
-
-    assert_includes response.body, 'Nenhum número de WhatsApp conectado'
-    assert_not_includes response.body, 'Zapi'
-  end
-
-  test 'status row shows the WhatsApp connection' do
-    client = evolution_client
-    saved_cart_automation(client)
-    client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
-    sign_in build_user(client: client)
-
-    get edit_cart_recovery_automation_path
-
-    assert_not_includes response.body, 'Zapi'
-    assert_includes response.body, 'Conectado'
-  end
-
-  test 'numbers partial asks to save the automation first when not persisted' do
-    client = evolution_client
-    client.whatsapp_connections.create!(name: 'Meu', state: 'connected')
-    sign_in build_user(client: client)
+    assert_includes response.body, 'Envio por WhatsApp desativado'
 
     get edit_tracking_automation_path
+    assert_includes response.body, 'Envio por WhatsApp desativado'
 
-    assert_includes response.body, 'Salve a automação antes de importar números.'
-    assert_not_includes response.body, 'Salvar números'
+    get automations_path
+    assert_includes response.body, 'Desativada por enquanto'
   end
 
-  test 'numbers partial links to the automation conversations once a number is linked' do
-    client = evolution_client
-    automation = saved_cart_automation(client)
+  test 'status row shows the official API and the chosen template' do
+    client = cloud_client
+    template = client.whatsapp_templates.create!(label: 'Carrinho FARAH', body: 'Ei, {{1}}!', status: 'approved')
+    saved_cart_automation(client, template:)
     sign_in build_user(client: client)
 
     get edit_cart_recovery_automation_path
-    assert_not_includes response.body, 'Conversas desta automação'
 
-    Whatsapp::AutomationConnection.create!(automation: automation,
-                                         connection: client.whatsapp_connections.create!(name: 'Meu'))
-    get edit_cart_recovery_automation_path
-    assert_select 'a[href=?]', '#conversas', text: /Conversas desta automação/
-    assert_select '#conversas #wa-inbox[data-automation-id=?]', automation.id.to_s
+    assert_includes response.body, 'API Oficial configurada'
+    assert_includes response.body, 'Carrinho FARAH'
   end
 
-  test 'resend_cart_recovery avisa quando o canal da 1ª mensagem não está disponível' do
-    client = evolution_client
-    saved_cart_automation(client)
-    checkout = client.abandoned_checkouts.create!(
-      shopify_checkout_id: SecureRandom.hex(6), phone: '+5511999999999',
-      checkout_created_at: Time.current, first_notified_at: Time.current, whatsapp_provider: 'zapi'
-    )
-    sign_in build_user(client: client)
-
-    assert_no_enqueued_jobs only: SendCartRecoveryNotificationJob do
-      post resend_cart_recovery_automation_path(checkout, slot: 'first')
-    end
-    assert_redirected_to cart_recovery_data_automation_path
-    assert_equal 'Canal da 1ª mensagem indisponível.', flash[:alert]
-    assert_nil flash[:notice]
-  end
-
-  test 'cart recovery page uses tabs in the pode-trocar layout' do
-    client = evolution_client
+  test 'cart recovery page uses tabs without numbers or conversations' do
+    client = cloud_client
     saved_cart_automation(client)
     sign_in build_user(client: client)
 
     get edit_cart_recovery_automation_path
 
     assert_response :success
-    %w[geral mensagens numeros conversas resultados].each do |tab|
-      assert_select ".scr-tab[data-tab=?]", tab
-      assert_select ".scr-panel[data-panel=?]", tab
+    %w[geral mensagens resultados].each do |tab|
+      assert_select '.scr-tab[data-tab=?]', tab
+      assert_select '.scr-panel[data-panel=?]', tab
     end
+    %w[numeros conversas].each { |tab| assert_select '.scr-tab[data-tab=?]', tab, count: 0 }
     assert_select '.scr-switch input[type=checkbox][name=?]', 'automation[active]'
   end
 end

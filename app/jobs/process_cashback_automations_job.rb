@@ -1,7 +1,13 @@
 class ProcessCashbackAutomationsJob < ApplicationJob
   queue_as :default
 
+  # Desativado: cashback e rastreio enviavam pelos números da Evolution, que saiu do painel. Voltam quando
+  # passarem a usar modelos aprovados da API Oficial. O Heroku Scheduler ainda chama este job.
+  DISABLED = true
+
   def perform(client_id = nil)
+    return if DISABLED
+
     scope = client_id ? Client.where(id: client_id) : Client.where(active: true)
 
     scope.find_each do |client|

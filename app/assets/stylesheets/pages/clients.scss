@@ -134,7 +134,7 @@
 .cform-logo--google { background: #fff; border: 1px solid var(--outline); }
 .cform-logo--google i { background: conic-gradient(from -45deg, #ea4335 0 25%, #4285f4 0 50%, #34a853 0 75%, #fbbc05 0); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-/* Provedores dentro da aba WhatsApp (Evolution e API Oficial) */
+/* Provedor dentro da aba WhatsApp (API Oficial) */
 .cform-provider { border: 1px solid var(--outline); border-radius: var(--radius); overflow: hidden; }
 .cform-provider__header { display: flex; align-items: center; gap: 0.6rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--outline); font-weight: 600; font-size: 0.9rem; color: var(--fg); }
 .cform-provider__title { flex: 1; }
@@ -153,21 +153,5 @@
 
 .crm-input:disabled { background: var(--outline); cursor: not-allowed; opacity: .7; }
 
-/* Números do WhatsApp (Evolution Mewtda) */
-.wan { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
-.wan__hint, .wan__status { color: var(--text-muted, #6b7280); font-size: 0.85rem; margin: 0; }
-.wan__notice { padding: 0.5rem 0.75rem; border-radius: var(--radius); background: var(--primary-tint); font-size: 0.9rem; }
-.wan__cards { display: grid; gap: 0.75rem; }
-.wan-card { border: 1px solid var(--outline); border-radius: var(--radius); padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
-.wan-card__head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.wan-card__head h4 { margin: 0; font-size: 1rem; }
-.wan-card__state { font-size: 0.8rem; font-weight: 600; }
-.wan-card.is-connected .wan-card__state { color: #15803d; }
-.wan-card__qr img { width: 220px; height: 220px; max-width: 100%; border: 1px solid var(--outline); border-radius: var(--radius); }
-.wan-card__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.wan-card details form, .wan__add { display: flex; flex-direction: column; gap: 0.5rem; }
-.wan__users { border: 0; padding: 0; margin: 0; }
-.wan__users label { display: block; font-size: 0.9rem; }
-.wan-card__warn { color: var(--warning-fg); font-size: 0.85rem; margin: 0; }
 .cform-logo-preview { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
 .cform-logo-preview__img { height: 56px; width: auto; max-width: 240px; object-fit: contain; padding: 0.5rem 0.75rem; background: #fff; border: 1px solid var(--outline); border-radius: var(--radius); }

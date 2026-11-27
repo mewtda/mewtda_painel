@@ -48,21 +48,15 @@ class ClientTest < ActiveSupport::TestCase
     assert client.ses_domain_verified?
   end
 
-  test 'whatsapp_ready? com Evolution depende de número conectado' do
-    client = Client.create!(name: 'Loja', email: "l-#{SecureRandom.hex(4)}@example.com", whatsapp_provider: 'evolution')
-    connection = client.whatsapp_connections.create!(name: 'A1')
+  test 'whatsapp_ready? exige número, conta (WABA) e token da API Oficial' do
+    client = build_client
     assert_not client.whatsapp_ready?
 
-    connection.update!(state: 'connected', enabled: true)
+    client.assign_attributes(whatsapp_cloud_phone_number_id: '111', whatsapp_cloud_access_token: 'token')
+    assert_not client.whatsapp_ready?
+
+    client.whatsapp_cloud_business_account_id = '222'
     assert client.whatsapp_ready?
-
-    connection.update!(enabled: false)
-    assert_not client.reload.whatsapp_ready?
-  end
-
-  test 'todo cliente usa a Evolution Mewtda' do
-    assert build_client.whatsapp_evolution?
-    assert_not build_client.whatsapp_ready?
   end
 
   test 'destroy removes the store data that points to the client' do

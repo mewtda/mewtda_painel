@@ -13,6 +13,11 @@ Sidekiq.configure_client { |config| config.redis = sidekiq_redis_config }
 
 schedule_file = Rails.root.join('config', 'schedule.yml')
 
+# Crons que saíram do schedule.yml: load_from_hash não apaga entradas antigas do Redis.
+# whatsapp_recovery era da Evolution, removida do painel.
+REMOVED_CRON_JOBS = %w[whatsapp_recovery].freeze
+
 if Sidekiq.server? && File.exist?(schedule_file)
+  REMOVED_CRON_JOBS.each { |name| Sidekiq::Cron::Job.destroy(name) }
   Sidekiq::Cron::Job.load_from_hash(YAML.load_file(schedule_file))
 end

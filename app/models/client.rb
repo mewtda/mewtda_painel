@@ -24,7 +24,6 @@ class Client < ApplicationRecord
   has_many :billing_charges, dependent: :destroy
   has_many :conversion_insights, dependent: :destroy
   has_many :custom_automation_settings, dependent: :delete_all
-  has_many :whatsapp_connections, class_name: 'Whatsapp::Connection', dependent: :restrict_with_exception
   has_one_attached :logo
 
   validates :plan_price, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
@@ -57,15 +56,12 @@ class Client < ApplicationRecord
   LOGO_MAX_SIZE = 2.megabytes
 
   encrypts :meta_access_token, :google_ads_refresh_token, :shopify_api_secret, :shopify_storefront_token,
-           :whatsapp_cloud_access_token, :openai_api_key
+           :whatsapp_cloud_access_token
 
   before_validation :generate_slug, if: -> { slug.blank? && name.present? }
 
   validates :name, presence: true
-  # Só existe a Evolution Mewtda; a Z-API foi removida.
-  validates :whatsapp_provider, inclusion: { in: %w[evolution] }
   validates :email, presence: true
-  validates :openai_model, presence: true, if: :auto_reply_enabled?
   validates :site_url, format: { with: %r{\Ahttps?://}, message: 'deve começar com http:// ou https://' },
                        allow_blank: true
   validates :email_sending_domain,
@@ -78,28 +74,18 @@ class Client < ApplicationRecord
                    format: { with: LandingPage::SLUG_FORMAT, message: 'use só letras minúsculas, números e hífens' },
                    exclusion: { in: LandingPage::RESERVED_PREFIXES, message: 'é reservado pelo sistema' }
 
-  # Todo cliente usa os números da Evolution Mewtda (a Z-API foi removida).
-  def whatsapp_evolution? = true
-
-  # Pronto para enviar: algum número da Evolution conectado.
-  def whatsapp_ready?
-    whatsapp_connections.any?(&:connected?)
-  end
-
-  # Resposta automática (OpenAI) só no Evolution, com chave, modelo e instruções preenchidos.
-  def auto_reply_ready?
-    whatsapp_evolution? && auto_reply_enabled? && openai_api_key.present? && openai_model.present? &&
-      auto_reply_instructions.present?
-  end
-
   def site_url_configured?
     site_url.present?
   end
 
-  # API Oficial do WhatsApp (Cloud API da Meta). Por ora só guarda as
-  # credenciais; o envio automático sai pela Evolution.
+  # API Oficial do WhatsApp (Cloud API da Meta): o único canal de WhatsApp do painel.
   def whatsapp_cloud_configured?
     whatsapp_cloud_phone_number_id.present? && whatsapp_cloud_access_token.present?
+  end
+
+  # Pronto para enviar pela API Oficial: número, conta (WABA) e token preenchidos.
+  def whatsapp_ready?
+    whatsapp_cloud_configured? && whatsapp_cloud_business_account_id.present?
   end
 
   def shopify_configured?

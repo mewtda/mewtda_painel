@@ -2,19 +2,18 @@ require 'test_helper'
 
 class ProcessCartRecoveryAutomationsJobTest < ActiveJob::TestCase
   def setup
-    @client = Client.create!(name: 'Loja Teste', email: "loja-#{SecureRandom.hex(4)}@example.com")
-    @number = @client.whatsapp_connections.create!(name: 'Loja', state: 'connected')
+    @client = Client.create!(name: 'Loja Teste', email: "loja-#{SecureRandom.hex(4)}@example.com",
+                             whatsapp_cloud_phone_number_id: '111', whatsapp_cloud_business_account_id: '222',
+                             whatsapp_cloud_access_token: 'token')
+    @template = @client.whatsapp_templates.create!(label: 'Carrinho', body: 'Ei, {{1}}!', status: 'approved')
   end
 
   def create_automation(attrs = {})
-    automation = @client.automations.create!({
-      name: 'Recuperação', kind: 'cart_recovery', message: 'Oi {nome}',
+    @client.automations.create!({
+      name: 'Recuperação', kind: 'cart_recovery', whatsapp_template: @template,
       start_date: Date.current - 1.day, end_date: Date.current + 1.year,
       send_delay_minutes: 60
     }.merge(attrs))
-    Whatsapp::AutomationConnection.create!(automation: automation, connection: @number)
-    automation.update_column(:evolution_started_at, 3.days.ago)
-    automation
   end
 
   def create_checkout(attrs = {})
@@ -24,20 +23,20 @@ class ProcessCartRecoveryAutomationsJobTest < ActiveJob::TestCase
     }.merge(attrs))
   end
 
-  test 'sends the first message once the delay has passed for a pending checkout' do
+  test 'envia o modelo depois do tempo configurado para um checkout pendente' do
     create_automation
     checkout = create_checkout(checkout_created_at: 2.hours.ago)
 
-    assert_enqueued_with(job: SendCartRecoveryNotificationJob, args: [checkout.id, 'Oi {nome}', nil, 'first']) do
+    assert_enqueued_with(job: SendCartRecoveryTemplateJob, args: [checkout.id]) do
       ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
     end
   end
 
-  test 'checkouts older than 24 hours never get the first message' do
+  test 'checkouts com mais de 24 horas nunca recebem a mensagem' do
     create_automation
     create_checkout(checkout_created_at: 25.hours.ago)
 
-    assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob) do
+    assert_no_enqueued_jobs(only: SendCartRecoveryTemplateJob) do
       ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
     end
   end
@@ -47,120 +46,76 @@ class ProcessCartRecoveryAutomationsJobTest < ActiveJob::TestCase
     create_checkout(checkout_created_at: 2.hours.ago)
     mine = create_checkout(checkout_created_at: 2.hours.ago, phone: '+55 11 98888-7777')
 
-    assert_enqueued_jobs 1, only: SendCartRecoveryNotificationJob do
+    assert_enqueued_jobs 1, only: SendCartRecoveryTemplateJob do
       ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
     end
-    assert_enqueued_with(job: SendCartRecoveryNotificationJob, args: [mine.id, 'Oi {nome}', nil, 'first'])
+    assert_enqueued_with(job: SendCartRecoveryTemplateJob, args: [mine.id])
   end
 
-  test 'does not send before the configured delay has passed' do
+  test 'checkouts de antes da data de início da automação não recebem a mensagem' do
+    create_automation(start_date: Date.current)
+    create_checkout(checkout_created_at: Date.current.beginning_of_day - 1.minute)
+    today = create_checkout(checkout_created_at: Date.current.beginning_of_day + 1.minute)
+
+    travel_to(Date.current.beginning_of_day + 2.hours) do
+      assert_enqueued_jobs 1, only: SendCartRecoveryTemplateJob do
+        ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
+      end
+    end
+    assert_enqueued_with(job: SendCartRecoveryTemplateJob, args: [today.id])
+  end
+
+  test 'não envia antes do tempo configurado' do
     create_automation(send_delay_minutes: 120)
     create_checkout(checkout_created_at: 10.minutes.ago)
 
-    assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob) do
+    assert_no_enqueued_jobs(only: SendCartRecoveryTemplateJob) do
       ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
     end
   end
 
-  test 'sends the resend message when enabled and the resend delay has passed' do
-    create_automation(resend_enabled: true, resend_delay_hours: 24, resend_message: 'Volta, {nome}!')
-    checkout = create_checkout(checkout_created_at: 2.days.ago, first_notified_at: 2.days.ago)
-
-    assert_enqueued_with(job: SendCartRecoveryNotificationJob,
-                         args: [checkout.id, 'Volta, {nome}!', nil, 'second']) do
-      ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
-    end
-  end
-
-  test 'skips clients without a connected number' do
-    @number.update!(state: 'disconnected')
+  test 'checkout que já recebeu a mensagem não recebe de novo' do
     create_automation
+    create_checkout(checkout_created_at: 2.hours.ago, first_notified_at: 1.hour.ago)
+
+    assert_no_enqueued_jobs(only: SendCartRecoveryTemplateJob) do
+      ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
+    end
+  end
+
+  test 'loja sem API Oficial configurada não envia' do
+    create_automation
+    @client.update!(whatsapp_cloud_access_token: nil)
     create_checkout(checkout_created_at: 2.hours.ago)
 
-    assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob) do
+    assert_no_enqueued_jobs(only: SendCartRecoveryTemplateJob) do
       ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
     end
   end
 
-  test 'com modelo da API Oficial envia pelo modelo mesmo sem número da Evolution' do
-    @number.update!(state: 'disconnected')
-    template = @client.whatsapp_templates.create!(label: 'Carrinho', body: 'Ei, {{1}}!', status: 'approved')
-    create_automation(whatsapp_template: template, message: nil)
-    checkout = create_checkout(checkout_created_at: 2.hours.ago)
+  test 'automação desligada sem modelo não envia' do
+    create_automation(whatsapp_template: nil, active: false)
+    create_checkout(checkout_created_at: 2.hours.ago)
 
-    assert_enqueued_with(job: SendCartRecoveryTemplateJob, args: [checkout.id]) do
+    assert_no_enqueued_jobs(only: SendCartRecoveryTemplateJob) do
       ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
     end
-    assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob)
   end
 
   test 'sem data final continua rodando' do
     create_automation(end_date: nil)
     checkout = create_checkout(checkout_created_at: 2.hours.ago)
 
-    assert_enqueued_with(job: SendCartRecoveryNotificationJob, args: [checkout.id, 'Oi {nome}', nil, 'first']) do
-      ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
-    end
-  end
-end
-
-class ProcessCartRecoveryEvolutionTest < ActiveJob::TestCase
-  def setup
-    @client = Client.create!(name: 'Loja Evo', email: "evo-#{SecureRandom.hex(4)}@example.com",
-                             whatsapp_provider: 'evolution')
-    @automation = @client.automations.create!(
-      name: 'Recuperação', kind: 'cart_recovery', message: 'Oi {nome}',
-      start_date: Date.current - 1.day, end_date: Date.current + 1.year, send_delay_minutes: 60
-    )
-  end
-
-  def checkout(created_at)
-    @client.abandoned_checkouts.create!(shopify_checkout_id: SecureRandom.hex(6), phone: '+5511999999999',
-                                        checkout_created_at: created_at)
-  end
-
-  def connect!
-    conn = @client.whatsapp_connections.create!(name: 'A', state: 'connected')
-    Whatsapp::AutomationConnection.create!(automation: @automation, connection: conn)
-    conn
-  end
-
-  test 'evolution only sends checkouts created after the first number was linked' do
-    old = checkout(3.hours.ago)
-    connect!
-    @automation.reload.update_column(:evolution_started_at, 2.hours.ago)
-    fresh = checkout(90.minutes.ago)
-
-    assert_enqueued_jobs 1, only: SendCartRecoveryNotificationJob do
-      ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
-    end
-    assert_enqueued_with(job: SendCartRecoveryNotificationJob, args: [fresh.id, 'Oi {nome}', nil, 'first'])
-    assert_equal :pending, old.reload.status
-  end
-
-  test 'evolution without evolution_started_at sends nothing' do
-    connect!
-    @automation.update_column(:evolution_started_at, nil)
-    checkout(3.hours.ago)
-
-    assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob) do
+    assert_enqueued_with(job: SendCartRecoveryTemplateJob, args: [checkout.id]) do
       ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
     end
   end
 
-  test 'evolution client without connected number sends nothing' do
-    @client.whatsapp_connections.create!(name: 'A', state: 'disconnected')
-    checkout(3.hours.ago)
-
-    assert_no_enqueued_jobs(only: SendCartRecoveryNotificationJob) do
-      ProcessCartRecoveryAutomationsJob.perform_now(@client.id)
-    end
-  end
-
-  test 'schedule.yml syncs abandoned checkouts and processes cart recovery' do
+  test 'schedule.yml sincroniza os checkouts e processa a recuperação de carrinho' do
     schedule = YAML.load_file(Rails.root.join('config/schedule.yml'))
     classes = schedule.values.map { |job| job['class'] }
     assert_includes classes, 'DailyAbandonedCheckoutsSyncJob'
     assert_includes classes, 'ProcessCartRecoveryAutomationsJob'
+    refute_includes classes, 'Whatsapp::RecoveryJob'
   end
 end

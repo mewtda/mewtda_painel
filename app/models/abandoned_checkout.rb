@@ -4,8 +4,6 @@ class AbandonedCheckout < ApplicationRecord
 
   belongs_to :client
   belongs_to :customer, optional: true
-  belongs_to :whatsapp_connection, class_name: 'Whatsapp::Connection', optional: true
-  belongs_to :whatsapp_conversation, class_name: 'Whatsapp::Conversation', optional: true
 
   scope :recent, -> { order(checkout_created_at: :desc) }
   scope :with_phone, -> { where.not(phone: [nil, '']) }

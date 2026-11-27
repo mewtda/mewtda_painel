@@ -12,7 +12,8 @@
       <div>
         <h1 class="campaign-show-header__title">Recuperação de Carrinho</h1>
         <p class="campaign-show-header__subtitle">
-          Checkouts abandonados com telefone, do mais recente pro mais antigo — cliente: <%= @client.name %>
+          Checkouts abandonados com telefone<%= " desde #{l(@since, format: '%d/%m/%Y')} (início da automação)" if @since %>,
+          do mais recente pro mais antigo — cliente: <%= @client.name %>
         </p>
       </div>
     </div>
@@ -75,9 +76,13 @@
               <% when :second_sent %>
                 <span class="campaign-show-table__status campaign-show-table__status--info">2ª enviada</span>
               <% when :first_sent %>
-                <span class="campaign-show-table__status campaign-show-table__status--sent">1ª enviada</span>
+                <span class="campaign-show-table__status campaign-show-table__status--sent">Enviada</span>
               <% else %>
-                <span class="campaign-show-table__status campaign-show-table__status--pending">Na fila</span>
+                <% if checkout.checkout_created_at && checkout.checkout_created_at < ProcessCartRecoveryAutomationsJob::FIRST_MESSAGE_MAX_AGE.ago %>
+                  <span class="campaign-show-table__status campaign-show-table__status--pending" title="Só checkouts das últimas 24 horas recebem a mensagem">Expirado</span>
+                <% else %>
+                  <span class="campaign-show-table__status campaign-show-table__status--pending">Na fila</span>
+                <% end %>
               <% end %>
             </td>
             <td>
@@ -87,20 +92,13 @@
             <td class="text-center">
               <div class="campaign-show-table__actions">
                 <% if checkout.first_notified_at.present? %>
-                  <%= button_to resend_cart_recovery_automation_path(checkout, slot: 'first'), method: :post,
+                  <%= button_to resend_cart_recovery_automation_path(checkout), method: :post,
                         class: 'campaign-show-table__message-btn', form: { data: { turbo: false } },
-                        data: { confirm: 'Reenviar a 1ª mensagem agora?', disable_with: '...' } do %>
+                        data: { confirm: 'Reenviar a mensagem agora?', disable_with: '...' } do %>
                     1ª
                   <% end %>
                 <% end %>
-                <% if checkout.second_notified_at.present? %>
-                  <%= button_to resend_cart_recovery_automation_path(checkout, slot: 'second'), method: :post,
-                        class: 'campaign-show-table__message-btn', form: { data: { turbo: false } },
-                        data: { confirm: 'Reenviar a 2ª mensagem agora?', disable_with: '...' } do %>
-                    2ª
-                  <% end %>
-                <% end %>
-                <% if checkout.first_notified_at.blank? && checkout.second_notified_at.blank? %>
+                <% if checkout.first_notified_at.blank? %>
                   <span class="campaign-show-table__empty">—</span>
                 <% end %>
               </div>

@@ -24,9 +24,6 @@ Rails.application.routes.draw do
   # Botão da mensagem de recuperação de carrinho (API Oficial): leva ao checkout com o cupom aplicado.
   get 'carrinho/:slug', to: 'cart_recovery_links#show', as: :cart_recovery_link, constraints: { slug: /[a-z0-9]+/ }
 
-  # Webhook da Evolution API: autenticado pelo token do número, fora do CRM.
-  post 'whatsapp/webhooks/:instance_key', to: 'whatsapp/webhooks#create'
-
   post 'webhooks/ses', to: 'webhooks/ses#create'
 
   namespace :widget do
@@ -53,32 +50,7 @@ Rails.application.routes.draw do
       end
     end
 
-    resources :clients do
-      namespace :whatsapp, module: 'whatsapp' do
-        resources :connections, only: %i[index create update destroy] do
-          member do
-            post :connect
-            post :disconnect
-            post :sync
-          end
-        end
-      end
-    end
-    # Atendimento: conversas do cliente selecionado, só nos números liberados ao usuário.
-    namespace :whatsapp do
-      resources :conversations, only: %i[index show create update] do
-        member do
-          post :read
-          patch :auto_reply
-        end
-        resources :messages, only: %i[index create] do
-          member do
-            post :retry_send
-            get :attachment
-          end
-        end
-      end
-    end
+    resources :clients
 
     resources :automations, only: [] do
       resources :actions, controller: 'automation_actions', only: :index do
@@ -98,8 +70,6 @@ Rails.application.routes.draw do
     patch 'automations/cart-recovery',      to: 'automations#update_cart_recovery', as: :cart_recovery_automation
     get   'automations/cart-recovery/data', to: 'automations#cart_recovery_data',
                                             as: :cart_recovery_data_automation
-    patch 'automations/:kind/numbers',      to: 'automations#update_numbers', as: :automation_numbers,
-                                            constraints: { kind: /tracking|cashback|cart-recovery/ }
     post  'automations/cart-recovery/data/:id/resend', to: 'automations#resend_cart_recovery',
                                                        as: :resend_cart_recovery_automation
 

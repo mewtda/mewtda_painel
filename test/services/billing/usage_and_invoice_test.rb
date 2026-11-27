@@ -34,6 +34,22 @@ class Billing::UsageAndInvoiceTest < ActiveSupport::TestCase
     assert_equal [0, 0, 3], series.values
   end
 
+  test 'whatsapp usage counts cart recovery messages accepted by the official API' do
+    client = build_client(daily_whatsapp_limit: 2)
+    usage = Billing::Usage.new(client)
+    make = ->(attrs) { client.abandoned_checkouts.create!({ shopify_checkout_id: SecureRandom.hex(4) }.merge(attrs)) }
+
+    make.call(whatsapp_provider: 'cloud', first_notified_at: Time.current)
+    make.call(whatsapp_provider: 'cloud', first_notified_at: Time.current, skip_reason: 'API Oficial: bloqueado')
+    make.call(whatsapp_provider: 'cloud', first_notified_at: 2.days.ago)
+    assert_equal 1, usage.today('whatsapp')
+    assert_not usage.limit_reached?('whatsapp')
+
+    make.call(whatsapp_provider: 'cloud', first_notified_at: Time.current)
+    assert usage.limit_reached?('whatsapp')
+    assert_equal 2, usage.daily_series('whatsapp', days: 3).values.last
+  end
+
   test 'invoice adds the plan price and R$ 4 per thousand emails of the month' do
     client = build_client(plan_name: 'Pro', plan_price: '297,00')
     MessageUsage.track!(client, 'email', 2_500)

@@ -1,79 +1,82 @@
 <% automation = @automations[@run.kind] %>
 <% title 'Nova nota de transferência' %>
 
-<div class="cpform-wrapper">
-  <div class="cpform-card">
+<%= form_with model: @run, url: custom_automations_path, method: :post, data: { turbo: false },
+              html: { autocomplete: 'off' } do |form| %>
+  <%= form.hidden_field :kind %>
+  <div class="users-form-page">
+    <div class="crm-card users-form-page__card">
 
-    <div class="cpform-card__header">
-      <div class="cpform-card__header-icon">
-        <i class="<%= automation[:icon] %>"></i>
-      </div>
-      <div>
-        <h2 class="cpform-card__title"><%= automation[:title] %></h2>
-        <p class="cpform-card__subtitle">Cliente: <%= @client.name %></p>
-      </div>
-    </div>
-
-    <% if @run.errors.any? %>
-      <div class="cpform-errors">
+      <div class="users-form-page__header">
+        <div class="users-form-page__header-icon"><i class="<%= automation[:icon] %>"></i></div>
         <div>
-          <strong>Corrija os erros abaixo:</strong>
-          <ul>
-            <% @run.errors.full_messages.each do |msg| %>
-              <li><%= msg %></li>
-            <% end %>
-          </ul>
+          <h2 class="users-form-page__title"><%= automation[:title] %></h2>
+          <p class="users-form-page__subtitle">Cliente: <%= @client.name %></p>
         </div>
       </div>
-    <% end %>
 
-    <%= form_with model: @run, url: custom_automations_path, method: :post, data: { turbo: false },
-                  html: { autocomplete: 'off' } do |form| %>
-      <%= form.hidden_field :kind %>
-      <div class="cpform-card__body">
+      <% if @run.errors.any? %>
+        <div class="users-form-page__errors">
+          <div class="users-form-page__errors-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div>
+            <strong>Corrija os erros abaixo:</strong>
+            <ul>
+              <% @run.errors.full_messages.each do |msg| %>
+                <li><%= msg %></li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      <% end %>
 
-        <div class="cpform-section">
-          <div class="cpform-section__header">Pedidos da Shopify</div>
-          <p class="cpform-section__description">
+      <div class="users-form-page__body">
+        <div class="users-form-page__section">
+          <div class="users-form-page__section-header"><i class="fa-solid fa-bag-shopping"></i> Pedidos da Shopify</div>
+          <p class="users-form-page__hint">
             Todos os pedidos criados no período entram na nota, agrupados por SKU. A nota é criada no Tiny da
             matriz como <strong>pendente</strong> — só é emitida depois que você conferir e aprovar.
           </p>
 
-          <div class="cpform-row">
-            <div class="cpform-field">
+          <div class="users-form-page__row">
+            <div class="users-form-page__field">
               <%= form.label :period_start, 'De', class: 'crm-label' %>
               <%= form.date_field :period_start, class: 'crm-input', required: true %>
             </div>
-            <div class="cpform-field">
+            <div class="users-form-page__field">
               <%= form.label :period_end, 'Até', class: 'crm-label' %>
               <%= form.date_field :period_end, class: 'crm-input', required: true %>
             </div>
           </div>
 
-          <div class="cpform-field">
+          <div class="users-form-page__field">
             <%= form.label :order_filter, 'Quais pedidos entram', class: 'crm-label' %>
-            <%= form.select :order_filter, CustomAutomationRun::ORDER_FILTERS.invert, {}, class: 'crm-input crm-select-block', data: { custom_select: true } %>
+            <%= form.select :order_filter, CustomAutomationRun::ORDER_FILTERS.invert, {},
+                            class: 'crm-input crm-select-block', data: { custom_select: true } %>
           </div>
         </div>
 
-        <div class="cpform-section cpform-section--highlight">
-          <div class="cpform-section__header cpform-section__header--highlight">Valor dos itens</div>
-          <p class="cpform-section__description">
+        <div class="users-form-page__section">
+          <div class="users-form-page__section-header"><i class="fa-solid fa-percent"></i> Valor dos itens</div>
+          <p class="users-form-page__hint">
             Valor unitário na nota = preço médio praticado na Shopify (já com desconto) × este percentual.
           </p>
-          <div class="cpform-field">
+          <div class="users-form-page__field">
             <%= form.label :price_percentage, '% sobre o preço praticado', class: 'crm-label' %>
-            <%= form.number_field :price_percentage, class: 'crm-input cpform-field__input--half',
+            <%= form.number_field :price_percentage, class: 'crm-input', style: 'max-width: 160px;',
                                   min: 1, max: 100, step: 0.01, required: true %>
           </div>
         </div>
       </div>
 
-      <div class="cpform-card__footer">
-        <%= link_to 'Voltar', custom_automations_path(tab: @run.kind), class: 'crm-btn crm-btn--secondary' %>
-        <%= form.submit 'Gerar nota para conferência', class: 'crm-btn crm-btn--primary',
-                        data: { disable_with: 'Enviando...' } %>
+      <div class="users-form-page__footer">
+        <%= link_to custom_automations_path(tab: @run.kind), class: 'crm-btn crm-btn--secondary' do %>
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        <% end %>
+        <%= form.button class: 'crm-btn crm-btn--primary', data: { disable_with: 'Enviando...' } do %>
+          <i class="fa-solid fa-circle-check"></i> Gerar nota para conferência
+        <% end %>
       </div>
-    <% end %>
+
+    </div>
   </div>
-</div>
+<% end %>

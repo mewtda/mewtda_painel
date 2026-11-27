@@ -113,6 +113,29 @@
   <% end %>
 <% end %>
 
+<%# Teste a qualquer momento: manda a mensagem escolhida para um e-mail ou celular, sem mexer no envio da campanha. %>
+<% testable = messages.select(&:template) %>
+<% if testable.any? %>
+  <form class="ec-welcome" data-campaign-test>
+    <h3 class="ec-details__subtitle">Enviar um teste</h3>
+    <p class="ec-sub">Manda a mensagem só para o endereço abaixo, com o nome "Maria". Não conta no envio da campanha.</p>
+    <div class="ec-welcome__row">
+      <% numbers = Hash.new(0) %>
+      <%= select_tag :message_id, options_for_select(testable.map do |message|
+            number = numbers[message.channel] += 1
+            ["#{message.channel_label} #{number} · #{message.template_name}", message.id,
+             { data: { channel: message.channel,
+                       url: message.whatsapp? ? send_test_whatsapp_campaign_path(campaign) : send_test_campaign_path(campaign),
+                       template_id: message.whatsapp_template_id } }]
+          end), class: 'crm-input', aria: { label: 'Mensagem do teste' }, data: { test_message: true } %>
+      <input type="text" class="crm-input" data-test-address autocomplete="off" required
+             aria-label="E-mail ou celular do teste">
+      <button type="submit" class="crm-btn crm-btn--secondary"><i class="fa-solid fa-paper-plane"></i> Enviar teste</button>
+    </div>
+    <p class="ec-hint" data-test-status></p>
+  </form>
+<% end %>
+
 <% if campaign.welcome_editable? %>
   <% deadline = campaign.welcome_deadline %>
   <% suggested = [deadline, Time.current].compact.max.change(min: 0) + 1.hour %>

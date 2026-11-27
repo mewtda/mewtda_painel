@@ -5,7 +5,11 @@
   const body = dialog.querySelector("[data-details-body]");
   let request = 0;
 
-  const show = (html) => { body.innerHTML = html; };
+  const show = (html) => {
+    body.innerHTML = html;
+    const testForm = body.querySelector("[data-campaign-test]");
+    if (testForm) syncTestField(testForm);
+  };
   const message = (text, loading = false) => {
     const paragraph = document.createElement("p");
     paragraph.className = "ec-details__message";
@@ -49,6 +53,63 @@
   dialog.addEventListener("cancel", (event) => {
     event.preventDefault();
     close();
+  });
+
+  // ---------- Enviar um teste ----------
+  // O último e-mail e o último celular usados ficam salvos no navegador e voltam preenchidos.
+  const TEST_KEYS = { email: "campaignTestEmail", whatsapp: "campaignTestPhone" };
+  const remembered = (channel) => { try { return localStorage.getItem(TEST_KEYS[channel]) || ""; } catch { return ""; } };
+  const remember = (channel, value) => { try { localStorage.setItem(TEST_KEYS[channel], value); } catch { /* sem storage */ } };
+
+  const selectedOption = (form) => form.querySelector("[data-test-message]").selectedOptions[0];
+
+  const syncTestField = (form) => {
+    const channel = selectedOption(form).dataset.channel;
+    const input = form.querySelector("[data-test-address]");
+    const whatsapp = channel === "whatsapp";
+    input.type = whatsapp ? "tel" : "email";
+    input.placeholder = whatsapp ? "(31) 99999-9999" : "seu@email.com";
+    input.value = remembered(channel);
+    form.querySelector("[data-test-status]").textContent = "";
+  };
+
+  const sendTest = async (form) => {
+    const option = selectedOption(form);
+    const channel = option.dataset.channel;
+    const address = form.querySelector("[data-test-address]").value.trim();
+    const status = form.querySelector("[data-test-status]");
+    const button = form.querySelector("button[type=submit]");
+    const data = new FormData();
+    if (channel === "whatsapp") {
+      data.append("phone", address);
+      data.append("whatsapp_template_id", option.dataset.templateId || "");
+    } else {
+      data.append("test_email", address);
+      data.append("message_id", option.value);
+    }
+    button.disabled = true;
+    status.className = "ec-hint";
+    status.textContent = "Enviando…";
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
+    const response = await fetch(option.dataset.url, {
+      method: "POST", body: data, headers: { Accept: "application/json", "X-CSRF-Token": csrf },
+    }).catch(() => null);
+    const result = await response?.json().catch(() => ({}));
+    button.disabled = false;
+    if (response?.ok) remember(channel, address);
+    status.textContent = response?.ok ? result.message : result?.error || "Não foi possível enviar o teste.";
+    status.className = response?.ok ? "ec-hint ec-hint--ok" : "ec-hint ec-hint--error";
+  };
+
+  dialog.addEventListener("change", (event) => {
+    if (event.target.matches("[data-test-message]")) syncTestField(event.target.closest("[data-campaign-test]"));
+  });
+
+  dialog.addEventListener("submit", (event) => {
+    const form = event.target.closest("[data-campaign-test]");
+    if (!form) return;
+    event.preventDefault();
+    sendTest(form);
   });
 
   document.addEventListener("click", (event) => {

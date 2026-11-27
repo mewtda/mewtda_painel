@@ -484,6 +484,38 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_match 'aprovado', response.parsed_body['error']
   end
 
+  test 'details of a confirmed campaign offers a test send for each message with a template' do
+    campaign = @client.campaigns.create!(name: 'Black', status: 'sent', started_at: 1.day.ago)
+    email = campaign.messages.create!(channel: 'email', email_template: template(@client), status: 'sent')
+    whatsapp = campaign.messages.create!(channel: 'whatsapp', whatsapp_template: wa_template, status: 'sent')
+
+    get details_campaign_path(campaign)
+
+    assert_response :success
+    assert_match 'Enviar um teste', response.body
+    assert_includes response.body, ERB::Util.html_escape(send_test_campaign_path(campaign))
+    assert_includes response.body, ERB::Util.html_escape(send_test_whatsapp_campaign_path(campaign))
+    assert_includes response.body, %(value="#{email.id}")
+    assert_includes response.body, %(data-template-id="#{whatsapp.whatsapp_template_id}")
+  end
+
+  test 'send_test works on a campaign that was already sent' do
+    @client.update!(ses_verification_status: 'verified')
+    campaign = @client.campaigns.create!(status: 'sent')
+    message = campaign.messages.create!(channel: 'email', email_template: template(@client), status: 'sent')
+    calls = []
+    sender = Object.new
+    sender.define_singleton_method(:call) { |**args| calls << args and true }
+
+    Ses::SendEmailService.stub(:new, ->(_client) { sender }) do
+      post send_test_campaign_path(campaign), params: { test_email: 'ana@example.com', message_id: message.id }
+    end
+
+    assert_response :success
+    assert_equal 'ana@example.com', calls.first[:to]
+    assert_equal 'sent', campaign.reload.status
+  end
+
   def ready_campaign(subscribed: true)
     @client.update!(ses_verification_status: 'verified')
     campaign = @client.campaigns.create!(name: 'Verão', segment_ids: [segment_with(subscribed:).id])

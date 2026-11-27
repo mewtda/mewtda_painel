@@ -1,0 +1,181 @@
+<% if dashboard.nil? %>
+  <div class="crm-card ss-empty">Selecione uma loja para ver o dashboard de pedidos.</div>
+<% else %>
+  <%
+    brl = ->(v) { v.nil? ? '–' : number_to_currency(v, unit: 'R$', separator: ',', delimiter: '.', precision: 2) }
+    brl_short = ->(v) { v.nil? ? '–' : (v.abs >= 1000 ? "R$ #{number_with_precision(v / 1000.0, precision: 1, separator: ',')} mil" : brl.call(v)) }
+    count = ->(v) { number_with_delimiter(v.to_i, delimiter: '.') }
+    pct = ->(v) { "#{number_with_precision(v || 0, precision: 1, separator: ',')}%" }
+    change_tag = lambda do |change, inverse: false|
+      next content_tag(:span, 'sem base anterior', class: 'ss-kpi__change ss-kpi__change--neutral') if change.nil?
+      good = inverse ? change.negative? : change.positive?
+      css = change.zero? ? 'neutral' : (good ? 'up' : 'down')
+      content_tag(:span, "#{change.positive? ? '+' : ''}#{number_with_precision(change, precision: 1, separator: ',')}% vs. período anterior", class: "ss-kpi__change ss-kpi__change--#{css}")
+    end
+    k = dashboard.kpis
+    customers = dashboard.customers
+    shipping = dashboard.shipping
+    states = dashboard.states
+    coupons = dashboard.coupons
+    known = customers[:new][:orders] + customers[:returning][:orders]
+  %>
+
+  <%= render 'shared/period_presets', presets: Sales::OrdersDashboard::PRESETS, period: dashboard, base_params: { aba: 'dashboard' },
+             path: ->(params) { orders_path(params) } %>
+
+  <div class="ss-kpis">
+    <div class="ss-kpi ss-kpi--main">
+      <div class="ss-kpi__label">Faturamento</div>
+      <div class="ss-kpi__value"><%= brl_short.call(k[:revenue][:value]) %></div>
+      <%= change_tag.call(k[:revenue][:change]) %>
+    </div>
+    <div class="ss-kpi">
+      <div class="ss-kpi__label">Pedidos</div>
+      <div class="ss-kpi__value"><%= count.call(k[:orders][:value]) %></div>
+      <%= change_tag.call(k[:orders][:change]) %>
+    </div>
+    <div class="ss-kpi">
+      <div class="ss-kpi__label">Ticket médio</div>
+      <div class="ss-kpi__value"><%= brl.call(k[:average_ticket][:value]) %></div>
+      <%= change_tag.call(k[:average_ticket][:change]) %>
+    </div>
+    <div class="ss-kpi">
+      <div class="ss-kpi__label">Peças por pedido</div>
+      <div class="ss-kpi__value"><%= k[:items_per_order][:value] ? number_with_precision(k[:items_per_order][:value], precision: 1, separator: ',') : '–' %></div>
+      <%= change_tag.call(k[:items_per_order][:change]) %>
+    </div>
+    <div class="ss-kpi">
+      <div class="ss-kpi__label">Descontos concedidos</div>
+      <div class="ss-kpi__value"><%= brl_short.call(k[:discounts][:value]) %></div>
+      <%= change_tag.call(k[:discounts][:change], inverse: true) %>
+    </div>
+    <div class="ss-kpi">
+      <div class="ss-kpi__label">Pedidos cancelados</div>
+      <div class="ss-kpi__value"><%= count.call(k[:cancelled][:value]) %></div>
+      <%= change_tag.call(k[:cancelled][:change], inverse: true) %>
+    </div>
+  </div>
+
+  <div class="ss-grid">
+    <div class="crm-card ss-card">
+      <div class="ss-card__title">Faturamento e pedidos por dia</div>
+      <p class="ss-card__hint">Total pago dos pedidos (com frete, sem cancelados).</p>
+      <div id="po-daily-chart"></div>
+      <details class="ss-table-toggle">
+        <summary>Ver como tabela</summary>
+        <div class="ss-table-wrap">
+          <table class="crm-table">
+            <thead><tr><th>Dia</th><th class="text-right">Pedidos</th><th class="text-right">Faturamento</th></tr></thead>
+            <tbody>
+              <% dashboard.daily.each do |d| %>
+                <tr><td><%= l(d[:date], format: '%d/%m') %></td><td class="text-right"><%= d[:orders] %></td><td class="text-right"><%= brl.call(d[:revenue]) %></td></tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+
+    <div class="crm-card ss-card">
+      <div class="ss-card__title">Clientes</div>
+      <p class="ss-card__hint">Cliente novo = primeiro pedido na loja. Recorrente = já tinha comprado antes.</p>
+      <dl class="ss-result">
+        <div><dt>Pedidos de clientes novos</dt><dd><%= count.call(customers[:new][:orders]) %> · <%= brl.call(customers[:new][:revenue]) %></dd></div>
+        <div><dt>Pedidos de clientes recorrentes</dt><dd><%= count.call(customers[:returning][:orders]) %> · <%= brl.call(customers[:returning][:revenue]) %></dd></div>
+        <div class="ss-result__total"><dt>Recompra</dt><dd><%= known.positive? ? pct.call(customers[:returning][:orders] * 100.0 / known) : '–' %> dos pedidos</dd></div>
+        <% if customers[:guest].positive? %>
+          <div><dt>Pedidos sem cliente identificado</dt><dd><%= count.call(customers[:guest]) %></dd></div>
+        <% end %>
+      </dl>
+      <div class="ss-card__title pa-subtitle">Frete</div>
+      <dl class="ss-result">
+        <div><dt>Pedidos com frete grátis</dt><dd><%= pct.call(shipping[:free_share]) %> (<%= count.call(shipping[:free]) %>)</dd></div>
+        <div><dt>Frete médio (quando cobrado)</dt><dd><%= brl.call(shipping[:average]) %></dd></div>
+        <div><dt>Frete cobrado no período</dt><dd><%= brl.call(shipping[:total]) %></dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div class="po-grid-3">
+    <div class="crm-card ss-card">
+      <div class="ss-card__title">Horário das compras</div>
+      <p class="ss-card__hint">Pedidos por hora do dia (horário de Brasília). Bom para escolher o horário das campanhas.</p>
+      <div id="po-hour-chart"></div>
+    </div>
+    <div class="crm-card ss-card">
+      <div class="ss-card__title">Dia da semana</div>
+      <p class="ss-card__hint">Pedidos por dia da semana no período.</p>
+      <div id="po-weekday-chart"></div>
+    </div>
+    <div class="crm-card ss-card">
+      <div class="ss-card__title">Estados que mais compram</div>
+      <% if states.empty? %>
+        <p class="ss-card__hint">Sem estado cadastrado nos clientes dos pedidos do período.</p>
+      <% else %>
+        <% top = states.first[:revenue] %>
+        <dl class="ss-result">
+          <% states.each do |s| %>
+            <div class="po-state">
+              <dt><strong><%= s[:state] %></strong> · <%= count.call(s[:orders]) %> pedidos
+                <div class="po-bar"><span style="width: <%= top.positive? ? (s[:revenue] * 100 / top).round : 0 %>%"></span></div></dt>
+              <dd><%= brl.call(s[:revenue]) %></dd>
+            </div>
+          <% end %>
+        </dl>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="ss-grid ss-grid--even">
+    <div class="crm-card ss-card">
+      <div class="ss-card__title">Cupons mais usados</div>
+      <% if coupons.empty? %>
+        <p class="ss-card__hint">Nenhum pedido com cupom no período.</p>
+      <% else %>
+        <div class="ss-table-wrap">
+          <table class="crm-table">
+            <thead><tr><th>Cupom</th><th class="text-right">Pedidos</th><th class="text-right">Faturamento</th><th class="text-right">Desconto</th></tr></thead>
+            <tbody>
+              <% coupons.each do |c| %>
+                <tr><td><span class="products-badge products-badge--sku"><%= c[:code] %></span></td><td class="text-right"><%= count.call(c[:orders]) %></td>
+                  <td class="text-right"><%= brl.call(c[:revenue]) %></td><td class="text-right">− <%= brl.call(c[:discount]) %></td></tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="crm-card ss-card">
+      <div class="ss-card__title">Maiores pedidos</div>
+      <% biggest = dashboard.biggest_orders %>
+      <% if biggest.empty? %>
+        <p class="ss-card__hint">Nenhum pedido no período.</p>
+      <% else %>
+        <div class="ss-table-wrap">
+          <table class="crm-table">
+            <thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th class="text-right">Total pago</th></tr></thead>
+            <tbody>
+              <% biggest.each do |order| %>
+                <tr><td><%= order.shopify_order_number.presence || order.shopify_order_id %></td><td><%= order.customer_name %></td>
+                  <td><%= order.shopify_creation_date&.in_time_zone('America/Sao_Paulo')&.strftime('%d/%m %H:%M') %></td>
+                  <td class="text-right"><%= brl.call(order.paid_total.to_f) %></td></tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <script type="application/json" id="po-chart-data"><%= raw({
+    labels: dashboard.daily.map { |d| l(d[:date], format: '%d/%m') },
+    revenue: dashboard.daily.map { |d| d[:revenue] },
+    orders: dashboard.daily.map { |d| d[:orders] },
+    hours: dashboard.by_hour,
+    hour_labels: (0..23).map { |h| "#{h}h" },
+    weekdays: dashboard.by_weekday,
+    weekday_labels: Sales::OrdersDashboard::WEEKDAYS
+  }.to_json.gsub('</', '<\\/')) %></script>
+  <%= javascript_include_tag 'page_analytics', defer: true %>
+<% end %>

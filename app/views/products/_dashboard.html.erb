@@ -1,0 +1,111 @@
+<% if abc.nil? %>
+  <div class="crm-card ss-empty">Selecione uma loja para ver o dashboard de produtos.</div>
+<% else %>
+  <%
+    brl = ->(v) { number_to_currency(v || 0, unit: 'R$', separator: ',', delimiter: '.', precision: 2) }
+    brl_short = ->(v) { v.to_f.abs >= 1000 ? "R$ #{number_with_precision(v / 1000.0, precision: 1, separator: ',')} mil" : brl.call(v) }
+    pct = ->(v) { "#{number_with_precision(v || 0, precision: 1, separator: ',')}%" }
+    count = ->(v) { number_with_delimiter(v.to_i, delimiter: '.') }
+    summary = abc.summary
+    items = abc.items
+    shown = items.first(50)
+  %>
+
+  <%= render 'shared/period_presets', presets: Sales::ProductAbc::PRESETS, period: abc, base_params: { aba: 'dashboard' },
+             path: ->(params) { products_path(params) } %>
+
+  <% if items.empty? %>
+    <div class="crm-card ss-empty">Nenhum produto vendido no período. Escolha um período maior para montar a curva ABC.</div>
+  <% else %>
+    <div class="ss-kpis">
+      <div class="ss-kpi ss-kpi--main">
+        <div class="ss-kpi__label">Faturamento em produtos</div>
+        <div class="ss-kpi__value"><%= brl_short.call(abc.revenue) %></div>
+        <span class="ss-kpi__change ss-kpi__change--neutral"><%= count.call(abc.orders_count) %> pedidos</span>
+      </div>
+      <div class="ss-kpi">
+        <div class="ss-kpi__label">Unidades vendidas</div>
+        <div class="ss-kpi__value"><%= count.call(abc.units) %></div>
+        <span class="ss-kpi__change ss-kpi__change--neutral">preço médio <%= brl.call(abc.units.positive? ? abc.revenue / abc.units : 0) %></span>
+      </div>
+      <div class="ss-kpi">
+        <div class="ss-kpi__label">Produtos vendidos</div>
+        <div class="ss-kpi__value"><%= count.call(abc.sold_count) %></div>
+        <span class="ss-kpi__change ss-kpi__change--neutral">de <%= count.call(abc.catalog_count) %> no catálogo</span>
+      </div>
+      <% { 'A' => 'up', 'B' => 'neutral', 'C' => 'down' }.each do |curve, tone| %>
+        <div class="ss-kpi">
+          <div class="ss-kpi__label"><span class="pa-curve pa-curve--<%= curve.downcase %>"><%= curve %></span> <%= Sales::ProductAbc::CLASSES[curve][:label] %></div>
+          <div class="ss-kpi__value"><%= count.call(summary[curve][:count]) %> <small class="pa-kpi-unit">produtos</small></div>
+          <span class="ss-kpi__change ss-kpi__change--<%= tone %>"><%= pct.call(summary[curve][:share_of_revenue]) %> do faturamento</span>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="ss-grid">
+      <div class="crm-card ss-card">
+        <div class="ss-card__title">Curva ABC (gráfico de Pareto)</div>
+        <p class="ss-card__hint">Faturamento dos <%= [items.size, 30].min %> produtos que mais vendem (barras, coloridas pela curva) e o acumulado do faturamento (linha).</p>
+        <div id="pa-pareto-chart"></div>
+      </div>
+
+      <div class="crm-card ss-card">
+        <div class="ss-card__title">Resumo da curva</div>
+        <div id="pa-curve-donut"></div>
+        <dl class="ss-result pa-curve-list">
+          <% Sales::ProductAbc::CLASSES.each do |curve, info| %>
+            <div>
+              <dt><span class="pa-curve pa-curve--<%= curve.downcase %>"><%= curve %></span> <%= count.call(summary[curve][:count]) %> produtos · <%= pct.call(summary[curve][:share_of_products]) %></dt>
+              <dd><%= brl.call(summary[curve][:revenue]) %></dd>
+            </div>
+          <% end %>
+          <div><dt>Sem venda no período</dt><dd><%= count.call(abc.unsold_count) %> produtos</dd></div>
+        </dl>
+        <ul class="pa-tips">
+          <li><strong>A:</strong> nunca deixe faltar estoque e use nas campanhas e anúncios.</li>
+          <li><strong>B:</strong> bons candidatos a combos, kits e vitrine para subir para A.</li>
+          <li><strong>C:</strong> revise preço, foto e estoque; considere liquidar ou tirar de linha.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="crm-card ss-card pa-table-card">
+      <div class="ss-card__title">Produtos por curva</div>
+      <p class="ss-card__hint">Ordenados pelo faturamento no período. Variantes (cor, tamanho) somadas no mesmo produto.</p>
+      <div class="ss-table-wrap">
+        <table class="crm-table pa-table">
+          <thead>
+            <tr>
+              <th class="text-center">#</th><th>Produto</th><th class="text-center">Curva</th>
+              <th class="text-right">Faturado</th><th class="text-right">% do total</th><th class="text-right">Acumulado</th>
+              <th class="text-right">Unidades</th><th class="text-right">Pedidos</th><th class="text-right">Preço médio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <%= render partial: 'abc_row', collection: shown, as: :item %>
+          </tbody>
+        </table>
+      </div>
+      <% if items.size > shown.size %>
+        <details class="ss-table-toggle">
+          <summary>Ver os outros <%= count.call(items.size - shown.size) %> produtos</summary>
+          <div class="ss-table-wrap">
+            <table class="crm-table pa-table">
+              <tbody><%= render partial: 'abc_row', collection: items.drop(shown.size), as: :item %></tbody>
+            </table>
+          </div>
+        </details>
+      <% end %>
+    </div>
+
+    <% pareto = items.first(30) %>
+    <script type="application/json" id="pa-chart-data"><%= raw({
+      labels: pareto.map { |i| i.name.to_s.truncate(28) },
+      revenue: pareto.map { |i| i.revenue.round(2) },
+      cumulative: pareto.map { |i| i.cumulative.round(1) },
+      curves: pareto.map(&:curve),
+      donut: Sales::ProductAbc::CLASSES.keys.map { |c| summary[c][:revenue].round(2) }
+    }.to_json.gsub('</', '<\\/')) %></script>
+    <%= javascript_include_tag 'page_analytics', defer: true %>
+  <% end %>
+<% end %>

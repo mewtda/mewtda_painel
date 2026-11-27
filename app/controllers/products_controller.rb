@@ -1,9 +1,16 @@
 class ProductsController < ApplicationController
   before_action :set_client_scope
-  before_action :load_form_references, only: [:index]
+  before_action :load_form_references, only: [:index], if: -> { params[:aba] == 'produtos' }
   before_action :set_filter_scope, only: [:index, :export_xlsx]
 
+  TABS = %w[dashboard produtos].freeze
+
   def index
+    @tab = params[:aba].presence_in(TABS) || 'dashboard'
+    @client = Client.find_by(id: @client_id)
+    @abc = Sales::ProductAbc.new(client: @client, preset: params[:p], from: params[:de], to: params[:ate]) if @client
+    return if @tab == 'dashboard'
+
     @products = @products_scope
                 .order(created_at: :desc)
                 .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))

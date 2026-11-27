@@ -17,6 +17,7 @@ class CampaignsController < ApplicationController
       @campaigns = @campaigns.where(id: CampaignMessage.where(channel: params[:canal]).select(:campaign_id))
     end
     @campaigns = @campaigns.where('name ILIKE ?', "%#{Campaign.sanitize_sql_like(params[:q].to_s.strip)}%") if params[:q].present?
+    @investment = Campaigns::Investment.new(@client, @campaigns)
   end
 
   def details

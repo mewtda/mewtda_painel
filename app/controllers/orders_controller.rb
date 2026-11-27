@@ -1,8 +1,17 @@
 class OrdersController < ApplicationController
-  before_action :load_form_references, only: [:index]
+  before_action :load_form_references, only: [:index], if: -> { params[:aba] == 'pedidos' }
   before_action :set_filter_scope, only: [:index, :export_xlsx]
 
+  TABS = %w[dashboard pedidos].freeze
+
   def index
+    @tab = params[:aba].presence_in(TABS) || 'dashboard'
+    @client = Client.find_by(id: current_client_id)
+    if @tab == 'dashboard'
+      @dashboard = Sales::OrdersDashboard.new(client: @client, preset: params[:p], from: params[:de], to: params[:ate]) if @client
+      return
+    end
+
     @orders = @orders_scope.includes(:customer, order_items: :product)
                            .order(shopify_creation_date: :desc)
                            .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))

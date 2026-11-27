@@ -29,37 +29,21 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_match 'Soluções para e-commerce', response.body
   end
 
-  test 'shows the sales preview to a signed-in common user with a client' do
+  test 'sends a signed-in user from the root to the panel' do
     client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
-    user = build_user(client: client)
-    sign_in user
+    sign_in build_user(client: client)
 
     get root_path
 
-    assert_response :success
-    assert_match "Olá, #{user.name}", response.body
-    refute_match 'Gerencie seu negócio com inteligência', response.body
+    assert_redirected_to crm_path
   end
 
-  test 'shows the sales preview to a signed-in admin with a client' do
-    client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
-    admin = build_user(admin: true, client: client)
-    sign_in admin
+  test 'sends a signed-in admin without a client from the root to the panel' do
+    sign_in build_user(admin: true, client: nil)
 
     get root_path
 
-    assert_response :success
-    assert_match "Olá, #{admin.name}", response.body
-  end
-
-  test 'shows an empty-state message instead of charts when the signed-in user has no client' do
-    admin = build_user(admin: true, client: nil)
-    sign_in admin
-
-    get root_path
-
-    assert_response :success
-    assert_match 'Nenhum cliente selecionado', response.body
+    assert_redirected_to crm_path
   end
 
   test 'redirects a signed-in affiliate to events instead of showing the sales preview' do
@@ -70,31 +54,5 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_redirected_to events_path(utm_code: affiliate.utm_code)
-  end
-
-  test 'renders friendly empty-chart copy when the client has no orders this month' do
-    client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
-    user = build_user(client: client)
-    sign_in user
-
-    get root_path
-
-    assert_response :success
-    assert_match 'esse gráfico ganha vida', response.body
-  end
-
-  test 'renders totals when the client has orders this month' do
-    client = Client.create!(name: 'Loja', email: "loja-#{SecureRandom.hex(4)}@example.com")
-    user = build_user(client: client)
-    Order.create!(
-      client: client, shopify_order_id: SecureRandom.hex(6),
-      shopify_creation_date: Time.current, total_price: 250, subtotal_price: 250, total_discounts: 0
-    )
-    sign_in user
-
-    get root_path
-
-    assert_response :success
-    assert_match 'R$ 250,00', response.body
   end
 end
